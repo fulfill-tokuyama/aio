@@ -155,15 +155,15 @@ export default function FormPilotAutoV2(){
   const[mt,setMt]=useState(false);
   const[view,setView]=useState("pipeline");
   const[leads,setLeads]=useState(()=>{
-    const arr=Array.from({length:150},genLead);
+    const arr=Array.from({length:120},genLead);
     arr.sort((a,b)=>b.aiScore-a.aiScore);
-    // Distribute phases
+    // Distribute phases: 65 discovered, 20 form_found, 13 queued, 10 sent, 4 replied, 8 customer
     arr.forEach((l,i)=>{
-      if(i<10){l.phase="customer";l.stripeStatus="active";l.mrr=10000;l.formUrl=l.url+"/contact";l.templateUsed="t1";l.diagnosisSent=true;}
-      else if(i<15){l.phase="replied";l.formUrl=l.url+"/contact";l.templateUsed=["t1","t2","t3"][i%3];l.repliedAt=new Date(Date.now()-Math.random()*7*864e5).toISOString();}
-      else if(i<30){l.phase="sent";l.formUrl=l.url+"/inquiry";l.sentAt=new Date(Date.now()-Math.random()*14*864e5).toISOString();l.templateUsed=["t1","t2","t3"][i%3];l.followUpCount=i<20?1:0;}
-      else if(i<45){l.phase="queued";l.formUrl=l.url+"/contact";l.scheduledAt=new Date(Date.now()+Math.random()*7*864e5).toISOString();}
-      else if(i<70){l.phase="form_found";l.formUrl=l.url+"/contact";}
+      if(i<8){l.phase="customer";l.stripeStatus="active";l.mrr=10000;l.formUrl=l.url+"/contact";l.templateUsed="t1";l.diagnosisSent=true;}
+      else if(i<12){l.phase="replied";l.formUrl=l.url+"/contact";l.templateUsed=["t1","t2","t3"][i%3];l.repliedAt=new Date(Date.now()-Math.random()*7*864e5).toISOString();}
+      else if(i<22){l.phase="sent";l.formUrl=l.url+"/inquiry";l.sentAt=new Date(Date.now()-Math.random()*14*864e5).toISOString();l.templateUsed=["t1","t2","t3"][i%3];l.followUpCount=i<18?1:0;}
+      else if(i<35){l.phase="queued";l.formUrl=l.url+"/contact";l.scheduledAt=new Date(Date.now()+Math.random()*7*864e5).toISOString();}
+      else if(i<55){l.phase="form_found";l.formUrl=l.url+"/contact";}
     });
     return arr;
   });
@@ -184,7 +184,7 @@ export default function FormPilotAutoV2(){
     sendThreshold:10,sendTime:"10:00",sendDays:["TUE","WED","THU"],
     llmoScoreMax:30,
     lastScanAt:new Date(Date.now()-3*36e5).toISOString(),
-    nextScanAt:new Date(Date.now()+21*36e5).toISOString(),totalScans:47,
+    nextScanAt:(()=>{const d=new Date();d.setDate(d.getDate()+1);d.setHours(20,45,0,0);return d.toISOString();})(),totalScans:47,
     // NEW configs
     aiScoreMinForPriority:70,
     autoFollowUp:true,followUpInterval:3,followUpMaxCount:3,
@@ -194,20 +194,11 @@ export default function FormPilotAutoV2(){
   });
 
   const[log,setLog]=useState([
-    {t:new Date(Date.now()-5e3).toISOString(),msg:"🏆 ホットリード: AIスコア92のテックラボ（IT・SaaS）が発見されました",type:"alert"},
-    {t:new Date(Date.now()-1e4).toISOString(),msg:"🔄 定期スキャン完了: 20件の新規リード発見",type:"scan"},
-    {t:new Date(Date.now()-36e5).toISOString(),msg:"📄 無料診断レポート: 8件に自動添付して送信",type:"diagnosis"},
-    {t:new Date(Date.now()-5*36e5).toISOString(),msg:"🔁 自動フォローアップ: 5件に2回目のメール送信",type:"followup"},
-    {t:new Date(Date.now()-12*36e5).toISOString(),msg:"📨 A/Bテスト送信: テンプレートA 10件 / B 10件 / C 10件",type:"send"},
-    {t:new Date(Date.now()-18*36e5).toISOString(),msg:"✅ 返信受信: テックソリューションズ 様（テンプレートA経由）",type:"reply"},
-    {t:new Date(Date.now()-24*36e5).toISOString(),msg:"💰 新規契約: デジタルラボ 様 ¥10,000/月 Stripe決済完了",type:"customer"},
-  ]);
-
-  const[alerts]=useState([
-    {id:1,type:"hot",msg:"AIスコア95 — クラウドシステムズ（EC・東京）がフォーム発見済に移行",time:"2分前",read:false},
-    {id:2,type:"reply",msg:"プライムテクノロジー 様から返信あり — テンプレートC経由",time:"1時間前",read:false},
-    {id:3,type:"open",msg:"テンプレートA の開封率が42%に上昇（+8pt）",time:"3時間前",read:true},
-    {id:4,type:"stripe",msg:"グロースパートナーズ 様がStripeトライアル開始",time:"5時間前",read:true},
+    {t:new Date(Date.now()-36e5).toISOString(),msg:"定期スキャン完了: 18件の新規リード発見",type:"scan"},
+    {t:new Date(Date.now()-2*36e5).toISOString(),msg:"フォーム探索: 12件でフォームURL発見",type:"form"},
+    {t:new Date(Date.now()-3*36e5).toISOString(),msg:"自動送信: 10件のフォームに営業メール送信完了",type:"send"},
+    {t:new Date(Date.now()-12*36e5).toISOString(),msg:"返信受信: テックソリューションズ様から返信",type:"reply"},
+    {t:new Date(Date.now()-24*36e5).toISOString(),msg:"新規顧客: デジタルラボ様がStripe決済完了",type:"customer"},
   ]);
 
   const[searchQ,setSearchQ]=useState("");
@@ -216,7 +207,6 @@ export default function FormPilotAutoV2(){
   const[scanRunning,setScanRunning]=useState(false);
   const[page,setPage]=useState(0);
   const[selectedLead,setSelectedLead]=useState(null);
-  const[showAlerts,setShowAlerts]=useState(false);
   const PP=25;
   useEffect(()=>{setMt(true)},[]);
 
@@ -316,14 +306,9 @@ export default function FormPilotAutoV2(){
   const nav=[
     {id:"pipeline",icon:ic.activity,label:"パイプライン"},
     {id:"leads",icon:ic.radar,label:"リード一覧"},
-    {id:"abtest",icon:ic.mail,label:"A/Bテスト"},
-    {id:"followup",icon:ic.repeat,label:"フォローアップ"},
-    {id:"analysis",icon:ic.trending,label:"分析"},
     {id:"automation",icon:ic.zap,label:"自動化設定"},
     {id:"customers",icon:ic.dollar,label:"顧客・収益"},
   ];
-  const unread=alerts.filter(a=>!a.read).length;
-
   return(
     <div style={{height:"100vh",display:"flex",background:C.bg,color:C.tx,fontFamily:"'Geist','Noto Sans JP',system-ui,sans-serif",opacity:mt?1:0,transition:"opacity .4s",overflow:"hidden"}}>
       <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
@@ -343,7 +328,7 @@ export default function FormPilotAutoV2(){
           <div style={{width:28,height:28,borderRadius:5,background:`linear-gradient(135deg,${C.acc},${C.accDk})`,display:"flex",alignItems:"center",justifyContent:"center"}}><I d={ic.zap} s={13} c={C.bg}/></div>
           <div>
             <div style={{fontSize:12,fontWeight:800,color:C.acc,letterSpacing:-.3}}>FormPilot</div>
-            <div style={{fontSize:7,color:C.dim,letterSpacing:1.2,fontWeight:700}}>AUTONOMOUS v2</div>
+            <div style={{fontSize:7,color:C.dim,letterSpacing:1.2,fontWeight:700}}>AUTONOMOUS FULL AUTO</div>
           </div>
         </div>
         <nav style={{flex:1,padding:"6px 4px",overflow:"auto"}}>
@@ -361,6 +346,7 @@ export default function FormPilotAutoV2(){
             <span style={{width:5,height:5,borderRadius:"50%",background:autoConfig.scanEnabled?C.g:C.r,animation:autoConfig.scanEnabled?"p5 2s infinite":"none"}}/>
             <span style={{fontWeight:700,color:autoConfig.scanEnabled?C.g:C.r,fontSize:10}}>{autoConfig.scanEnabled?"自動運転中":"停止中"}</span>
           </div>
+          <div style={{fontSize:9,color:C.dim,marginBottom:8}}>次回スキャン: {new Date(autoConfig.nextScanAt).toLocaleString("ja-JP",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
           <div style={{padding:"7px 9px",borderRadius:4,background:C.accGl,marginTop:6}}>
             <div style={{fontSize:8,color:C.acc,fontWeight:700}}>MRR</div>
             <div style={{fontSize:16,fontWeight:800,color:C.g,fontFamily:"'Geist Mono',monospace"}}>¥{kpi.mrr.toLocaleString()}</div>
@@ -381,86 +367,78 @@ export default function FormPilotAutoV2(){
                 <I d={ic.send} s={11} c={C.p}/>AIスコア順送信
               </button>
             </>}
-            {/* Alerts bell */}
-            <button onClick={()=>setShowAlerts(!showAlerts)} style={{position:"relative",padding:5,borderRadius:4,border:`1px solid ${C.bdr}`,background:showAlerts?C.accGl:"transparent",cursor:"pointer",display:"flex",alignItems:"center"}}>
-              <I d={ic.bell} s={14} c={unread?C.acc:C.sub}/>
-              {unread>0&&<span style={{position:"absolute",top:-3,right:-3,width:14,height:14,borderRadius:7,background:C.r,color:"#fff",fontSize:8,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center"}}>{unread}</span>}
-            </button>
             <div style={{padding:"4px 8px",borderRadius:3,background:C.gB,color:C.g,fontSize:9,fontWeight:700}}>{leads.length} リード</div>
           </div>
         </header>
 
-        {/* Alerts dropdown */}
-        {showAlerts&&(
-          <div style={{position:"absolute",top:45,right:100,width:360,background:C.card,borderRadius:8,border:`1px solid ${C.bdr}`,zIndex:50,boxShadow:"0 12px 40px rgba(0,0,0,.5)",padding:10}}>
-            <div style={{fontSize:11,fontWeight:700,marginBottom:8,padding:"0 4px"}}>🔔 ウォームリードアラート</div>
-            {alerts.map(a=>(
-              <div key={a.id} style={{padding:"8px 10px",borderRadius:5,background:a.read?"transparent":C.accGl,marginBottom:3,borderLeft:`3px solid ${a.type==="hot"?C.r:a.type==="reply"?C.g:a.type==="stripe"?C.st:C.b}`}}>
-                <div style={{fontSize:10,lineHeight:1.5,color:a.read?C.sub:C.tx}}>{a.msg}</div>
-                <div style={{fontSize:8,color:C.dim,marginTop:2}}>{a.time}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div style={{flex:1,overflow:"auto",padding:16}} onClick={()=>showAlerts&&setShowAlerts(false)}>
+        <div style={{flex:1,overflow:"auto",padding:16}}>
 
           {/* ===== PIPELINE ===== */}
           {view==="pipeline"&&(
             <div className="fi">
-              <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:5,marginBottom:16}}>
+              <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>自動営業パイプライン</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:5,marginBottom:20}}>
                 {[
-                  {label:"LLMO\n未対策発見",count:leads.filter(l=>l.phase==="discovered").length,color:C.cy,icon:ic.radar},
-                  {label:"フォーム\n自動発見",count:leads.filter(l=>l.phase==="form_found").length,color:C.b,icon:ic.link},
-                  {label:"送信\n待機中",count:leads.filter(l=>l.phase==="queued").length,color:C.o,icon:ic.clock},
-                  {label:"営業メール\n送信済",count:leads.filter(l=>["sent"].includes(l.phase)).length,color:C.p,icon:ic.send},
-                  {label:"返信\n受信",count:leads.filter(l=>l.phase==="replied").length,color:C.acc,icon:ic.check},
-                  {label:"有料\n顧客",count:leads.filter(l=>l.phase==="customer").length,color:C.g,icon:ic.dollar},
+                  {label:"LLMO未対策企業発見",count:leads.filter(l=>l.phase==="discovered").length,color:C.cy,icon:ic.radar},
+                  {label:"フォーム自動発見",count:leads.filter(l=>l.phase==="form_found").length,color:C.b,icon:ic.link},
+                  {label:"送信待機中",count:leads.filter(l=>l.phase==="queued").length,color:C.o,icon:ic.clock},
+                  {label:"営業メール送信済",count:leads.filter(l=>["sent"].includes(l.phase)).length,color:C.p,icon:ic.send},
+                  {label:"返信受信",count:leads.filter(l=>l.phase==="replied").length,color:C.acc,icon:ic.check},
+                  {label:"有料顧客",count:leads.filter(l=>l.phase==="customer").length,color:C.g,icon:ic.dollar},
                 ].map((s,i)=>(
                   <div key={i} style={{background:C.card,borderRadius:7,padding:"12px 10px",border:`1px solid ${C.bdr}`,textAlign:"center",position:"relative"}}>
                     <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:s.color,opacity:.5}}/>
                     <div style={{width:26,height:26,borderRadius:5,background:`${s.color}10`,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 6px"}}><I d={s.icon} s={12} c={s.color}/></div>
                     <div style={{fontSize:20,fontWeight:800,color:s.color,fontFamily:"'Geist Mono',monospace"}}>{s.count}</div>
-                    <div style={{fontSize:8,color:C.dim,marginTop:3,whiteSpace:"pre-line",lineHeight:1.3}}>{s.label}</div>
+                    <div style={{fontSize:8,color:C.dim,marginTop:3,lineHeight:1.3}}>{s.label}</div>
                     {i<5&&<div style={{position:"absolute",right:-7,top:"50%",transform:"translateY(-50%)",color:C.dim,fontSize:10,zIndex:1}}>→</div>}
                   </div>
                 ))}
               </div>
 
-              <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:8,marginBottom:16}}>
-                <KPI icon={ic.star} ic={C.acc} label="ホットリード" val={kpi.hotLeads.toString()} sub={`スコア${autoConfig.aiScoreMinForPriority}+`}/>
-                <KPI icon={ic.eye} ic={C.b} label="開封率" val={`${kpi.openRate}%`} trend={8} good/>
-                <KPI icon={ic.check} ic={C.g} label="返信率" val={`${kpi.replyRate}%`} trend={5} good/>
-                <KPI icon={ic.file} ic={C.cy} label="診断レポート" val={kpi.withDiag.toString()} sub="自動添付済"/>
-                <KPI icon={ic.repeat} ic={C.pk} label="フォローアップ" val={kpi.followedUp.toString()} sub="自動追客"/>
-                <KPI icon={ic.dollar} ic={C.g} label="成約率" val={`${kpi.convRate}%`} sub={`${kpi.cust}社契約`} trend={12} good/>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8,marginBottom:20}}>
+                <KPI icon={ic.radar} ic={C.b} label="総リード数" val={kpi.t.toString()} sub={`累計${autoConfig.totalScans}回スキャン`} trend={18} good/>
+                <KPI icon={ic.send} ic={C.p} label="送信完了" val={kpi.sent.toString()} sub={`フォーム発見率 ${kpi.formRate}%`}/>
+                <KPI icon={ic.check} ic={C.g} label="返信率" val={`${kpi.replyRate}%`} sub={`${kpi.replied}件返信`} trend={5} good/>
+                <KPI icon={ic.dollar} ic={C.acc} label="成約率" val={`${kpi.convRate}%`} sub="送信→顧客"/>
+                <KPI icon={ic.dollar} ic={C.g} label="MRR" val={`¥${kpi.mrr.toLocaleString()}`} sub={`${kpi.cust}社 × ¥10,000`} trend={22} good/>
               </div>
 
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                <div style={{background:C.card,borderRadius:7,padding:14,border:`1px solid ${C.bdr}`}}>
-                  <div style={{fontSize:11,fontWeight:700,marginBottom:8}}>⚡ アクティビティ</div>
-                  <div style={{maxHeight:200,overflow:"auto"}}>
-                    {log.slice(0,12).map((l,i)=>(
-                      <div key={i} style={{padding:"5px 0",borderBottom:`1px solid ${C.bdr}`,display:"flex",gap:8}}>
-                        <span style={{fontSize:8,color:C.dim,fontFamily:"'Geist Mono',monospace",flexShrink:0,marginTop:2}}>{new Date(l.t).toLocaleString("ja-JP",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</span>
-                        <span style={{fontSize:10,color:l.type==="alert"?C.r:l.type==="customer"?C.g:l.type==="followup"?C.pk:l.type==="diagnosis"?C.cy:l.type==="reply"?C.acc:l.type==="send"?C.p:C.sub,lineHeight:1.4}}>{l.msg}</span>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+                <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
+                  <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>アクティビティログ</div>
+                  <div style={{maxHeight:220,overflow:"auto"}}>
+                    {log.map((l,i)=>(
+                      <div key={i} style={{padding:"8px 0",borderBottom:i<log.length-1?`1px solid ${C.bdr}`:"none",display:"flex",gap:10,alignItems:"flex-start"}}>
+                        <span style={{fontSize:9,color:C.dim,fontFamily:"'Geist Mono',monospace",flexShrink:0}}>{new Date(l.t).toLocaleString("ja-JP",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</span>
+                        <span style={{fontSize:10,color:l.type==="customer"?C.g:l.type==="reply"?C.acc:l.type==="send"?C.p:l.type==="form"?C.b:C.sub,lineHeight:1.5}}>{l.msg}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div style={{background:C.card,borderRadius:7,padding:14,border:`1px solid ${C.bdr}`}}>
-                  <div style={{fontSize:11,fontWeight:700,marginBottom:8}}>🏆 ホットリード TOP5</div>
-                  {leads.filter(l=>l.phase!=="customer").sort((a,b)=>b.aiScore-a.aiScore).slice(0,5).map((l,i)=>(
-                    <div key={l.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:`1px solid ${C.bdr}`}}>
-                      <span style={{fontSize:9,fontWeight:800,color:C.acc,width:14}}>{i+1}</span>
-                      <ScoreBadge score={l.aiScore}/>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:10,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.company}</div>
-                        <div style={{fontSize:8,color:C.dim}}>{l.industry} · {l.region} · {l.companySize}</div>
+                <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
+                  <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>自動化ステータス</div>
+                  {[
+                    {l:"LLMO調査",d:`${autoConfig.scanInterval}時間ごと・${autoConfig.batchSize}件/回`,on:autoConfig.scanEnabled,key:"scanEnabled"},
+                    {l:"フォーム自動探索",d:"発見次第即実行",on:autoConfig.autoFormScan,key:"autoFormScan"},
+                    {l:"自動送信",d:`${autoConfig.sendThreshold}件蓄積で自動送信・${autoConfig.sendTime}`,on:autoConfig.autoSendEnabled,key:"autoSendEnabled"},
+                  ].map((s,i)=>(
+                    <div key={s.key} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:i<2?`1px solid ${C.bdr}`:"none"}}>
+                      <div>
+                        <div style={{fontSize:11,fontWeight:600}}>{s.l}</div>
+                        <div style={{fontSize:9,color:C.dim}}>{s.d}</div>
                       </div>
-                      <Phase p={l.phase}/>
+                      <button onClick={()=>setAutoConfig(p=>({...p,[s.key]:!p[s.key]}))} style={{padding:"4px 10px",borderRadius:4,border:"none",background:s.on?C.gB:C.rB,color:s.on?C.g:C.r,fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s.on?"ON":"OFF"}</button>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`,maxWidth:400}}>
+                <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>Stripe 収益サマリー</div>
+                <div style={{display:"flex",alignItems:"center",gap:12}}>
+                  <span style={{fontSize:10,color:C.sub}}>契約中</span>
+                  <span style={{fontSize:18,fontWeight:800,fontFamily:"'Geist Mono',monospace",color:C.g}}>{kpi.cust}社 ¥{kpi.mrr.toLocaleString()}</span>
                 </div>
               </div>
             </div>
