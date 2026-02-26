@@ -1,0 +1,16 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "next build",
+  "outputDirectory": ".next",
+  "regions": ["hnd1"],
+  "crons": [
+    {
+      "path": "/api/llmo-scan",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/auto-send",
+      "schedule": "0 10 * * 2,3,4"
+    }
+  ]
+}
