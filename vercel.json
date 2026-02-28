@@ -2,5 +2,11 @@
   "framework": "nextjs",
   "buildCommand": "next build",
   "outputDirectory": ".next",
-  "regions": ["hnd1"]
+  "regions": ["hnd1"],
+  "crons": [
+    {
+      "path": "/api/rescan",
+      "schedule": "0 3 * * 1"
+    }
+  ]
 }

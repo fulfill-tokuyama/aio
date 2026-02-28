@@ -256,7 +256,7 @@ const TabButton = ({ active, children, onClick }) => (
 // MAIN APP
 // ============================================================
 
-export default function AIODashboard({ diagnosisData = null, userEmail = "" }) {
+export default function AIODashboard({ diagnosisData = null, diagnosisHistory = [], userEmail = "" }) {
   const [trafficData] = useState(generateTrafficData);
   const [activeTab, setActiveTab] = useState("overview");
   const [hoveredPlatform, setHoveredPlatform] = useState(null);
@@ -271,6 +271,68 @@ export default function AIODashboard({ diagnosisData = null, userEmail = "" }) {
   const totalOrganic = trafficData.reduce((a, d) => a + d.organic, 0);
   const totalAll = totalAITraffic + totalOrganic + trafficData.reduce((a, d) => a + d.direct + d.social, 0);
   const aiPercent = ((totalAITraffic / totalAll) * 100).toFixed(1);
+
+  // --- Real data derived from diagnosisData & diagnosisHistory ---
+  const latestScore = diagnosisData?.score ?? null;
+  const prevScore = diagnosisHistory.length >= 2 ? diagnosisHistory[diagnosisHistory.length - 2].score : null;
+  const scoreChange = latestScore !== null && prevScore !== null ? latestScore - prevScore : null;
+  const weaknessCount = diagnosisData?.weaknesses?.length ?? 0;
+  const suggestionCount = diagnosisData?.suggestions?.length ?? 0;
+
+  // Score trend data for chart
+  const scoreTrendData = diagnosisHistory.map(h => ({
+    date: new Date(h.createdAt).toLocaleDateString("ja-JP", { month: "short", day: "numeric" }),
+    score: h.score,
+  }));
+
+  // Category breakdown from latest diagnosisData.htmlAnalysis (the breakdown is stored in the report)
+  const breakdown = diagnosisData?.htmlAnalysis?.breakdown || diagnosisData?.pagespeedData ? null : null;
+  // We can reconstruct breakdown from htmlAnalysis fields if available
+  const categoryBreakdown = (() => {
+    if (!diagnosisData) return null;
+    const ha = diagnosisData.htmlAnalysis || {};
+    const ps = diagnosisData.pagespeedData;
+    // Reconstruct scores using same logic as diagnosis.ts
+    let coreWebVitals = 10;
+    if (ps) {
+      coreWebVitals = 0;
+      if (ps.lcp < 2500) coreWebVitals += 10; else if (ps.lcp < 4000) coreWebVitals += 5;
+      if (ps.cls < 0.1) coreWebVitals += 8; else if (ps.cls < 0.25) coreWebVitals += 4;
+      if (ps.fid < 100) coreWebVitals += 7; else if (ps.fid < 300) coreWebVitals += 3;
+    }
+    let structuredData = 0;
+    if (ha.hasJsonLd) structuredData += 10;
+    if (ha.hasFaqSchema) structuredData += 5;
+    if (ha.hasHowToSchema) structuredData += 5;
+    let metaSeo = 0;
+    if (ha.hasMetaDescription) {
+      metaSeo += (ha.metaDescriptionLength >= 50 && ha.metaDescriptionLength <= 160) ? 6 : 3;
+    }
+    if (ha.hasH1) metaSeo += ha.h1Count === 1 ? 5 : 3;
+    if (ha.hasOgTags) metaSeo += 5;
+    if (ha.hasCanonical) metaSeo += 4;
+    let eeat = 0;
+    if (ha.hasAuthorMarkup) eeat += 8;
+    if (ha.hasDateModified) eeat += 7;
+    let crawlability = 0;
+    // crawlability info isn't stored in htmlAnalysis, estimate from score
+    const knownTotal = coreWebVitals + structuredData + metaSeo + eeat;
+    let content = 0;
+    if (ha.hasLangAttr) content += 3;
+    if (ha.contentLength > 1000) content += 4; else if (ha.contentLength > 300) content += 2;
+    if (ha.internalLinkCount >= 5) content += 3; else if (ha.internalLinkCount >= 2) content += 1;
+    // Derive crawlability from total score
+    crawlability = Math.max(0, (diagnosisData.score || 0) - knownTotal - content);
+    crawlability = Math.min(crawlability, 10);
+    return [
+      { label: "Core Web Vitals", score: coreWebVitals, max: 25, color: COLORS.accent },
+      { label: "構造化データ", score: structuredData, max: 20, color: COLORS.green },
+      { label: "Meta/SEO", score: metaSeo, max: 20, color: COLORS.cyan },
+      { label: "E-E-A-T", score: eeat, max: 15, color: COLORS.purple },
+      { label: "クロール", score: crawlability, max: 10, color: COLORS.orange },
+      { label: "コンテンツ", score: content, max: 10, color: COLORS.red },
+    ];
+  })();
 
   return (
     <div style={{
@@ -413,123 +475,106 @@ export default function AIODashboard({ diagnosisData = null, userEmail = "" }) {
               </div>
             )}
 
-            {/* KPI Row */}
+            {/* KPI Row — Real diagnosis data */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
-              <StatCard label="全トラフィック" value={totalAll.toLocaleString()} change={8.3} icon="🌐" color={COLORS.accent} sub="月間ユニーク訪問者" />
-              <StatCard label="AIトラフィック" value={totalAITraffic.toLocaleString()} change={32.4} icon="🤖" color={COLORS.green} sub={`全体の${aiPercent}%`} />
-              <StatCard label="AI Share of Voice" value="34.2%" change={12.5} icon="📡" color={COLORS.purple} sub="業界内シェア" />
-              <StatCard label="AI引用数" value="933" change={18.7} icon="🔗" color={COLORS.cyan} sub="6プラットフォーム合計" />
-            </div>
-
-            {/* Main Chart */}
-            <div style={{
-              background: COLORS.card, borderRadius: 12, padding: 24,
-              border: `1px solid ${COLORS.border}`, marginBottom: 24,
-            }}>
-              <SectionHeader
-                title="トラフィック推移"
-                subtitle="チャネル別の訪問者数トレンド（stats + chart エンドポイント）"
-                action={
-                  <div style={{ display: "flex", gap: 16 }}>
-                    {[
-                      { key: "organic", label: "Organic", color: COLORS.accent },
-                      { key: "ai", label: "AI Search", color: COLORS.green },
-                      { key: "direct", label: "Direct", color: COLORS.orange },
-                      { key: "social", label: "Social", color: COLORS.purple },
-                    ].map(l => (
-                      <div key={l.key} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                        <div style={{ width: 8, height: 8, borderRadius: 2, background: l.color }} />
-                        <span style={{ fontSize: 11, color: COLORS.textMuted }}>{l.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                }
+              <StatCard
+                label="AI可視性スコア"
+                value={latestScore !== null ? latestScore : "—"}
+                icon="📊"
+                color={latestScore !== null ? (latestScore >= 70 ? COLORS.green : latestScore >= 40 ? COLORS.orange : COLORS.red) : COLORS.accent}
+                sub={latestScore !== null ? "/ 100点" : "診断データなし"}
               />
-              <AreaChart
-                data={trafficData}
-                keys={["organic", "ai", "direct", "social"]}
-                colors={[COLORS.accent, COLORS.green, COLORS.orange, COLORS.purple]}
-                height={220}
+              <StatCard
+                label="前回比変化"
+                value={scoreChange !== null ? `${scoreChange >= 0 ? "+" : ""}${scoreChange}` : "—"}
+                change={scoreChange !== null ? (scoreChange >= 0 ? Math.abs(scoreChange) : -Math.abs(scoreChange)) : undefined}
+                icon="📈"
+                color={scoreChange !== null ? (scoreChange >= 0 ? COLORS.green : COLORS.red) : COLORS.accent}
+                sub={scoreChange !== null ? "ポイント" : "比較データなし"}
+              />
+              <StatCard
+                label="検出された弱点"
+                value={weaknessCount}
+                icon="⚠️"
+                color={weaknessCount > 5 ? COLORS.red : weaknessCount > 2 ? COLORS.orange : COLORS.green}
+                sub="改善が必要な項目"
+              />
+              <StatCard
+                label="改善提案数"
+                value={suggestionCount}
+                icon="💡"
+                color={COLORS.cyan}
+                sub="アクション可能な提案"
               />
             </div>
 
-            {/* Bottom Row */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              {/* AI Platform Breakdown */}
+            {/* Score Trend Chart */}
+            {scoreTrendData.length > 1 && (
               <div style={{
                 background: COLORS.card, borderRadius: 12, padding: 24,
-                border: `1px solid ${COLORS.border}`,
+                border: `1px solid ${COLORS.border}`, marginBottom: 24,
               }}>
-                <SectionHeader title="AIプラットフォーム別" subtitle="Brand Radar API データ" />
-                <div style={{ display: "flex", gap: 24 }}>
-                  <DonutChart
-                    segments={AI_PLATFORMS.map(p => ({ value: p.mentions, color: p.color }))}
-                    size={130}
-                  />
-                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-                    {AI_PLATFORMS.map((p, i) => (
-                      <div key={i}
-                        onMouseEnter={() => setHoveredPlatform(i)}
-                        onMouseLeave={() => setHoveredPlatform(null)}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 10, padding: "6px 10px",
-                          borderRadius: 6, cursor: "default",
-                          background: hoveredPlatform === i ? COLORS.surfaceHover : "transparent",
-                          transition: "background 0.15s",
-                        }}>
-                        <div style={{ width: 8, height: 8, borderRadius: 2, background: p.color, flexShrink: 0 }} />
-                        <span style={{ fontSize: 12, flex: 1 }}>{p.name}</span>
-                        <span style={{ fontSize: 12, fontWeight: 600, fontFamily: "JetBrains Mono" }}>{p.mentions}</span>
-                        <span style={{
-                          fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 3,
-                          color: p.trend >= 0 ? COLORS.green : COLORS.red,
-                          background: p.trend >= 0 ? COLORS.greenBg : COLORS.redBg,
-                        }}>
-                          {p.trend >= 0 ? "+" : ""}{p.trend}%
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                <SectionHeader
+                  title="スコア推移"
+                  subtitle={`${scoreTrendData.length}回の診断結果（週次再スキャン）`}
+                />
+                <AreaChart
+                  data={scoreTrendData.map(d => ({ date: d.date, score: d.score }))}
+                  keys={["score"]}
+                  colors={[COLORS.accent]}
+                  height={200}
+                />
+              </div>
+            )}
+            {scoreTrendData.length <= 1 && (
+              <div style={{
+                background: COLORS.card, borderRadius: 12, padding: 24,
+                border: `1px solid ${COLORS.border}`, marginBottom: 24,
+                textAlign: "center",
+              }}>
+                <SectionHeader
+                  title="スコア推移"
+                  subtitle="週次再スキャンによりデータが蓄積されるとトレンドチャートが表示されます"
+                />
+                <div style={{ color: COLORS.textDim, fontSize: 13, padding: "20px 0" }}>
+                  次回スキャン後にグラフが表示されます
                 </div>
               </div>
+            )}
 
-              {/* Top AI Pages */}
+            {/* Category Breakdown */}
+            {categoryBreakdown && (
               <div style={{
                 background: COLORS.card, borderRadius: 12, padding: 24,
-                border: `1px solid ${COLORS.border}`,
+                border: `1px solid ${COLORS.border}`, marginBottom: 24,
               }}>
-                <SectionHeader title="AIトラフィック上位ページ" subtitle="Web Analytics API データ" />
-                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                  <div style={{
-                    display: "grid", gridTemplateColumns: "2fr 1fr 1fr 60px",
-                    padding: "6px 10px", fontSize: 10, color: COLORS.textDim, textTransform: "uppercase", letterSpacing: 0.5,
-                  }}>
-                    <span>URL</span><span style={{ textAlign: "right" }}>AI流入</span><span style={{ textAlign: "right" }}>AI比率</span><span style={{ textAlign: "right" }}>変化</span>
-                  </div>
-                  {TOP_PAGES.map((page, i) => (
-                    <div key={i} style={{
-                      display: "grid", gridTemplateColumns: "2fr 1fr 1fr 60px",
-                      padding: "8px 10px", borderRadius: 6, fontSize: 12,
-                      background: i % 2 === 0 ? "transparent" : COLORS.surfaceHover + "40",
-                    }}>
-                      <span style={{ color: COLORS.accent, fontFamily: "JetBrains Mono", fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {page.url}
-                      </span>
-                      <span style={{ textAlign: "right", fontWeight: 600, fontFamily: "JetBrains Mono" }}>
-                        {page.aiTraffic.toLocaleString()}
-                      </span>
-                      <span style={{ textAlign: "right", color: COLORS.cyan }}>{page.aiRatio}%</span>
-                      <span style={{
-                        textAlign: "right", fontSize: 11,
-                        color: page.trend >= 0 ? COLORS.green : COLORS.red,
-                      }}>
-                        {page.trend >= 0 ? "↑" : "↓"}{Math.abs(page.trend)}%
-                      </span>
+                <SectionHeader
+                  title="カテゴリ別スコア内訳"
+                  subtitle="6つの評価カテゴリごとの獲得点数と満点"
+                />
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {categoryBreakdown.map((cat, i) => (
+                    <div key={i}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                        <span style={{ fontSize: 13, color: COLORS.text }}>{cat.label}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "JetBrains Mono", color: cat.color }}>
+                          {cat.score} / {cat.max}
+                        </span>
+                      </div>
+                      <div style={{ height: 8, background: COLORS.surface, borderRadius: 4, overflow: "hidden" }}>
+                        <div style={{
+                          width: `${(cat.score / cat.max) * 100}%`,
+                          height: "100%",
+                          borderRadius: 4,
+                          background: `linear-gradient(90deg, ${cat.color}90, ${cat.color})`,
+                          transition: "width 0.8s ease",
+                        }} />
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -543,7 +588,7 @@ export default function AIODashboard({ diagnosisData = null, userEmail = "" }) {
             }}>
               <span style={{ fontSize: 14 }}>📌</span>
               <span style={{ fontSize: 12, color: COLORS.orange }}>
-                このタブのデータはデモデータです。Ahrefsデータ連携は今後追加予定です。
+                Ahrefs Web Analytics連携後にリアルデータを表示します。現在はサンプルデータです。
               </span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
@@ -640,7 +685,7 @@ export default function AIODashboard({ diagnosisData = null, userEmail = "" }) {
             }}>
               <span style={{ fontSize: 14 }}>📌</span>
               <span style={{ fontSize: 12, color: COLORS.orange }}>
-                このタブのデータはデモデータです。Ahrefsデータ連携は今後追加予定です。
+                Ahrefs Web Analytics連携後にリアルデータを表示します。現在はサンプルデータです。
               </span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
@@ -745,7 +790,7 @@ export default function AIODashboard({ diagnosisData = null, userEmail = "" }) {
             }}>
               <span style={{ fontSize: 14 }}>📌</span>
               <span style={{ fontSize: 12, color: COLORS.orange }}>
-                このタブのデータはデモデータです。Ahrefsデータ連携は今後追加予定です。
+                Ahrefs Web Analytics連携後にリアルデータを表示します。現在はサンプルデータです。
               </span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>

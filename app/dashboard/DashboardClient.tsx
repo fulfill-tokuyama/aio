@@ -13,13 +13,28 @@ interface DiagnosisData {
   createdAt: string;
 }
 
+interface DiagnosisHistoryEntry {
+  score: number;
+  createdAt: string;
+  weaknesses: string[];
+  suggestions: string[];
+  breakdown: Record<string, number> | null;
+}
+
 interface Props {
   diagnosisData: DiagnosisData | null;
+  diagnosisHistory: DiagnosisHistoryEntry[];
   userEmail: string;
 }
 
-export default function DashboardClient({ diagnosisData, userEmail }: Props) {
+export default function DashboardClient({ diagnosisData, diagnosisHistory, userEmail }: Props) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const Dashboard = AIODashboard as any;
-  return <Dashboard diagnosisData={diagnosisData} userEmail={userEmail} />;
+  return (
+    <Dashboard
+      diagnosisData={diagnosisData}
+      diagnosisHistory={diagnosisHistory}
+      userEmail={userEmail}
+    />
+  );
 }

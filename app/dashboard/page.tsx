@@ -23,40 +23,59 @@ export default async function DashboardPage() {
     .eq("supabase_user_id", user.id)
     .single();
 
-  // Fetch latest diagnosis report for this customer's email
+  // Fetch diagnosis reports for this customer's email
   let diagnosisData = null;
+  let diagnosisHistory: { score: number; createdAt: string; weaknesses: string[]; suggestions: string[]; breakdown: Record<string, number> | null }[] = [];
   if (customer?.email) {
-    const { data: lead } = await supabaseAdmin
+    // Get all leads for this customer to collect reports across leads
+    const { data: leads } = await supabaseAdmin
       .from("leads")
       .select("id, company, url")
       .eq("email", customer.email)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+      .order("created_at", { ascending: false });
 
-    if (lead) {
-      const { data: report } = await supabaseAdmin
+    if (leads && leads.length > 0) {
+      const leadIds = leads.map(l => l.id);
+      const latestLead = leads[0];
+
+      // Fetch ALL diagnosis reports for this customer's leads (time series)
+      const { data: allReports } = await supabaseAdmin
         .from("diagnosis_reports")
         .select("*")
-        .eq("lead_id", lead.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
+        .in("lead_id", leadIds)
+        .order("created_at", { ascending: true });
 
-      if (report) {
+      if (allReports && allReports.length > 0) {
+        // Latest report for main diagnosis display
+        const latestReport = allReports[allReports.length - 1];
         diagnosisData = {
-          company: lead.company,
-          url: lead.url,
-          score: report.score,
-          pagespeedData: report.pagespeed_data,
-          htmlAnalysis: report.html_analysis,
-          weaknesses: report.weaknesses,
-          suggestions: report.suggestions,
-          createdAt: report.created_at,
+          company: latestLead.company,
+          url: latestLead.url,
+          score: latestReport.score,
+          pagespeedData: latestReport.pagespeed_data,
+          htmlAnalysis: latestReport.html_analysis,
+          weaknesses: latestReport.weaknesses,
+          suggestions: latestReport.suggestions,
+          createdAt: latestReport.created_at,
         };
+
+        // Build history for trend chart
+        diagnosisHistory = allReports.map(r => ({
+          score: r.score,
+          createdAt: r.created_at,
+          weaknesses: r.weaknesses || [],
+          suggestions: r.suggestions || [],
+          breakdown: r.html_analysis?.breakdown || null,
+        }));
       }
     }
   }
 
-  return <DashboardClient diagnosisData={diagnosisData} userEmail={user.email || ""} />;
+  return (
+    <DashboardClient
+      diagnosisData={diagnosisData}
+      diagnosisHistory={diagnosisHistory}
+      userEmail={user.email || ""}
+    />
+  );
 }
