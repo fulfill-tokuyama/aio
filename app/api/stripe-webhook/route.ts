@@ -1,31 +1,184 @@
 // app/api/stripe-webhook/route.ts
-// Stripe Webhook: 顧客ステータスの自動更新
-// Vercel環境変数: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
+// Stripe Webhook: checkout完了 → アカウント自動作成 → ウェルカムメール
 
 import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
+import { supabaseAdmin } from "@/lib/supabase";
+
+export const dynamic = "force-dynamic";
+
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY || "");
+}
+
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
 
 export async function POST(req: NextRequest) {
-  // TODO: 本番実装時に以下を追加
-  // 1. Stripe signature検証
-  // 2. イベントタイプに応じた処理
-  //    - checkout.session.completed → 新規顧客登録
-  //    - customer.subscription.updated → ステータス更新
-  //    - customer.subscription.deleted → 解約処理
-  //    - invoice.payment_failed → 支払い失敗通知
-  // 3. Supabase/DBへの書き込み
-
   const body = await req.text();
+  const sig = req.headers.get("stripe-signature");
 
-  // Placeholder response
-  return NextResponse.json({
-    received: true,
-    message: "Stripe webhook endpoint ready. Implement with stripe npm package.",
-    events_to_handle: [
-      "checkout.session.completed",
-      "customer.subscription.updated",
-      "customer.subscription.deleted",
-      "invoice.payment_failed",
-      "invoice.payment_succeeded",
-    ],
-  });
+  if (!sig) {
+    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
+  }
+
+  let event: Stripe.Event;
+
+  try {
+    const stripeClient = getStripe();
+    event = stripeClient.webhooks.constructEvent(body, sig, webhookSecret);
+  } catch (err) {
+    console.error("Webhook signature verification failed:", err);
+    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+  }
+
+  try {
+    switch (event.type) {
+      case "checkout.session.completed":
+        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+        break;
+
+      case "customer.subscription.deleted":
+        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        break;
+
+      case "customer.subscription.updated":
+        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+        break;
+
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
+    }
+  } catch (err) {
+    console.error(`Error handling ${event.type}:`, err);
+    // Return 200 to prevent Stripe from retrying
+    return NextResponse.json({ received: true, error: "Handler error" });
+  }
+
+  return NextResponse.json({ received: true });
+}
+
+// ============================================================
+// checkout.session.completed
+// ============================================================
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  const email = session.customer_details?.email || session.customer_email;
+  if (!email) {
+    console.error("No email in checkout session");
+    return;
+  }
+
+  const stripeCustomerId = typeof session.customer === "string"
+    ? session.customer
+    : session.customer?.id || null;
+
+  const stripeSubscriptionId = typeof session.subscription === "string"
+    ? session.subscription
+    : session.subscription?.id || null;
+
+  // 1. leads から該当リードを検索
+  const { data: lead } = await supabaseAdmin
+    .from("leads")
+    .select("id, name, company")
+    .eq("email", email)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  const name = lead?.name || session.customer_details?.name || email.split("@")[0];
+
+  // 2. Supabase Auth でユーザー作成（一時パスワード）
+  const tempPassword = generateTempPassword();
+
+  let supabaseUserId: string | null = null;
+
+  // Check if user already exists
+  const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+  const existingUser = existingUsers?.users?.find(u => u.email === email);
+
+  if (existingUser) {
+    supabaseUserId = existingUser.id;
+  } else {
+    const { data: newUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password: tempPassword,
+      email_confirm: true,
+    });
+
+    if (authError) {
+      console.error("Auth user creation error:", authError);
+    } else {
+      supabaseUserId = newUser.user.id;
+    }
+  }
+
+  // 3. customers テーブルに保存（upsert）
+  await supabaseAdmin.from("customers").upsert(
+    {
+      email,
+      stripe_customer_id: stripeCustomerId,
+      stripe_subscription_id: stripeSubscriptionId,
+      supabase_user_id: supabaseUserId,
+      status: "active",
+    },
+    { onConflict: "email" }
+  );
+
+  // 4. leads ステータスを converted に更新
+  if (lead) {
+    await supabaseAdmin
+      .from("leads")
+      .update({ status: "converted" })
+      .eq("id", lead.id);
+  }
+
+  // 5. ウェルカムメール送信（既存ユーザーにはパスワードなし）
+  if (!existingUser) {
+    try {
+      const { sendWelcomeEmail } = await import("@/lib/email");
+      await sendWelcomeEmail({
+        to: email,
+        name,
+        tempPassword,
+      });
+    } catch (err) {
+      console.error("Welcome email error:", err);
+    }
+  }
+}
+
+// ============================================================
+// customer.subscription.deleted
+// ============================================================
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  const subscriptionId = subscription.id;
+
+  await supabaseAdmin
+    .from("customers")
+    .update({ status: "canceled" })
+    .eq("stripe_subscription_id", subscriptionId);
+}
+
+// ============================================================
+// customer.subscription.updated
+// ============================================================
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  const subscriptionId = subscription.id;
+  const status = subscription.status === "active" ? "active" : subscription.status;
+
+  await supabaseAdmin
+    .from("customers")
+    .update({ status })
+    .eq("stripe_subscription_id", subscriptionId);
+}
+
+// ============================================================
+// Helpers
+// ============================================================
+function generateTempPassword(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+  let pw = "";
+  for (let i = 0; i < 12; i++) {
+    pw += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return pw;
 }

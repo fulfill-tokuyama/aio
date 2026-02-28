@@ -194,15 +194,32 @@ export default function AIOServiceLP() {
     return errors;
   };
 
-  const handleSubmit = () => {
+  const [formError, setFormError] = useState("");
+
+  const handleSubmit = async () => {
     const errors = validateForm();
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) return;
     setFormSending(true);
-    setTimeout(() => {
+    setFormError("");
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        setFormError(result.error || "送信に失敗しました");
+        setFormSending(false);
+        return;
+      }
       setFormSending(false);
       setFormSubmitted(true);
-    }, 1500);
+    } catch {
+      setFormError("ネットワークエラーが発生しました。もう一度お試しください。");
+      setFormSending(false);
+    }
   };
 
   const scrollTo = (id) => {
@@ -577,8 +594,8 @@ export default function AIOServiceLP() {
       <Section id="contact">
         <SectionTitle
           tag="Contact"
-          title="無料相談・お問い合わせ"
-          sub="AIO対策について、まずは無料でご相談ください。貴社サイトのAI可視性を簡易診断し、改善の方向性をお伝えします。"
+          title="無料AI可視性診断"
+          sub="貴社サイトのURLを入力するだけ。AI検索での可視性をスコアリングし、弱点と改善提案を数分以内にメールでお届けします。"
         />
 
         <div style={{ maxWidth: 600, margin: "0 auto" }}>
@@ -588,12 +605,12 @@ export default function AIOServiceLP() {
               border: `1px solid ${C.green}30`, textAlign: "center",
             }}>
               <div style={{ fontSize: 48, marginBottom: 16, animation: "float 3s ease-in-out infinite" }}>🎉</div>
-              <h3 style={{ fontSize: 22, fontWeight: 700, margin: "0 0 12px" }}>お問い合わせありがとうございます</h3>
+              <h3 style={{ fontSize: 22, fontWeight: 700, margin: "0 0 12px" }}>診断リクエストを受け付けました</h3>
               <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.7, margin: "0 0 8px" }}>
-                2営業日以内に、ご記入いただいたメールアドレスへご返信いたします。
+                数分以内に診断結果をメールでお届けします。
               </p>
               <p style={{ fontSize: 13, color: C.textDim }}>
-                ※ 貴社サイトの簡易AI可視性レポートを添付してお送りします
+                ※ 迷惑メールフォルダもご確認ください
               </p>
             </div>
           ) : (
@@ -669,12 +686,18 @@ export default function AIOServiceLP() {
                     <span style={{ animation: "pulse2 1s infinite" }}>送信中...</span>
                   </>
                 ) : (
-                  <>無料相談を申し込む</>
+                  <>無料AI可視性診断を受ける</>
                 )}
               </button>
 
+              {formError && (
+                <p style={{ fontSize: 13, color: C.red, textAlign: "center", marginTop: 12 }}>
+                  {formError}
+                </p>
+              )}
+
               <p style={{ fontSize: 11, color: C.textDim, textAlign: "center", marginTop: 12, lineHeight: 1.6 }}>
-                ※ ご入力いただいた情報は、お問い合わせ対応および簡易診断の目的のみに使用します。
+                ※ ご入力いただいた情報は、AI可視性診断の目的のみに使用します。
                 <br />第三者への提供は一切行いません。
               </p>
             </div>

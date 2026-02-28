@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 
 const links = [
-  { href: "/lp", label: "サービスLP", desc: "AIO Insight サービス紹介 + Stripe決済", color: "#F0B429" },
-  { href: "/dashboard", label: "AIOダッシュボード", desc: "AI トラフィック・Brand Radar・競合分析", color: "#60A5FA" },
-  { href: "/pipeline", label: "FormPilot 営業自動化", desc: "LLMO未対策企業の自動発見→自動営業", color: "#34D399" },
+  { href: "/lp", label: "無料AI可視性診断", desc: "AIの検索結果で貴社がどう見えているか無料で診断", color: "#F0B429", primary: true },
+  { href: "/dashboard", label: "AIOダッシュボード", desc: "AI トラフィック・Brand Radar・競合分析（要ログイン）", color: "#60A5FA", primary: false },
+  { href: "/login", label: "ログイン", desc: "有料プランご契約者様のダッシュボードアクセス", color: "#34D399", primary: false },
 ];
 
 export default function Home() {
@@ -34,12 +34,12 @@ export default function Home() {
         {links.map(l => (
           <a key={l.href} href={l.href} style={{
             display: "block", width: 280, padding: "24px 20px",
-            background: "#111622", borderRadius: 10,
-            border: `1px solid #1B2235`, textDecoration: "none",
+            background: l.primary ? "#161C2B" : "#111622", borderRadius: 10,
+            border: `1px solid ${l.primary ? l.color + "40" : "#1B2235"}`, textDecoration: "none",
             color: "#D2DAE8", transition: "border-color 0.2s, transform 0.2s",
           }}
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = l.color; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "#1B2235"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = l.primary ? l.color + "40" : "#1B2235"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
           >
             <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, color: l.color }}>{l.label}</div>
             <div style={{ fontSize: 12, color: "#7E8CA4", lineHeight: 1.5 }}>{l.desc}</div>

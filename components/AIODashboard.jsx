@@ -256,7 +256,7 @@ const TabButton = ({ active, children, onClick }) => (
 // MAIN APP
 // ============================================================
 
-export default function AIODashboard() {
+export default function AIODashboard({ diagnosisData = null, userEmail = "" }) {
   const [trafficData] = useState(generateTrafficData);
   const [activeTab, setActiveTab] = useState("overview");
   const [hoveredPlatform, setHoveredPlatform] = useState(null);
@@ -357,6 +357,62 @@ export default function AIODashboard() {
         {/* ===== OVERVIEW TAB ===== */}
         {activeTab === "overview" && (
           <div className="fade-up">
+
+            {/* Diagnosis Result Panel (real data from props) */}
+            {diagnosisData && (
+              <div style={{
+                background: COLORS.card, borderRadius: 12, padding: 24,
+                border: `1px solid ${COLORS.border}`, marginBottom: 24,
+              }}>
+                <SectionHeader
+                  title="AI可視性診断結果"
+                  subtitle={`${diagnosisData.url} — ${new Date(diagnosisData.createdAt).toLocaleDateString("ja-JP")}に診断`}
+                />
+                <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: 32 }}>
+                  {/* Score */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{
+                      width: 120, height: 120, borderRadius: "50%",
+                      border: `4px solid ${diagnosisData.score >= 70 ? COLORS.green : diagnosisData.score >= 40 ? COLORS.orange : COLORS.red}`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <span style={{
+                        fontSize: 40, fontWeight: 800,
+                        color: diagnosisData.score >= 70 ? COLORS.green : diagnosisData.score >= 40 ? COLORS.orange : COLORS.red,
+                      }}>{diagnosisData.score}</span>
+                    </div>
+                    <span style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 8 }}>/ 100点</span>
+                  </div>
+
+                  {/* Weaknesses & Suggestions */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                    <div>
+                      <h4 style={{ fontSize: 13, color: COLORS.red, margin: "0 0 10px", fontWeight: 700 }}>検出された弱点</h4>
+                      {(diagnosisData.weaknesses || []).slice(0, 5).map((w, i) => (
+                        <div key={i} style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.7, padding: "3px 0" }}>
+                          <span style={{ color: COLORS.red }}>-</span> {w}
+                        </div>
+                      ))}
+                      {diagnosisData.weaknesses?.length > 5 && (
+                        <span style={{ fontSize: 11, color: COLORS.textDim }}>他{diagnosisData.weaknesses.length - 5}件</span>
+                      )}
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: 13, color: COLORS.green, margin: "0 0 10px", fontWeight: 700 }}>改善提案</h4>
+                      {(diagnosisData.suggestions || []).slice(0, 5).map((s, i) => (
+                        <div key={i} style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.7, padding: "3px 0" }}>
+                          <span style={{ color: COLORS.green }}>+</span> {s}
+                        </div>
+                      ))}
+                      {diagnosisData.suggestions?.length > 5 && (
+                        <span style={{ fontSize: 11, color: COLORS.textDim }}>他{diagnosisData.suggestions.length - 5}件</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* KPI Row */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
               <StatCard label="全トラフィック" value={totalAll.toLocaleString()} change={8.3} icon="🌐" color={COLORS.accent} sub="月間ユニーク訪問者" />
@@ -480,6 +536,16 @@ export default function AIODashboard() {
         {/* ===== AI TRAFFIC TAB ===== */}
         {activeTab === "ai-traffic" && (
           <div className="fade-up">
+            <div style={{
+              background: `${COLORS.orange}15`, border: `1px solid ${COLORS.orange}30`,
+              borderRadius: 8, padding: "10px 16px", marginBottom: 16,
+              display: "flex", alignItems: "center", gap: 8,
+            }}>
+              <span style={{ fontSize: 14 }}>📌</span>
+              <span style={{ fontSize: 12, color: COLORS.orange }}>
+                このタブのデータはデモデータです。Ahrefsデータ連携は今後追加予定です。
+              </span>
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
               <StatCard label="AI検索トラフィック" value={totalAITraffic.toLocaleString()} change={32.4} icon="🤖" color={COLORS.green} sub="ChatGPT + Perplexity + Copilot" />
               <StatCard label="AI流入バウンス率" value="34.2%" change={-5.1} icon="📉" color={COLORS.cyan} sub="通常トラフィックより12%低い" />
@@ -567,6 +633,16 @@ export default function AIODashboard() {
         {/* ===== BRAND RADAR TAB ===== */}
         {activeTab === "brand-radar" && (
           <div className="fade-up">
+            <div style={{
+              background: `${COLORS.orange}15`, border: `1px solid ${COLORS.orange}30`,
+              borderRadius: 8, padding: "10px 16px", marginBottom: 16,
+              display: "flex", alignItems: "center", gap: 8,
+            }}>
+              <span style={{ fontSize: 14 }}>📌</span>
+              <span style={{ fontSize: 12, color: COLORS.orange }}>
+                このタブのデータはデモデータです。Ahrefsデータ連携は今後追加予定です。
+              </span>
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
               <StatCard label="AI言及数" value="2,481" change={18.7} icon="💬" color={COLORS.accent} sub="6プラットフォーム合計" />
               <StatCard label="AI引用数" value="933" change={22.1} icon="🔗" color={COLORS.green} sub="被リンクページ数" />
@@ -662,6 +738,16 @@ export default function AIODashboard() {
         {/* ===== COMPETITORS TAB ===== */}
         {activeTab === "competitors" && (
           <div className="fade-up">
+            <div style={{
+              background: `${COLORS.orange}15`, border: `1px solid ${COLORS.orange}30`,
+              borderRadius: 8, padding: "10px 16px", marginBottom: 16,
+              display: "flex", alignItems: "center", gap: 8,
+            }}>
+              <span style={{ fontSize: 14 }}>📌</span>
+              <span style={{ fontSize: 12, color: COLORS.orange }}>
+                このタブのデータはデモデータです。Ahrefsデータ連携は今後追加予定です。
+              </span>
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
               {COMPETITOR_DATA.map((c, i) => (
                 <div key={i} style={{
