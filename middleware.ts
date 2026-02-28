@@ -31,6 +31,13 @@ export async function middleware(request: NextRequest) {
 
   // Protect /dashboard — redirect to /login if not authenticated
   if (!user && request.nextUrl.pathname.startsWith("/dashboard")) {
+    // 管理者プレビュー: ?token=ADMIN_SECRET でバイパス
+    const adminSecret = process.env.ADMIN_SECRET;
+    const token = request.nextUrl.searchParams.get("token");
+    if (adminSecret && token === adminSecret) {
+      return supabaseResponse;
+    }
+
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
