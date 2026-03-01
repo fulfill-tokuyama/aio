@@ -10,15 +10,14 @@ const supabase = createBrowserClient(
 );
 
 const C = {
-  bg: "#04060B",
-  card: "#111827",
-  border: "#1E293B",
-  text: "#E2E8F0",
-  textSub: "#8896AB",
-  textDim: "#5A6A80",
-  accent: "#3B82F6",
-  red: "#EF4444",
-  gold: "#F0B429",
+  bg: "#FFFFFF",
+  card: "#FFFFFF",
+  border: "#E5E7EB",
+  text: "#111827",
+  textSub: "#4B5563",
+  textDim: "#9CA3AF",
+  accent: "#2563EB",
+  red: "#DC2626",
 };
 
 export default function LoginPage() {
@@ -54,7 +53,7 @@ export default function LoginPage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: C.bg,
+        background: "#F9FAFB",
         fontFamily: "'Noto Sans JP', system-ui, sans-serif",
         padding: 24,
       }}
@@ -67,6 +66,7 @@ export default function LoginPage() {
           borderRadius: 16,
           border: `1px solid ${C.border}`,
           padding: mob ? "36px 24px" : "48px 36px",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
         }}
       >
         {/* Logo */}
@@ -77,7 +77,7 @@ export default function LoginPage() {
               width: 44,
               height: 44,
               borderRadius: 10,
-              background: "linear-gradient(135deg, #F0B429, #D49B1F)",
+              background: "linear-gradient(135deg, #2563EB, #1D4ED8)",
               lineHeight: "44px",
               textAlign: "center",
               fontSize: 22,
@@ -96,7 +96,7 @@ export default function LoginPage() {
           >
             AIO Insight
           </h1>
-          <p style={{ color: C.textDim, fontSize: 12, margin: 0 }}>
+          <p style={{ color: C.textDim, fontSize: 14, margin: 0 }}>
             ダッシュボードにログイン
           </p>
         </div>
@@ -107,7 +107,7 @@ export default function LoginPage() {
               style={{
                 display: "block",
                 color: C.textSub,
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: 600,
                 marginBottom: 6,
               }}
@@ -123,7 +123,7 @@ export default function LoginPage() {
               style={{
                 width: "100%",
                 padding: "12px 14px",
-                background: C.bg,
+                background: "#F9FAFB",
                 border: `1px solid ${C.border}`,
                 borderRadius: 8,
                 color: C.text,
@@ -139,7 +139,7 @@ export default function LoginPage() {
               style={{
                 display: "block",
                 color: C.textSub,
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: 600,
                 marginBottom: 6,
               }}
@@ -155,7 +155,7 @@ export default function LoginPage() {
               style={{
                 width: "100%",
                 padding: "12px 14px",
-                background: C.bg,
+                background: "#F9FAFB",
                 border: `1px solid ${C.border}`,
                 borderRadius: 8,
                 color: C.text,
@@ -170,7 +170,7 @@ export default function LoginPage() {
             <p
               style={{
                 color: C.red,
-                fontSize: 13,
+                fontSize: 14,
                 textAlign: "center",
                 marginBottom: 16,
               }}
@@ -185,7 +185,7 @@ export default function LoginPage() {
             style={{
               width: "100%",
               padding: 14,
-              background: `linear-gradient(135deg, ${C.accent}, #2563EB)`,
+              background: `linear-gradient(135deg, ${C.accent}, #1D4ED8)`,
               color: "#fff",
               fontSize: 14,
               fontWeight: 700,
@@ -200,17 +200,17 @@ export default function LoginPage() {
         </form>
 
         <div style={{ textAlign: "center", marginTop: 20 }}>
-          <a href="/reset-password" style={{ color: C.accent, fontSize: 12, textDecoration: "none" }}>
+          <a href="/reset-password" style={{ color: C.accent, fontSize: 14, textDecoration: "none" }}>
             パスワードをお忘れですか？
           </a>
         </div>
         <p
           style={{
             color: C.textDim,
-            fontSize: 11,
+            fontSize: 13,
             textAlign: "center",
             marginTop: 12,
-            lineHeight: 1.6,
+            lineHeight: 1.7,
           }}
         >
           パスワードはウェルカムメールに記載されています。

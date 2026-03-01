@@ -9,15 +9,15 @@ const supabase = createBrowserClient(
 );
 
 const C = {
-  bg: "#04060B",
-  card: "#111827",
-  border: "#1E293B",
-  text: "#E2E8F0",
-  sub: "#8896AB",
-  dim: "#5A6A80",
-  accent: "#3B82F6",
-  red: "#EF4444",
-  green: "#10B981",
+  bg: "#FFFFFF",
+  card: "#FFFFFF",
+  border: "#E5E7EB",
+  text: "#111827",
+  sub: "#4B5563",
+  dim: "#9CA3AF",
+  accent: "#2563EB",
+  red: "#DC2626",
+  green: "#059669",
 };
 
 export default function ResetPasswordPage() {
@@ -83,16 +83,17 @@ export default function ResetPasswordPage() {
   return (
     <div style={{
       minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-      background: C.bg, fontFamily: "'Noto Sans JP', system-ui, sans-serif", padding: 24,
+      background: "#F9FAFB", fontFamily: "'Noto Sans JP', system-ui, sans-serif", padding: 24,
     }}>
       <div style={{
         maxWidth: 400, width: "100%", background: C.card, borderRadius: 16,
         border: `1px solid ${C.border}`, padding: "48px 36px",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
       }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div style={{
             display: "inline-block", width: 44, height: 44, borderRadius: 10,
-            background: "linear-gradient(135deg, #F0B429, #D49B1F)", lineHeight: "44px",
+            background: "linear-gradient(135deg, #2563EB, #1D4ED8)", lineHeight: "44px",
             textAlign: "center", fontSize: 22, marginBottom: 12,
           }}>
             ⚡
@@ -100,7 +101,7 @@ export default function ResetPasswordPage() {
           <h1 style={{ color: C.text, fontSize: 20, fontWeight: 800, margin: "0 0 4px" }}>
             {mode === "request" ? "パスワードリセット" : "新しいパスワード設定"}
           </h1>
-          <p style={{ color: C.dim, fontSize: 12, margin: 0 }}>
+          <p style={{ color: C.dim, fontSize: 14, margin: 0 }}>
             {mode === "request" ? "登録メールアドレスにリセットリンクを送信します" : "新しいパスワードを入力してください"}
           </p>
         </div>
@@ -108,23 +109,23 @@ export default function ResetPasswordPage() {
         {mode === "request" ? (
           <form onSubmit={handleRequestReset}>
             <div style={{ marginBottom: 20 }}>
-              <label style={{ display: "block", color: C.sub, fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+              <label style={{ display: "block", color: C.sub, fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
                 メールアドレス
               </label>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
                 placeholder="your@company.co.jp"
                 style={{
-                  width: "100%", padding: "12px 14px", background: C.bg, border: `1px solid ${C.border}`,
+                  width: "100%", padding: "12px 14px", background: "#F9FAFB", border: `1px solid ${C.border}`,
                   borderRadius: 8, color: C.text, fontSize: 14, outline: "none", boxSizing: "border-box",
                 }}
               />
             </div>
 
-            {error && <p style={{ color: C.red, fontSize: 13, textAlign: "center", marginBottom: 16 }}>{error}</p>}
-            {success && <p style={{ color: C.green, fontSize: 13, textAlign: "center", marginBottom: 16 }}>{success}</p>}
+            {error && <p style={{ color: C.red, fontSize: 14, textAlign: "center", marginBottom: 16 }}>{error}</p>}
+            {success && <p style={{ color: C.green, fontSize: 14, textAlign: "center", marginBottom: 16 }}>{success}</p>}
 
             <button type="submit" disabled={loading} style={{
-              width: "100%", padding: 14, background: `linear-gradient(135deg, ${C.accent}, #2563EB)`,
+              width: "100%", padding: 14, background: `linear-gradient(135deg, ${C.accent}, #1D4ED8)`,
               color: "#fff", fontSize: 14, fontWeight: 700, border: "none", borderRadius: 10,
               cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1,
             }}>
@@ -134,23 +135,23 @@ export default function ResetPasswordPage() {
         ) : (
           <form onSubmit={handleUpdatePassword}>
             <div style={{ marginBottom: 20 }}>
-              <label style={{ display: "block", color: C.sub, fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+              <label style={{ display: "block", color: C.sub, fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
                 新しいパスワード
               </label>
               <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required
                 placeholder="8文字以上"
                 style={{
-                  width: "100%", padding: "12px 14px", background: C.bg, border: `1px solid ${C.border}`,
+                  width: "100%", padding: "12px 14px", background: "#F9FAFB", border: `1px solid ${C.border}`,
                   borderRadius: 8, color: C.text, fontSize: 14, outline: "none", boxSizing: "border-box",
                 }}
               />
             </div>
 
-            {error && <p style={{ color: C.red, fontSize: 13, textAlign: "center", marginBottom: 16 }}>{error}</p>}
-            {success && <p style={{ color: C.green, fontSize: 13, textAlign: "center", marginBottom: 16 }}>{success}</p>}
+            {error && <p style={{ color: C.red, fontSize: 14, textAlign: "center", marginBottom: 16 }}>{error}</p>}
+            {success && <p style={{ color: C.green, fontSize: 14, textAlign: "center", marginBottom: 16 }}>{success}</p>}
 
             <button type="submit" disabled={loading} style={{
-              width: "100%", padding: 14, background: `linear-gradient(135deg, ${C.accent}, #2563EB)`,
+              width: "100%", padding: 14, background: `linear-gradient(135deg, ${C.accent}, #1D4ED8)`,
               color: "#fff", fontSize: 14, fontWeight: 700, border: "none", borderRadius: 10,
               cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1,
             }}>
@@ -160,7 +161,7 @@ export default function ResetPasswordPage() {
         )}
 
         <div style={{ textAlign: "center", marginTop: 20 }}>
-          <a href="/login" style={{ color: C.sub, fontSize: 12, textDecoration: "none" }}>
+          <a href="/login" style={{ color: C.sub, fontSize: 14, textDecoration: "none" }}>
             ログインページに戻る
           </a>
         </div>

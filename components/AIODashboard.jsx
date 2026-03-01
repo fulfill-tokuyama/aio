@@ -7,28 +7,28 @@ import { useIsMobile } from "../hooks/useIsMobile";
 // ============================================================
 
 const COLORS = {
-  bg: "#0B0F1A",
-  surface: "#111827",
-  surfaceHover: "#1A2235",
-  card: "#151D2E",
-  cardHover: "#1C2640",
-  border: "#1E293B",
-  borderLight: "#2A3A52",
-  text: "#E2E8F0",
-  textMuted: "#8896AB",
-  textDim: "#5A6A80",
-  accent: "#3B82F6",
-  accentGlow: "rgba(59,130,246,0.15)",
-  green: "#10B981",
-  greenBg: "rgba(16,185,129,0.12)",
-  red: "#EF4444",
-  redBg: "rgba(239,68,68,0.12)",
-  orange: "#F59E0B",
-  orangeBg: "rgba(245,158,11,0.12)",
-  purple: "#8B5CF6",
-  purpleBg: "rgba(139,92,246,0.12)",
-  cyan: "#06B6D4",
-  cyanBg: "rgba(6,182,212,0.12)",
+  bg: "#FFFFFF",
+  surface: "#F9FAFB",
+  surfaceHover: "#F3F4F6",
+  card: "#FFFFFF",
+  cardHover: "#F9FAFB",
+  border: "#E5E7EB",
+  borderLight: "#D1D5DB",
+  text: "#111827",
+  textMuted: "#4B5563",
+  textDim: "#9CA3AF",
+  accent: "#2563EB",
+  accentGlow: "rgba(37,99,235,0.07)",
+  green: "#059669",
+  greenBg: "rgba(5,150,105,0.08)",
+  red: "#DC2626",
+  redBg: "rgba(220,38,38,0.08)",
+  orange: "#D97706",
+  orangeBg: "rgba(217,119,6,0.08)",
+  purple: "#7C3AED",
+  purpleBg: "rgba(124,58,237,0.08)",
+  cyan: "#0891B2",
+  cyanBg: "rgba(8,145,178,0.08)",
 };
 
 // Mock data generators
@@ -124,7 +124,7 @@ const MiniBarChart = ({ data, colors, height = 120, labels }) => {
       </svg>
       {labels && (
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-          {labels.map((l, i) => <span key={i} style={{ fontSize: 9, color: COLORS.textDim }}>{l}</span>)}
+          {labels.map((l, i) => <span key={i} style={{ fontSize: 13, color: COLORS.textDim }}>{l}</span>)}
         </div>
       )}
     </div>
@@ -156,7 +156,7 @@ const AreaChart = ({ data, keys, colors, height = 200 }) => {
       </svg>
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, padding: "0 2px" }}>
         {data.filter((_, i) => i % 5 === 0).map((d, i) => (
-          <span key={i} style={{ fontSize: 9, color: COLORS.textDim }}>{d.date}</span>
+          <span key={i} style={{ fontSize: 13, color: COLORS.textDim }}>{d.date}</span>
         ))}
       </div>
     </div>
@@ -206,15 +206,15 @@ const StatCard = ({ label, value, change, icon, color = COLORS.accent, sub }) =>
     <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: color, opacity: 0.6 }} />
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
       <div>
-        <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 6, letterSpacing: 0.5, textTransform: "uppercase" }}>{label}</div>
-        <div style={{ fontSize: 28, fontWeight: 700, color: COLORS.text, lineHeight: 1 }}>{value}</div>
-        {sub && <div style={{ fontSize: 11, color: COLORS.textDim, marginTop: 4 }}>{sub}</div>}
+        <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 6, letterSpacing: 0.5, textTransform: "uppercase" }}>{label}</div>
+        <div style={{ fontSize: 28, fontWeight: 700, color: COLORS.text, lineHeight: 1.4 }}>{value}</div>
+        {sub && <div style={{ fontSize: 13, color: COLORS.textDim, marginTop: 4 }}>{sub}</div>}
       </div>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
         <span style={{ fontSize: 20 }}>{icon}</span>
         {change !== undefined && (
           <span style={{
-            fontSize: 11, fontWeight: 600, padding: "2px 6px", borderRadius: 4,
+            fontSize: 13, fontWeight: 600, padding: "4px 10px", borderRadius: 6,
             color: change >= 0 ? COLORS.green : COLORS.red,
             background: change >= 0 ? COLORS.greenBg : COLORS.redBg,
           }}>
@@ -230,7 +230,7 @@ const SectionHeader = ({ title, subtitle, action }) => (
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
     <div>
       <h2 style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, margin: 0 }}>{title}</h2>
-      {subtitle && <p style={{ fontSize: 11, color: COLORS.textDim, margin: "2px 0 0" }}>{subtitle}</p>}
+      {subtitle && <p style={{ fontSize: 13, color: COLORS.textDim, margin: "2px 0 0" }}>{subtitle}</p>}
     </div>
     {action}
   </div>
@@ -238,18 +238,18 @@ const SectionHeader = ({ title, subtitle, action }) => (
 
 const Badge = ({ children, color = COLORS.accent }) => (
   <span style={{
-    fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 4,
+    fontSize: 13, fontWeight: 600, padding: "4px 10px", borderRadius: 6,
     background: `${color}20`, color, letterSpacing: 0.3,
   }}>{children}</span>
 );
 
 const TabButton = ({ active, children, onClick }) => (
   <button onClick={onClick} style={{
-    padding: "6px 14px", fontSize: 12, fontWeight: active ? 600 : 400,
+    padding: "6px 14px", fontSize: 14, fontWeight: active ? 600 : 400,
     color: active ? COLORS.accent : COLORS.textMuted,
     background: active ? COLORS.accentGlow : "transparent",
     border: `1px solid ${active ? COLORS.accent + "40" : "transparent"}`,
-    borderRadius: 6, cursor: "pointer", transition: "all 0.2s",
+    borderRadius: 8, cursor: "pointer", transition: "all 0.2s",
   }}>{children}</button>
 );
 
@@ -372,10 +372,10 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
   return (
     <div style={{
       minHeight: "100vh", background: COLORS.bg, color: COLORS.text,
-      fontFamily: "'DM Sans', 'Noto Sans JP', sans-serif",
+      fontFamily: "'Noto Sans JP', system-ui, sans-serif",
       opacity: mounted ? 1 : 0, transition: "opacity 0.5s",
     }}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 
       {/* HEADER */}
       <header style={{
@@ -396,7 +396,7 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
             <h1 style={{ fontSize: mob ? 15 : 17, fontWeight: 700, margin: 0, letterSpacing: -0.3 }}>
               AIO Dashboard
             </h1>
-            {!mob && <p style={{ fontSize: 10, color: COLORS.textDim, margin: 0 }}>
+            {!mob && <p style={{ fontSize: 13, color: COLORS.textDim, margin: 0 }}>
               AI Optimization Intelligence × Ahrefs Web Analytics
             </p>}
           </div>
@@ -412,7 +412,7 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
             width: 1, height: 20, background: COLORS.border, margin: "0 4px"
           }} />}
           <div style={{
-            padding: "6px 12px", borderRadius: 6, fontSize: 11,
+            padding: "8px 16px", borderRadius: 8, fontSize: 13,
             background: COLORS.greenBg, color: COLORS.green, fontWeight: 600,
             display: "flex", alignItems: "center", gap: 4,
           }}>
@@ -480,7 +480,7 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
                         color: diagnosisData.score >= 70 ? COLORS.green : diagnosisData.score >= 40 ? COLORS.orange : COLORS.red,
                       }}>{diagnosisData.score}</span>
                     </div>
-                    <span style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 8 }}>/ 100点</span>
+                    <span style={{ fontSize: 14, color: COLORS.textMuted, marginTop: 8 }}>/ 100点</span>
                   </div>
 
                   {/* Weaknesses & Suggestions */}
@@ -488,23 +488,23 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
                     <div>
                       <h4 style={{ fontSize: 13, color: COLORS.red, margin: "0 0 10px", fontWeight: 700 }}>検出された弱点</h4>
                       {(diagnosisData.weaknesses || []).slice(0, 5).map((w, i) => (
-                        <div key={i} style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.7, padding: "3px 0" }}>
+                        <div key={i} style={{ fontSize: 14, color: COLORS.textMuted, lineHeight: 1.7, padding: "3px 0" }}>
                           <span style={{ color: COLORS.red }}>-</span> {w}
                         </div>
                       ))}
                       {diagnosisData.weaknesses?.length > 5 && (
-                        <span style={{ fontSize: 11, color: COLORS.textDim }}>他{diagnosisData.weaknesses.length - 5}件</span>
+                        <span style={{ fontSize: 13, color: COLORS.textDim }}>他{diagnosisData.weaknesses.length - 5}件</span>
                       )}
                     </div>
                     <div>
                       <h4 style={{ fontSize: 13, color: COLORS.green, margin: "0 0 10px", fontWeight: 700 }}>改善提案</h4>
                       {(diagnosisData.suggestions || []).slice(0, 5).map((s, i) => (
-                        <div key={i} style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.7, padding: "3px 0" }}>
+                        <div key={i} style={{ fontSize: 14, color: COLORS.textMuted, lineHeight: 1.7, padding: "3px 0" }}>
                           <span style={{ color: COLORS.green }}>+</span> {s}
                         </div>
                       ))}
                       {diagnosisData.suggestions?.length > 5 && (
-                        <span style={{ fontSize: 11, color: COLORS.textDim }}>他{diagnosisData.suggestions.length - 5}件</span>
+                        <span style={{ fontSize: 13, color: COLORS.textDim }}>他{diagnosisData.suggestions.length - 5}件</span>
                       )}
                     </div>
                   </div>
@@ -594,7 +594,7 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
                     <div key={i}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                         <span style={{ fontSize: 13, color: COLORS.text }}>{cat.label}</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "JetBrains Mono", color: cat.color }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Noto Sans JP', system-ui, sans-serif", color: cat.color }}>
                           {cat.score} / {cat.max}
                         </span>
                       </div>
@@ -624,7 +624,7 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
               display: "flex", alignItems: "center", gap: 8,
             }}>
               <span style={{ fontSize: 14 }}>📌</span>
-              <span style={{ fontSize: 12, color: COLORS.orange }}>
+              <span style={{ fontSize: 14, color: COLORS.orange }}>
                 Ahrefs Web Analytics連携後にリアルデータを表示します。現在はサンプルデータです。
               </span>
             </div>
@@ -655,9 +655,9 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
                     { name: "その他AI", pct: 12, color: COLORS.textDim },
                   ].map((s, i) => (
                     <div key={i}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 4 }}>
                         <span>{s.name}</span>
-                        <span style={{ fontWeight: 600, fontFamily: "JetBrains Mono" }}>{s.pct}%</span>
+                        <span style={{ fontWeight: 600, fontFamily: "'Noto Sans JP', system-ui, sans-serif" }}>{s.pct}%</span>
                       </div>
                       <div style={{ height: 6, background: COLORS.surface, borderRadius: 3, overflow: "hidden" }}>
                         <div style={{
@@ -677,7 +677,7 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
               <div style={{ display: "flex", flexDirection: "column", gap: 2, overflowX: mob ? "auto" : undefined, WebkitOverflowScrolling: "touch" }}>
                 <div style={{
                   display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1fr 100px", minWidth: mob ? 600 : undefined,
-                  padding: "8px 12px", fontSize: 10, color: COLORS.textDim, textTransform: "uppercase", letterSpacing: 0.5,
+                  padding: "8px 12px", fontSize: 13, color: COLORS.textDim, textTransform: "uppercase", letterSpacing: 0.5,
                   borderBottom: `1px solid ${COLORS.border}`,
                 }}>
                   <span>ページURL</span><span style={{ textAlign: "right" }}>AI流入</span>
@@ -687,15 +687,15 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
                 {TOP_PAGES.map((p, i) => (
                   <div key={i} style={{
                     display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1fr 100px",
-                    padding: "10px 12px", borderRadius: 6, fontSize: 12, alignItems: "center",
+                    padding: "10px 12px", borderRadius: 8, fontSize: 14, alignItems: "center",
                     background: i % 2 === 0 ? "transparent" : COLORS.surfaceHover + "30",
                     minWidth: mob ? 600 : undefined,
                   }}>
-                    <span style={{ color: COLORS.accent, fontFamily: "JetBrains Mono", fontSize: 11 }}>{p.url}</span>
-                    <span style={{ textAlign: "right", fontWeight: 600, fontFamily: "JetBrains Mono", color: COLORS.green }}>
+                    <span style={{ color: COLORS.accent, fontFamily: "'Noto Sans JP', system-ui, sans-serif", fontSize: 13 }}>{p.url}</span>
+                    <span style={{ textAlign: "right", fontWeight: 600, fontFamily: "'Noto Sans JP', system-ui, sans-serif", color: COLORS.green }}>
                       {p.aiTraffic.toLocaleString()}
                     </span>
-                    <span style={{ textAlign: "right", fontFamily: "JetBrains Mono" }}>{p.totalTraffic.toLocaleString()}</span>
+                    <span style={{ textAlign: "right", fontFamily: "'Noto Sans JP', system-ui, sans-serif" }}>{p.totalTraffic.toLocaleString()}</span>
                     <span style={{ textAlign: "right" }}>
                       <Badge color={COLORS.cyan}>{p.aiRatio}%</Badge>
                     </span>
@@ -722,7 +722,7 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
               display: "flex", alignItems: "center", gap: 8,
             }}>
               <span style={{ fontSize: 14 }}>📌</span>
-              <span style={{ fontSize: 12, color: COLORS.orange }}>
+              <span style={{ fontSize: 14, color: COLORS.orange }}>
                 Ahrefs Web Analytics連携後にリアルデータを表示します。現在はサンプルデータです。
               </span>
             </div>
@@ -745,9 +745,9 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
                         <span style={{ fontSize: 13 }}>{p.name}</span>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "JetBrains Mono" }}>{p.sov}%</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Noto Sans JP', system-ui, sans-serif" }}>{p.sov}%</span>
                         <span style={{
-                          fontSize: 10, color: p.trend >= 0 ? COLORS.green : COLORS.red,
+                          fontSize: 13, color: p.trend >= 0 ? COLORS.green : COLORS.red,
                         }}>
                           {p.trend >= 0 ? "↑" : "↓"}{Math.abs(p.trend)}%
                         </span>
@@ -779,11 +779,11 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
                 <div style={{ display: "flex", gap: 16, marginTop: 12, justifyContent: "center" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <div style={{ width: 10, height: 10, borderRadius: 2, background: COLORS.accent }} />
-                    <span style={{ fontSize: 11, color: COLORS.textMuted }}>言及</span>
+                    <span style={{ fontSize: 13, color: COLORS.textMuted }}>言及</span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <div style={{ width: 10, height: 10, borderRadius: 2, background: COLORS.green }} />
-                    <span style={{ fontSize: 11, color: COLORS.textMuted }}>引用</span>
+                    <span style={{ fontSize: 13, color: COLORS.textMuted }}>引用</span>
                   </div>
                 </div>
               </div>
@@ -803,11 +803,11 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
                   display: "grid", gridTemplateColumns: "2fr 1fr 1fr 80px", alignItems: "center",
                   padding: "10px 12px", borderBottom: i < 4 ? `1px solid ${COLORS.border}` : "none",
                 }}>
-                  <span style={{ fontFamily: "JetBrains Mono", fontSize: 12, color: COLORS.accent }}>{d.domain}</span>
-                  <span style={{ textAlign: "right", fontSize: 12 }}><strong>{d.citations}</strong> 引用</span>
-                  <span style={{ textAlign: "right", fontSize: 12, color: COLORS.textMuted }}>{d.pages} ページ</span>
+                  <span style={{ fontFamily: "'Noto Sans JP', system-ui, sans-serif", fontSize: 14, color: COLORS.accent }}>{d.domain}</span>
+                  <span style={{ textAlign: "right", fontSize: 14 }}><strong>{d.citations}</strong> 引用</span>
+                  <span style={{ textAlign: "right", fontSize: 14, color: COLORS.textMuted }}>{d.pages} ページ</span>
                   <span style={{
-                    textAlign: "right", fontSize: 11, fontWeight: 600,
+                    textAlign: "right", fontSize: 13, fontWeight: 600,
                     color: d.growth >= 0 ? COLORS.green : COLORS.red,
                   }}>
                     {d.growth >= 0 ? "+" : ""}{d.growth}%
@@ -827,7 +827,7 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
               display: "flex", alignItems: "center", gap: 8,
             }}>
               <span style={{ fontSize: 14 }}>📌</span>
-              <span style={{ fontSize: 12, color: COLORS.orange }}>
+              <span style={{ fontSize: 14, color: COLORS.orange }}>
                 Ahrefs Web Analytics連携後にリアルデータを表示します。現在はサンプルデータです。
               </span>
             </div>
@@ -843,18 +843,18 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
                     <span style={{ fontSize: 14, fontWeight: 600 }}>{c.name}</span>
                     {i === 0 && <Badge color={COLORS.green}>YOU</Badge>}
                   </div>
-                  <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "JetBrains Mono", color: c.color, marginBottom: 4 }}>
+                  <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "'Noto Sans JP', system-ui, sans-serif", color: c.color, marginBottom: 4 }}>
                     {c.sov}%
                   </div>
-                  <div style={{ fontSize: 10, color: COLORS.textDim }}>AI Share of Voice</div>
+                  <div style={{ fontSize: 13, color: COLORS.textDim }}>AI Share of Voice</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
                     <div>
-                      <div style={{ fontSize: 10, color: COLORS.textDim }}>言及</div>
-                      <div style={{ fontSize: 13, fontWeight: 600, fontFamily: "JetBrains Mono" }}>{c.mentions.toLocaleString()}</div>
+                      <div style={{ fontSize: 13, color: COLORS.textDim }}>言及</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, fontFamily: "'Noto Sans JP', system-ui, sans-serif" }}>{c.mentions.toLocaleString()}</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 10, color: COLORS.textDim }}>引用</div>
-                      <div style={{ fontSize: 13, fontWeight: 600, fontFamily: "JetBrains Mono" }}>{c.citations.toLocaleString()}</div>
+                      <div style={{ fontSize: 13, color: COLORS.textDim }}>引用</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, fontFamily: "'Noto Sans JP', system-ui, sans-serif" }}>{c.citations.toLocaleString()}</div>
                     </div>
                   </div>
                 </div>
@@ -873,7 +873,7 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
                 ].map((l, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 5 }}>
                     <div style={{ width: 10, height: 3, borderRadius: 2, background: l.color }} />
-                    <span style={{ fontSize: 11, color: COLORS.textMuted }}>{l.label}</span>
+                    <span style={{ fontSize: 13, color: COLORS.textMuted }}>{l.label}</span>
                   </div>
                 ))}
               </div>
@@ -900,8 +900,8 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
                   padding: "10px 12px", borderBottom: i < 4 ? `1px solid ${COLORS.border}` : "none",
                 }}>
                   <span style={{ fontSize: 13, fontWeight: 500 }}>{g.topic}</span>
-                  <span style={{ fontSize: 12, color: COLORS.textMuted }}>{g.competitor}</span>
-                  <span style={{ fontSize: 12, fontFamily: "JetBrains Mono" }}>{g.mentions} 件</span>
+                  <span style={{ fontSize: 14, color: COLORS.textMuted }}>{g.competitor}</span>
+                  <span style={{ fontSize: 14, fontFamily: "'Noto Sans JP', system-ui, sans-serif" }}>{g.mentions} 件</span>
                   <span style={{ textAlign: "right" }}>
                     <Badge color={
                       g.opportunity === "HIGH" ? COLORS.red :
@@ -921,10 +921,10 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
           justifyContent: "space-between", alignItems: mob ? "flex-start" : "center",
           gap: mob ? 8 : 0,
         }}>
-          <div style={{ fontSize: 11, color: COLORS.textDim }}>
+          <div style={{ fontSize: 13, color: COLORS.textDim }}>
             Powered by Ahrefs Web Analytics API (stats/chart) + Brand Radar API
           </div>
-          <div style={{ fontSize: 11, color: COLORS.textDim }}>
+          <div style={{ fontSize: 13, color: COLORS.textDim }}>
             Fulfill Corporation × BeginAI © 2026
           </div>
         </div>

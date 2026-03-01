@@ -29,7 +29,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body style={{ margin: 0, padding: 0, background: "#04060B" }}>
+      <body style={{ margin: 0, padding: 0, background: "#FFFFFF" }}>
         {children}
       </body>
     </html>
