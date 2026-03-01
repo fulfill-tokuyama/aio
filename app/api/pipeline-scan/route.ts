@@ -56,14 +56,21 @@ function calculateAiScore(llmoScore: number, weaknesses: string[], weaknessDetai
   return Math.round(Math.max(0, Math.min(150, raw)));
 }
 
-// 既存pipeline_leadsのURL一覧を取得
+// 既存pipeline_leads + leads のURL一覧を取得（テーブル横断で重複防止）
 async function getExistingUrls(): Promise<Set<string>> {
-  const { data } = await supabaseAdmin
-    .from("pipeline_leads")
-    .select("url");
+  const [pipelineResult, leadsResult] = await Promise.all([
+    supabaseAdmin.from("pipeline_leads").select("url"),
+    supabaseAdmin.from("leads").select("url"),
+  ]);
+
   const urls = new Set<string>();
-  if (data) {
-    for (const row of data) {
+  if (pipelineResult.data) {
+    for (const row of pipelineResult.data) {
+      if (row.url) urls.add(normalizeUrl(row.url));
+    }
+  }
+  if (leadsResult.data) {
+    for (const row of leadsResult.data) {
       if (row.url) urls.add(normalizeUrl(row.url));
     }
   }

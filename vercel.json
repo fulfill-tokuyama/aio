@@ -6,11 +6,11 @@
   "crons": [
     {
       "path": "/api/rescan",
-      "schedule": "0 3 * * 1"
+      "schedule": "0 18 * * 0"
     },
     {
       "path": "/api/auto-send",
-      "schedule": "0 1 * * *"
+      "schedule": "0 1 * * 1-5"
     }
   ]
 }

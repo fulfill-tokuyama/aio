@@ -78,7 +78,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // 1. leads から該当リードを検索
   const { data: lead } = await supabaseAdmin
     .from("leads")
-    .select("id, name, company")
+    .select("id, name, company, url")
     .eq("email", email)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -131,6 +131,44 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       .eq("id", lead.id);
   }
 
+  // 4b. pipeline_leads の phase を customer に更新（メールまたはURLで照合）
+  try {
+    // メールアドレスで照合
+    const { data: pipelineLead } = await supabaseAdmin
+      .from("pipeline_leads")
+      .select("id")
+      .eq("contact_email", email)
+      .neq("phase", "customer")
+      .limit(1)
+      .single();
+
+    if (pipelineLead) {
+      await supabaseAdmin
+        .from("pipeline_leads")
+        .update({
+          phase: "customer",
+          stripe_status: "active",
+          mrr: 10000,
+          follow_up_scheduled: null,
+        })
+        .eq("id", pipelineLead.id);
+    } else if (lead?.url) {
+      // URLドメインで照合（フォールバック）
+      await supabaseAdmin
+        .from("pipeline_leads")
+        .update({
+          phase: "customer",
+          stripe_status: "active",
+          mrr: 10000,
+          follow_up_scheduled: null,
+        })
+        .eq("url", lead.url)
+        .neq("phase", "customer");
+    }
+  } catch {
+    console.error("pipeline_leads customer update failed (non-fatal)");
+  }
+
   // 5. ウェルカムメール送信（既存ユーザーにはパスワードなし）
   if (!existingUser) {
     try {
@@ -156,6 +194,20 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     .from("customers")
     .update({ status: "canceled" })
     .eq("stripe_subscription_id", subscriptionId);
+
+  // pipeline_leads の stripe_status も同期
+  const { data: customer } = await supabaseAdmin
+    .from("customers")
+    .select("email")
+    .eq("stripe_subscription_id", subscriptionId)
+    .single();
+
+  if (customer?.email) {
+    await supabaseAdmin
+      .from("pipeline_leads")
+      .update({ stripe_status: "canceled", mrr: 0 })
+      .eq("contact_email", customer.email);
+  }
 }
 
 // ============================================================
@@ -169,6 +221,20 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     .from("customers")
     .update({ status })
     .eq("stripe_subscription_id", subscriptionId);
+
+  // pipeline_leads の stripe_status も同期
+  const { data: customer } = await supabaseAdmin
+    .from("customers")
+    .select("email")
+    .eq("stripe_subscription_id", subscriptionId)
+    .single();
+
+  if (customer?.email) {
+    await supabaseAdmin
+      .from("pipeline_leads")
+      .update({ stripe_status: status })
+      .eq("contact_email", customer.email);
+  }
 }
 
 // ============================================================

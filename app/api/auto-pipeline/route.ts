@@ -59,12 +59,20 @@ function calculateAiScore(llmoScore: number, weaknesses: string[], weaknessDetai
 }
 
 async function getExistingUrls(): Promise<Set<string>> {
-  const { data } = await supabaseAdmin
-    .from("pipeline_leads")
-    .select("url");
+  // pipeline_leads と leads 両方から既存URLを取得し、重複を防ぐ
+  const [pipelineResult, leadsResult] = await Promise.all([
+    supabaseAdmin.from("pipeline_leads").select("url"),
+    supabaseAdmin.from("leads").select("url"),
+  ]);
+
   const urls = new Set<string>();
-  if (data) {
-    for (const row of data) {
+  if (pipelineResult.data) {
+    for (const row of pipelineResult.data) {
+      if (row.url) urls.add(normalizeUrl(row.url));
+    }
+  }
+  if (leadsResult.data) {
+    for (const row of leadsResult.data) {
       if (row.url) urls.add(normalizeUrl(row.url));
     }
   }
@@ -310,11 +318,11 @@ export async function POST(req: NextRequest) {
 
       for (const lead of sendTargets) {
         try {
-          const diagnosisLink = process.env.NEXT_PUBLIC_APP_URL
-            ? `${process.env.NEXT_PUBLIC_APP_URL}/diagnosis?url=${encodeURIComponent(lead.url)}`
-            : `https://aio-rouge.vercel.app/diagnosis?url=${encodeURIComponent(lead.url)}`;
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aio-rouge.vercel.app";
+          const diagnosisLink = `${appUrl}/diagnosis?url=${encodeURIComponent(lead.url)}`;
           const paymentLink = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK || "#";
           const senderName = process.env.NEXT_PUBLIC_SENDER_NAME || "AIO Insight";
+          const unsubscribeLink = `${appUrl}/unsubscribe?lid=${lead.id}`;
 
           await sendOutreachEmail({
             to: lead.contactEmail!,
@@ -325,6 +333,8 @@ export async function POST(req: NextRequest) {
               diagnosisLink,
               paymentLink,
               senderName,
+              leadId: lead.id,
+              unsubscribeLink,
             },
             step: 1,
           });

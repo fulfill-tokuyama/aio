@@ -199,18 +199,21 @@ export default function LoginPage() {
           </button>
         </form>
 
+        <div style={{ textAlign: "center", marginTop: 20 }}>
+          <a href="/reset-password" style={{ color: C.accent, fontSize: 12, textDecoration: "none" }}>
+            パスワードをお忘れですか？
+          </a>
+        </div>
         <p
           style={{
             color: C.textDim,
             fontSize: 11,
             textAlign: "center",
-            marginTop: 24,
+            marginTop: 12,
             lineHeight: 1.6,
           }}
         >
           パスワードはウェルカムメールに記載されています。
-          <br />
-          ご不明な場合はサポートまでお問い合わせください。
         </p>
       </div>
     </div>

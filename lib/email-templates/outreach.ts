@@ -8,6 +8,8 @@ export interface OutreachEmailData {
   diagnosisLink: string;
   paymentLink: string;
   senderName: string;
+  leadId?: string;
+  unsubscribeLink?: string;
 }
 
 type OutreachStep = 1 | 2 | 3 | 4;
@@ -18,7 +20,15 @@ function getScoreColor(score: number): string {
   return "#EF4444";
 }
 
-function wrapLayout(content: string): string {
+function wrapLayout(content: string, options?: { leadId?: string; unsubscribeLink?: string }): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aio-rouge.vercel.app";
+  const trackingPixel = options?.leadId
+    ? `<img src="${appUrl}/api/track?type=open&lid=${options.leadId}" width="1" height="1" alt="" style="display:none;" />`
+    : "";
+  const unsubscribeHtml = options?.unsubscribeLink
+    ? `<a href="${options.unsubscribeLink}" style="color:#3E4A5C;font-size:10px;text-decoration:underline;">配信停止</a>`
+    : `<span style="color:#3E4A5C;font-size:10px;">配信停止をご希望の場合は本メールにご返信ください。</span>`;
+
   return `<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -42,14 +52,21 @@ ${content}
       <p style="color:#5A6A80;font-size:11px;margin:0 0 4px;">
         AIO Insight by BeginAI / 株式会社Fulfill
       </p>
-      <p style="color:#3E4A5C;font-size:10px;margin:0;">
-        配信停止をご希望の場合は本メールにご返信ください。
+      <p style="margin:0;">
+        ${unsubscribeHtml}
       </p>
     </div>
 
+    ${trackingPixel}
   </div>
 </body>
 </html>`;
+}
+
+function trackLink(url: string, leadId?: string): string {
+  if (!leadId) return url;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aio-rouge.vercel.app";
+  return `${appUrl}/api/track?type=click&lid=${leadId}&url=${encodeURIComponent(url)}`;
 }
 
 function buildStep1Html(data: OutreachEmailData): string {
@@ -57,6 +74,7 @@ function buildStep1Html(data: OutreachEmailData): string {
   const weaknessItems = data.weaknesses.slice(0, 3)
     .map(w => `<li style="color:#8896AB;font-size:13px;line-height:1.8;">${w}</li>`)
     .join("");
+  const diagLink = trackLink(data.diagnosisLink, data.leadId);
 
   return wrapLayout(`
     <!-- Main Card -->
@@ -97,14 +115,15 @@ function buildStep1Html(data: OutreachEmailData): string {
       <p style="color:#8896AB;font-size:12px;line-height:1.7;margin:0 0 20px;">
         30秒の入力で、貴社サイトのAI検索対策レポートを即時発行します。
       </p>
-      <a href="${data.diagnosisLink}" style="display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;font-size:14px;font-weight:700;text-decoration:none;border-radius:10px;">
+      <a href="${diagLink}" style="display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;font-size:14px;font-weight:700;text-decoration:none;border-radius:10px;">
         無料診断レポートを受け取る →
       </a>
-    </div>`);
+    </div>`, { leadId: data.leadId, unsubscribeLink: data.unsubscribeLink });
 }
 
 function buildStep2Html(data: OutreachEmailData): string {
   const scoreColor = getScoreColor(data.llmoScore);
+  const diagLink = trackLink(data.diagnosisLink, data.leadId);
 
   return wrapLayout(`
     <!-- Main Card -->
@@ -152,13 +171,16 @@ function buildStep2Html(data: OutreachEmailData): string {
       <p style="color:#8896AB;font-size:12px;line-height:1.7;margin:0 0 20px;">
         無料でAI検索可視性レポートを発行します。
       </p>
-      <a href="${data.diagnosisLink}" style="display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;font-size:14px;font-weight:700;text-decoration:none;border-radius:10px;">
+      <a href="${diagLink}" style="display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;font-size:14px;font-weight:700;text-decoration:none;border-radius:10px;">
         無料診断を受ける →
       </a>
-    </div>`);
+    </div>`, { leadId: data.leadId, unsubscribeLink: data.unsubscribeLink });
 }
 
 function buildStep3Html(data: OutreachEmailData): string {
+  const diagLink = trackLink(data.diagnosisLink, data.leadId);
+  const payLink = trackLink(data.paymentLink, data.leadId);
+
   return wrapLayout(`
     <!-- Main Card -->
     <div style="background:#111827;border-radius:16px;border:1px solid #1E293B;padding:32px;margin-bottom:24px;">
@@ -220,18 +242,20 @@ function buildStep3Html(data: OutreachEmailData): string {
     <div style="background:#111827;border-radius:16px;border:1px solid #3B82F620;padding:32px;text-align:center;margin-bottom:24px;">
       <h3 style="color:#E2E8F0;font-size:16px;margin:0 0 16px;">貴社も成果を出しませんか？</h3>
       <div style="margin-bottom:12px;">
-        <a href="${data.diagnosisLink}" style="display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;font-size:14px;font-weight:700;text-decoration:none;border-radius:10px;">
+        <a href="${diagLink}" style="display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;font-size:14px;font-weight:700;text-decoration:none;border-radius:10px;">
           無料診断を受ける →
         </a>
       </div>
       <p style="color:#5A6A80;font-size:11px;margin:0 0 12px;">または</p>
-      <a href="${data.paymentLink}" style="display:inline-block;padding:12px 36px;background:linear-gradient(135deg,#F0B429,#D49B1F);color:#0B0F1A;font-size:13px;font-weight:700;text-decoration:none;border-radius:10px;">
+      <a href="${payLink}" style="display:inline-block;padding:12px 36px;background:linear-gradient(135deg,#F0B429,#D49B1F);color:#0B0F1A;font-size:13px;font-weight:700;text-decoration:none;border-radius:10px;">
         月額プランに申し込む（¥10,000/月）
       </a>
-    </div>`);
+    </div>`, { leadId: data.leadId, unsubscribeLink: data.unsubscribeLink });
 }
 
 function buildStep4Html(data: OutreachEmailData): string {
+  const payLink = trackLink(data.paymentLink, data.leadId);
+
   return wrapLayout(`
     <!-- Main Card -->
     <div style="background:#111827;border-radius:16px;border:1px solid #1E293B;padding:32px;margin-bottom:24px;">
@@ -287,11 +311,11 @@ function buildStep4Html(data: OutreachEmailData): string {
       <p style="color:#8896AB;font-size:12px;line-height:1.7;margin:0 0 20px;">
         月額¥10,000でAI検索可視性を継続モニタリング＆改善
       </p>
-      <a href="${data.paymentLink}" style="display:inline-block;padding:16px 48px;background:linear-gradient(135deg,#F0B429,#D49B1F);color:#0B0F1A;font-size:15px;font-weight:800;text-decoration:none;border-radius:10px;">
+      <a href="${payLink}" style="display:inline-block;padding:16px 48px;background:linear-gradient(135deg,#F0B429,#D49B1F);color:#0B0F1A;font-size:15px;font-weight:800;text-decoration:none;border-radius:10px;">
         有料プランに申し込む →
       </a>
       <p style="color:#5A6A80;font-size:11px;margin:12px 0 0;">初月セットアップ費用無料キャンペーン中</p>
-    </div>`);
+    </div>`, { leadId: data.leadId, unsubscribeLink: data.unsubscribeLink });
 }
 
 export function buildOutreachSubject(company: string, step: OutreachStep): string {

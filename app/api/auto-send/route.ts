@@ -53,11 +53,11 @@ async function sendStepEmail(lead: LeadRow, step: 1 | 2 | 3 | 4): Promise<{ succ
     return { success: false, error: "No contact email" };
   }
 
-  const diagnosisLink = process.env.NEXT_PUBLIC_APP_URL
-    ? `${process.env.NEXT_PUBLIC_APP_URL}/diagnosis?url=${encodeURIComponent(lead.url)}`
-    : `https://aio-rouge.vercel.app/diagnosis?url=${encodeURIComponent(lead.url)}`;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aio-rouge.vercel.app";
+  const diagnosisLink = `${appUrl}/diagnosis?url=${encodeURIComponent(lead.url)}`;
   const paymentLink = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK || "#";
   const senderName = process.env.NEXT_PUBLIC_SENDER_NAME || "AIO Insight";
+  const unsubscribeLink = `${appUrl}/unsubscribe?lid=${lead.id}`;
 
   try {
     await sendOutreachEmail({
@@ -69,6 +69,8 @@ async function sendStepEmail(lead: LeadRow, step: 1 | 2 | 3 | 4): Promise<{ succ
         diagnosisLink,
         paymentLink,
         senderName,
+        leadId: lead.id,
+        unsubscribeLink,
       },
       step,
     });
@@ -140,6 +142,12 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
+      // 顧客・休眠・配信停止済みはスキップ
+      if (["customer", "dormant"].includes(lead.phase)) {
+        results.push({ leadId: lead.id, company: lead.company, success: false, step: 0, error: "Customer or dormant" });
+        continue;
+      }
+
       // step指定あればそれを使う、なければfollow_up_countから判定
       const targetStep = (step as 1 | 2 | 3 | 4) || getStepFromCount(lead.follow_up_count || 0);
       const result = await sendStepEmail(lead, targetStep);
@@ -174,11 +182,12 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 対象リード抽出: フォローアップ予定日が過ぎたリード
+    // 対象リード抽出: フォローアップ予定日が過ぎたリード（顧客・休眠を除外）
     const { data: leads, error } = await supabaseAdmin
       .from("pipeline_leads")
       .select("id, company, url, contact_email, llmo_score, weaknesses, phase, follow_up_count, follow_up_scheduled")
       .in("phase", ["sent", "step2", "step3"])
+      .not("phase", "in", '("customer","dormant")')
       .lte("follow_up_scheduled", new Date().toISOString())
       .lt("follow_up_count", 4)
       .order("follow_up_scheduled", { ascending: true })
