@@ -475,8 +475,8 @@ export default function FormPilotAutoV2(){
                     <ScoreBadge score={l.aiScore}/>
                     <span style={{fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.company}</span>
                     <span style={{fontFamily:"'Geist Mono',monospace",fontSize:8,color:C.sub,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.url}</span>
-                    <span style={{fontSize:8,color:C.sub}}>{l.industry.slice(0,4)}</span>
-                    <span style={{fontSize:8,color:C.dim}}>{l.companySize.slice(0,4)}</span>
+                    <span style={{fontSize:8,color:C.sub}}>{(l.industry||"—").slice(0,4)}</span>
+                    <span style={{fontSize:8,color:C.dim}}>{(l.companySize||"—").slice(0,4)}</span>
                     <Phase p={l.phase}/>
                     <span style={{fontSize:9}}>{l.openedEmail&&l.sentAt?"👁":"—"}</span>
                     <span style={{fontSize:9,color:l.followUpCount?C.pk:C.dim}}>{l.followUpCount||"—"}</span>
@@ -511,10 +511,10 @@ export default function FormPilotAutoV2(){
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                     {[
-                      {l:"業種",v:selectedLead.industry},{l:"地域",v:selectedLead.region},
-                      {l:"企業規模",v:selectedLead.companySize},{l:"推定売上",v:selectedLead.revenue},
-                      {l:"LLMOスコア",v:`${selectedLead.llmoScore}/100`},{l:"広告出稿",v:selectedLead.hasAdSpend?"あり":"なし"},
-                      {l:"フェーズ",v:selectedLead.phase},{l:"フォローアップ",v:`${selectedLead.followUpCount}回`},
+                      {l:"業種",v:selectedLead.industry||"—"},{l:"地域",v:selectedLead.region||"—"},
+                      {l:"企業規模",v:selectedLead.companySize||"—"},{l:"推定売上",v:selectedLead.revenue||"—"},
+                      {l:"LLMOスコア",v:`${selectedLead.llmoScore||0}/100`},{l:"広告出稿",v:selectedLead.hasAdSpend?"あり":"なし"},
+                      {l:"フェーズ",v:selectedLead.phase},{l:"フォローアップ",v:`${selectedLead.followUpCount||0}回`},
                     ].map((r,i)=>(
                       <div key={i} style={{padding:"6px 8px",borderRadius:4,background:C.ca}}>
                         <div style={{fontSize:8,color:C.dim,fontWeight:600}}>{r.l}</div>
@@ -525,16 +525,17 @@ export default function FormPilotAutoV2(){
                 </div>
                 <div style={{background:C.card,borderRadius:8,padding:18,border:`1px solid ${C.bdr}`}}>
                   <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>⚠️ LLMO弱点分析</div>
-                  {selectedLead.weaknesses.map((w,i)=>(
+                  {(selectedLead.weaknesses||[]).map((w,i)=>(
                     <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:`1px solid ${C.bdr}`}}>
                       <span style={{color:C.r,fontSize:12}}>✕</span>
                       <span style={{fontSize:11}}>{w}</span>
                     </div>
                   ))}
+                  {(selectedLead.weaknesses||[]).length===0&&<div style={{fontSize:10,color:C.dim,padding:"8px 0"}}>弱点データなし</div>}
                   <div style={{marginTop:12,padding:"10px 12px",borderRadius:5,background:C.accGl,border:`1px solid ${C.acc}15`}}>
                     <div style={{fontSize:10,fontWeight:700,color:C.acc,marginBottom:4}}>💡 AIパーソナライズ文案プレビュー</div>
                     <div style={{fontSize:9,color:C.sub,lineHeight:1.6}}>
-                      「{selectedLead.company}様のサイトを分析した結果、{selectedLead.weaknesses.slice(0,2).join("、")} など{selectedLead.weaknesses.length}件の改善点を発見しました。AI検索での露出を改善し、新規顧客獲得につなげませんか？」
+                      「{selectedLead.company}様のサイトを分析した結果、{(selectedLead.weaknesses||[]).slice(0,2).join("、")||"未分析"} など{(selectedLead.weaknesses||[]).length}件の改善点を発見しました。AI検索での露出を改善し、新規顧客獲得につなげませんか？」
                     </div>
                   </div>
                 </div>
