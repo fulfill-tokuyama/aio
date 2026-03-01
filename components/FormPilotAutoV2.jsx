@@ -268,20 +268,50 @@ export default function FormPilotAutoV2(){
     setShowScanModal(true);
   },[]);
 
-  // Phase 1: autoSend はDB永続化対応（各リードをupdateLeadで更新）
-  const autoSend=useCallback(()=>{
-    const ready=leads.filter(l=>l.phase==="form_found").sort((a,b)=>b.aiScore-a.aiScore).slice(0,autoConfig.sendThreshold);
-    if(!ready.length)return;
-    const tIds=templates.map(t=>t.id);
-    ready.forEach((r,idx)=>{
-      const tpl=autoConfig.abTestEnabled?tIds[idx%tIds.length]:tIds[0];
-      updateLead(r.id,{phase:"sent",sentAt:new Date().toISOString(),templateUsed:tpl,diagnosisSent:autoConfig.autoDiagnosis});
-    });
-    if(autoConfig.abTestEnabled){
-      setTemplates(p=>p.map((t,i)=>{const c=ready.filter((_,j)=>j%tIds.length===i).length;return{...t,sent:t.sent+c};}));
-    }
-    setLog(p=>[{t:new Date().toISOString(),msg:`📨 AIスコア優先で${ready.length}件送信${autoConfig.autoDiagnosis?" + 診断レポート添付":""}`,type:"send"},...p]);
-  },[leads,autoConfig,templates,updateLead]);
+  // フォーム探索: /api/scan-forms に leadId を POST
+  const [scanningLeadId, setScanningLeadId] = useState(null);
+  const scanFormForLead=useCallback(async(lead)=>{
+    setScanningLeadId(lead.id);
+    try{
+      const res=await fetch("/api/scan-forms",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({leadId:lead.id,url:lead.url})});
+      if(!res.ok)throw new Error("Scan failed");
+      const json=await res.json();
+      // 結果でリストを更新
+      const updates={};
+      if(json.contactEmail)updates.contactEmail=json.contactEmail;
+      if(json.contactPhone)updates.contactPhone=json.contactPhone;
+      if(json.formUrl)updates.formUrl=json.formUrl;
+      if(json.contactPageUrl)updates.contactPageUrl=json.contactPageUrl;
+      if(json.contactEmail||json.formUrl)updates.phase="form_found";
+      if(Object.keys(updates).length>0){
+        setLeads(p=>p.map(l=>l.id===lead.id?{...l,...updates}:l));
+      }
+      setLog(p=>[{t:new Date().toISOString(),msg:`🔍 ${lead.company}: ${json.contactEmail?"メール発見("+json.contactEmail+")":"メール未検出"}, ${json.formUrl?"フォーム発見":"フォーム未検出"}`,type:"form"},...p]);
+    }catch(e){console.error("scanForm error:",e);setLog(p=>[{t:new Date().toISOString(),msg:`❌ ${lead.company}: フォーム探索失敗`,type:"form"},...p]);}
+    finally{setScanningLeadId(null);}
+  },[]);
+
+  // AIスコア順送信: form_found かつ contactEmail ありのリードを /api/auto-send に POST
+  const [sending, setSending] = useState(false);
+  const autoSend=useCallback(async()=>{
+    const ready=leads.filter(l=>l.phase==="form_found"&&l.contactEmail).sort((a,b)=>b.aiScore-a.aiScore).slice(0,autoConfig.sendThreshold);
+    if(!ready.length){setLog(p=>[{t:new Date().toISOString(),msg:"⚠ 送信対象リードがありません（form_found + メールアドレス必要）",type:"send"},...p]);return;}
+    setSending(true);
+    try{
+      const res=await fetch("/api/auto-send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({leadIds:ready.map(r=>r.id)})});
+      if(!res.ok)throw new Error("Send failed");
+      const json=await res.json();
+      // 送信成功したリードを更新
+      if(json.results){
+        json.results.filter(r=>r.success).forEach(r=>{
+          setLeads(p=>p.map(l=>l.id===r.leadId?{...l,phase:"sent",sentAt:new Date().toISOString(),followUpCount:(l.followUpCount||0)+1}:l));
+        });
+      }
+      setLog(p=>[{t:new Date().toISOString(),msg:`📨 AIスコア優先で${json.summary?.sent||0}件送信完了（${json.summary?.skipped||0}件スキップ）`,type:"send"},...p]);
+      fetchLeads(); // 最新状態を再取得
+    }catch(e){console.error("autoSend error:",e);setLog(p=>[{t:new Date().toISOString(),msg:"❌ 送信処理に失敗しました",type:"send"},...p]);}
+    finally{setSending(false);}
+  },[leads,autoConfig,fetchLeads]);
 
   const nav=[
     {id:"pipeline",icon:ic.activity,label:"パイプライン"},
@@ -356,8 +386,8 @@ export default function FormPilotAutoV2(){
               <button onClick={runScan} disabled={scanRunning} style={{padding:"5px 11px",borderRadius:4,border:"none",background:C.acc,color:C.bg,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4,opacity:scanRunning?.5:1}}>
                 {scanRunning?"⟳ スキャン中...":<><I d={ic.radar} s={11} c={C.bg}/>一括LLMO調査</>}
               </button>
-              <button onClick={autoSend} style={{padding:"5px 11px",borderRadius:4,border:`1px solid ${C.bdr}`,background:"transparent",color:C.tx,fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
-                <I d={ic.send} s={11} c={C.p}/>AIスコア順送信
+              <button onClick={autoSend} disabled={sending} style={{padding:"5px 11px",borderRadius:4,border:`1px solid ${C.bdr}`,background:"transparent",color:C.tx,fontSize:10,fontWeight:600,cursor:sending?"default":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4,opacity:sending?.5:1}}>
+                <I d={ic.send} s={11} c={C.p}/>{sending?"送信中...":"AIスコア順送信"}
               </button>
             </>}
             <div style={{padding:"4px 8px",borderRadius:3,background:C.gB,color:C.g,fontSize:9,fontWeight:700}}>{loading?"読込中...":leads.length+" リード"}</div>
@@ -465,22 +495,22 @@ export default function FormPilotAutoV2(){
               </div>
 
               <div style={{background:C.card,borderRadius:6,border:`1px solid ${C.bdr}`,overflow:mob?"auto":"hidden",WebkitOverflowScrolling:"touch"}}>
-                <div style={{display:"grid",gridTemplateColumns:"35px 1.2fr 1.4fr 50px 40px 45px 40px 40px 75px",padding:"6px 10px",fontSize:8,color:C.dim,fontWeight:700,textTransform:"uppercase",letterSpacing:.4,borderBottom:`1px solid ${C.bdr}`,background:C.ca,minWidth:mob?600:undefined}}>
-                  <span>AI</span><span>会社名</span><span>URL</span><span>業種</span><span>規模</span><span>フェーズ</span><span>開封</span><span>FU</span><span>操作</span>
+                <div style={{display:"grid",gridTemplateColumns:"35px 1fr 1fr .8fr 50px 45px 40px 40px 75px",padding:"6px 10px",fontSize:8,color:C.dim,fontWeight:700,textTransform:"uppercase",letterSpacing:.4,borderBottom:`1px solid ${C.bdr}`,background:C.ca,minWidth:mob?700:undefined}}>
+                  <span>AI</span><span>会社名</span><span>URL</span><span>メール</span><span>業種</span><span>フェーズ</span><span>開封</span><span>FU</span><span>操作</span>
                 </div>
                 {paged.map(l=>(
-                  <div key={l.id} className="rh" onClick={()=>setSelectedLead(l)} style={{display:"grid",gridTemplateColumns:"35px 1.2fr 1.4fr 50px 40px 45px 40px 40px 75px",padding:"7px 10px",borderBottom:`1px solid ${C.bdr}`,alignItems:"center",fontSize:10,cursor:"pointer",minWidth:mob?600:undefined}}>
+                  <div key={l.id} className="rh" onClick={()=>setSelectedLead(l)} style={{display:"grid",gridTemplateColumns:"35px 1fr 1fr .8fr 50px 45px 40px 40px 75px",padding:"7px 10px",borderBottom:`1px solid ${C.bdr}`,alignItems:"center",fontSize:10,cursor:"pointer",minWidth:mob?700:undefined}}>
                     <ScoreBadge score={l.aiScore}/>
                     <span style={{fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.company}</span>
                     <span style={{fontFamily:"'Geist Mono',monospace",fontSize:8,color:C.sub,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.url}</span>
+                    <span style={{fontFamily:"'Geist Mono',monospace",fontSize:8,color:l.contactEmail?C.g:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.contactEmail||"—"}</span>
                     <span style={{fontSize:8,color:C.sub}}>{(l.industry||"—").slice(0,4)}</span>
-                    <span style={{fontSize:8,color:C.dim}}>{(l.companySize||"—").slice(0,4)}</span>
                     <Phase p={l.phase}/>
                     <span style={{fontSize:9}}>{l.openedEmail&&l.sentAt?"👁":"—"}</span>
                     <span style={{fontSize:9,color:l.followUpCount?C.pk:C.dim}}>{l.followUpCount||"—"}</span>
                     <div style={{display:"flex",gap:2}} onClick={e=>e.stopPropagation()}>
-                      {l.phase==="discovered"&&<button onClick={()=>updateLead(l.id,{formUrl:l.url+"/contact",phase:"form_found"})} style={{padding:"2px 5px",borderRadius:2,border:`1px solid ${C.bdr}`,background:"transparent",color:C.b,fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>探索</button>}
-                      {l.phase==="form_found"&&<button onClick={()=>updateLead(l.id,{phase:"queued",scheduledAt:new Date(Date.now()+864e5).toISOString()})} style={{padding:"2px 5px",borderRadius:2,border:`1px solid ${C.bdr}`,background:"transparent",color:C.o,fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>予約</button>}
+                      {l.phase==="discovered"&&<button onClick={()=>scanFormForLead(l)} disabled={scanningLeadId===l.id} style={{padding:"2px 5px",borderRadius:2,border:`1px solid ${C.bdr}`,background:"transparent",color:C.b,fontSize:8,cursor:scanningLeadId===l.id?"default":"pointer",fontFamily:"inherit",opacity:scanningLeadId===l.id?.5:1}}>{scanningLeadId===l.id?"探索中...":"探索"}</button>}
+                      {l.phase==="form_found"&&!l.contactEmail&&<button onClick={()=>scanFormForLead(l)} disabled={scanningLeadId===l.id} style={{padding:"2px 5px",borderRadius:2,border:`1px solid ${C.bdr}`,background:"transparent",color:C.b,fontSize:8,cursor:scanningLeadId===l.id?"default":"pointer",fontFamily:"inherit",opacity:scanningLeadId===l.id?.5:1}}>{scanningLeadId===l.id?"探索中...":"再探索"}</button>}
                       <button onClick={()=>deleteLead(l.id)} style={{padding:"2px 4px",borderRadius:2,border:"none",background:"transparent",color:C.dim,fontSize:8,cursor:"pointer"}}>✕</button>
                     </div>
                   </div>

@@ -29,6 +29,9 @@ function dbRowToClientLead(row: Record<string, unknown>) {
     diagnosisSent: row.diagnosis_sent,
     openedEmail: row.opened_email,
     clickedLink: row.clicked_link,
+    contactEmail: row.contact_email,
+    contactPhone: row.contact_phone,
+    contactPageUrl: row.contact_page_url,
     notes: row.notes,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -53,6 +56,9 @@ const FIELD_MAP: Record<string, string> = {
   diagnosisSent: "diagnosis_sent",
   openedEmail: "opened_email",
   clickedLink: "clicked_link",
+  contactEmail: "contact_email",
+  contactPhone: "contact_phone",
+  contactPageUrl: "contact_page_url",
 };
 
 function clientToDbFields(obj: Record<string, unknown>) {

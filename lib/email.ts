@@ -7,6 +7,11 @@ import {
   buildWelcomeEmailSubject,
   buildWelcomeEmailHtml,
 } from "./email-templates/welcome";
+import {
+  buildOutreachSubject,
+  buildOutreachHtml,
+  type OutreachEmailData,
+} from "./email-templates/outreach";
 import type { DiagnosisResult } from "./diagnosis";
 
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "info@beginai.jp";
@@ -59,6 +64,20 @@ export async function sendWelcomeEmail(params: {
   });
 
   await sendEmail(params.to, subject, html, "welcome");
+}
+
+// ============================================================
+// Send outreach step email (pipeline auto-sales)
+// ============================================================
+export async function sendOutreachEmail(params: {
+  to: string;
+  data: OutreachEmailData;
+  step: 1 | 2 | 3 | 4;
+}): Promise<void> {
+  const subject = buildOutreachSubject(params.data.company, params.step);
+  const html = buildOutreachHtml(params.data, params.step);
+
+  await sendEmail(params.to, subject, html, "outreach");
 }
 
 // ============================================================

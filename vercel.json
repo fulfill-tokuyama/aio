@@ -7,6 +7,10 @@
     {
       "path": "/api/rescan",
       "schedule": "0 3 * * 1"
+    },
+    {
+      "path": "/api/auto-send",
+      "schedule": "0 1 * * *"
     }
   ]
 }
