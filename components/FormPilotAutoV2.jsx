@@ -164,14 +164,7 @@ export default function FormPilotAutoV2(){
     }catch(e){console.error("addLead error:",e);return false;}
   },[]);
 
-  const[templates,setTemplates]=useState(()=>{
-    const t=[...TEMPLATES];
-    // Simulate historical performance
-    t[0].sent=52;t[0].opened=31;t[0].replied=8;t[0].converted=4;
-    t[1].sent=38;t[1].opened=19;t[1].replied=5;t[1].converted=2;
-    t[2].sent=45;t[2].opened=28;t[2].replied=7;t[2].converted=3;
-    return t;
-  });
+  const[templates,setTemplates]=useState(()=>[...TEMPLATES]);
 
   const[autoConfig,setAutoConfig]=useState({
     scanEnabled:true,scanInterval:24,
@@ -179,23 +172,56 @@ export default function FormPilotAutoV2(){
     batchSize:20,autoFormScan:true,autoSendEnabled:true,
     sendThreshold:10,sendTime:"10:00",sendDays:["TUE","WED","THU"],
     llmoScoreMax:30,
-    lastScanAt:new Date(Date.now()-3*36e5).toISOString(),
-    nextScanAt:(()=>{const d=new Date();d.setDate(d.getDate()+1);d.setHours(20,45,0,0);return d.toISOString();})(),totalScans:47,
-    // NEW configs
+    lastScanAt:null,
+    nextScanAt:null,totalScans:0,
     aiScoreMinForPriority:70,
     autoFollowUp:true,followUpInterval:3,followUpMaxCount:3,
-    autoDiagnosis:true, // auto-attach free report
-    abTestEnabled:true, // round-robin A/B templates
-    warmAlerts:true, // notifications for high-score leads
+    autoDiagnosis:true,
+    abTestEnabled:true,
+    warmAlerts:true,
   });
 
-  const[log,setLog]=useState([
-    {t:new Date(Date.now()-36e5).toISOString(),msg:"定期スキャン完了: 18件の新規リード発見",type:"scan"},
-    {t:new Date(Date.now()-2*36e5).toISOString(),msg:"フォーム探索: 12件でフォームURL発見",type:"form"},
-    {t:new Date(Date.now()-3*36e5).toISOString(),msg:"自動送信: 10件のフォームに営業メール送信完了",type:"send"},
-    {t:new Date(Date.now()-12*36e5).toISOString(),msg:"返信受信: テックソリューションズ様から返信",type:"reply"},
-    {t:new Date(Date.now()-24*36e5).toISOString(),msg:"新規顧客: デジタルラボ様がStripe決済完了",type:"customer"},
-  ]);
+  const[log,setLog]=useState([]);
+
+  // addLogEntry: ログをstateに追加しつつDBにも永続化
+  const addLogEntry=useCallback((msg,type="info")=>{
+    const entry={t:new Date().toISOString(),msg,type};
+    setLog(p=>[entry,...p]);
+    fetch("/api/pipeline-activity",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg,type})}).catch(e=>console.error("addLogEntry error:",e));
+  },[]);
+
+  // 初期ロード: テンプレート実績 + 活動ログ + 自動化設定をDBから取得
+  useEffect(()=>{
+    // テンプレート実績
+    fetch("/api/pipeline-templates").then(r=>r.json()).then(json=>{
+      if(json.templates&&json.templates.length>0){
+        setTemplates(prev=>prev.map(t=>{
+          const stats=json.templates.find(s=>s.templateId===t.id);
+          if(stats)return{...t,sent:stats.sent,opened:stats.opened,replied:stats.replied,converted:stats.converted};
+          return t;
+        }));
+      }
+    }).catch(e=>console.error("fetchTemplates error:",e));
+
+    // 活動ログ
+    fetch("/api/pipeline-activity").then(r=>r.json()).then(json=>{
+      if(json.entries)setLog(json.entries);
+    }).catch(e=>console.error("fetchActivity error:",e));
+
+    // 自動化設定
+    fetch("/api/pipeline-config").then(r=>r.json()).then(json=>{
+      if(json.config)setAutoConfig(prev=>({...prev,...json.config}));
+    }).catch(e=>console.error("fetchConfig error:",e));
+  },[]);
+
+  // Debounced auto-save: 設定が変わったら1秒後にPUT
+  useEffect(()=>{
+    if(!mt)return; // 初回マウント前はスキップ
+    const timer=setTimeout(()=>{
+      fetch("/api/pipeline-config",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({config:autoConfig})}).catch(e=>console.error("saveConfig error:",e));
+    },1000);
+    return()=>clearTimeout(timer);
+  },[autoConfig,mt]);
 
   const[searchQ,setSearchQ]=useState("");
   const[filterPhase,setFilterPhase]=useState("all");
@@ -287,16 +313,16 @@ export default function FormPilotAutoV2(){
       if(Object.keys(updates).length>0){
         setLeads(p=>p.map(l=>l.id===lead.id?{...l,...updates}:l));
       }
-      setLog(p=>[{t:new Date().toISOString(),msg:`🔍 ${lead.company}: ${json.contactEmail?"メール発見("+json.contactEmail+")":"メール未検出"}, ${json.formUrl?"フォーム発見":"フォーム未検出"}`,type:"form"},...p]);
-    }catch(e){console.error("scanForm error:",e);setLog(p=>[{t:new Date().toISOString(),msg:`❌ ${lead.company}: フォーム探索失敗`,type:"form"},...p]);}
+      addLogEntry(`🔍 ${lead.company}: ${json.contactEmail?"メール発見("+json.contactEmail+")":"メール未検出"}, ${json.formUrl?"フォーム発見":"フォーム未検出"}`,"form");
+    }catch(e){console.error("scanForm error:",e);addLogEntry(`❌ ${lead.company}: フォーム探索失敗`,"form");}
     finally{setScanningLeadId(null);}
-  },[]);
+  },[addLogEntry]);
 
   // AIスコア順送信: form_found かつ contactEmail ありのリードを /api/auto-send に POST
   const [sending, setSending] = useState(false);
   const autoSend=useCallback(async()=>{
     const ready=leads.filter(l=>l.phase==="form_found"&&l.contactEmail).sort((a,b)=>b.aiScore-a.aiScore).slice(0,autoConfig.sendThreshold);
-    if(!ready.length){setLog(p=>[{t:new Date().toISOString(),msg:"⚠ 送信対象リードがありません（form_found + メールアドレス必要）",type:"send"},...p]);return;}
+    if(!ready.length){addLogEntry("⚠ 送信対象リードがありません（form_found + メールアドレス必要）","send");return;}
     setSending(true);
     try{
       const res=await fetch("/api/auto-send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({leadIds:ready.map(r=>r.id)})});
@@ -308,11 +334,11 @@ export default function FormPilotAutoV2(){
           setLeads(p=>p.map(l=>l.id===r.leadId?{...l,phase:"sent",sentAt:new Date().toISOString(),followUpCount:(l.followUpCount||0)+1}:l));
         });
       }
-      setLog(p=>[{t:new Date().toISOString(),msg:`📨 AIスコア優先で${json.summary?.sent||0}件送信完了（${json.summary?.skipped||0}件スキップ）`,type:"send"},...p]);
+      addLogEntry(`📨 AIスコア優先で${json.summary?.sent||0}件送信完了（${json.summary?.skipped||0}件スキップ）`,"send");
       fetchLeads(); // 最新状態を再取得
-    }catch(e){console.error("autoSend error:",e);setLog(p=>[{t:new Date().toISOString(),msg:"❌ 送信処理に失敗しました",type:"send"},...p]);}
+    }catch(e){console.error("autoSend error:",e);addLogEntry("❌ 送信処理に失敗しました","send");}
     finally{setSending(false);}
-  },[leads,autoConfig,fetchLeads]);
+  },[leads,autoConfig,fetchLeads,addLogEntry]);
 
   const nav=[
     {id:"pipeline",icon:ic.activity,label:"パイプライン"},
@@ -873,7 +899,7 @@ export default function FormPilotAutoV2(){
           onClose={()=>{setShowScanModal(false);setScanResults(null);}}
           scanResults={scanResults}
           setScanResults={setScanResults}
-          onComplete={()=>{fetchLeads();setAutoConfig(p=>({...p,lastScanAt:new Date().toISOString(),nextScanAt:new Date(Date.now()+p.scanInterval*36e5).toISOString(),totalScans:p.totalScans+1}));setLog(p=>[{t:new Date().toISOString(),msg:`🔬 一括LLMOスキャン完了`,type:"scan"},...p]);}}
+          onComplete={()=>{fetchLeads();setAutoConfig(p=>({...p,lastScanAt:new Date().toISOString(),nextScanAt:new Date(Date.now()+p.scanInterval*36e5).toISOString(),totalScans:p.totalScans+1}));addLogEntry("🔬 一括LLMOスキャン完了","scan");}}
         />
       )}
 
@@ -884,10 +910,7 @@ export default function FormPilotAutoV2(){
           onComplete={(summary)=>{
             fetchLeads();
             setAutoConfig(p=>({...p,lastScanAt:new Date().toISOString(),nextScanAt:new Date(Date.now()+p.scanInterval*36e5).toISOString(),totalScans:p.totalScans+1}));
-            setLog(p=>[
-              {t:new Date().toISOString(),msg:`自動発見パイプライン完了: ${summary.savedAsLeads}件リード追加, ${summary.formsFound}件フォーム発見, ${summary.emailsSent}件メール送信`,type:"scan"},
-              ...p,
-            ]);
+            addLogEntry(`自動発見パイプライン完了: ${summary.savedAsLeads}件リード追加, ${summary.formsFound}件フォーム発見, ${summary.emailsSent}件メール送信`,"scan");
           }}
         />
       )}

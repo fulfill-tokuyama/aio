@@ -31,62 +31,46 @@ const COLORS = {
   cyanBg: "rgba(8,145,178,0.08)",
 };
 
-// Mock data generators
-const generateTrafficData = () => {
-  const days = 30;
-  const data = [];
-  let organic = 1200, ai = 180, direct = 800, social = 350;
-  for (let i = 0; i < days; i++) {
-    organic += Math.round((Math.random() - 0.45) * 80);
-    ai += Math.round((Math.random() - 0.3) * 25);
-    direct += Math.round((Math.random() - 0.48) * 50);
-    social += Math.round((Math.random() - 0.47) * 30);
-    data.push({
-      day: i + 1,
-      date: new Date(2026, 1, i + 1).toLocaleDateString("ja-JP", { month: "short", day: "numeric" }),
-      organic: Math.max(organic, 400),
-      ai: Math.max(ai, 50),
-      direct: Math.max(direct, 300),
-      social: Math.max(social, 100),
-    });
-  }
-  return data;
+// Platform color mapping for Brand Radar data
+const PLATFORM_COLORS = {
+  ChatGPT: COLORS.green,
+  Perplexity: COLORS.cyan,
+  Gemini: COLORS.orange,
+  Copilot: COLORS.purple,
+  "AI Overviews": COLORS.accent,
+  "AI Mode": COLORS.red,
 };
 
-const AI_PLATFORMS = [
-  { name: "ChatGPT", mentions: 847, citations: 234, sov: 34.2, trend: 12.5, color: COLORS.green },
-  { name: "Perplexity", mentions: 523, citations: 189, sov: 21.1, trend: 28.3, color: COLORS.cyan },
-  { name: "Gemini", mentions: 412, citations: 145, sov: 16.6, trend: -5.2, color: COLORS.orange },
-  { name: "Copilot", mentions: 389, citations: 98, sov: 15.7, trend: 8.1, color: COLORS.purple },
-  { name: "AI Overviews", mentions: 310, citations: 267, sov: 12.4, trend: 45.6, color: COLORS.accent },
-];
+// Not-connected state component
+const NotConnectedState = ({ title, description }) => (
+  <div style={{
+    background: COLORS.card, borderRadius: 12, padding: "48px 24px",
+    border: `1px solid ${COLORS.border}`, textAlign: "center",
+  }}>
+    <div style={{ fontSize: 36, marginBottom: 16 }}>🔗</div>
+    <h3 style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, margin: "0 0 8px" }}>{title}</h3>
+    <p style={{ fontSize: 14, color: COLORS.textMuted, margin: 0, maxWidth: 400, marginLeft: "auto", marginRight: "auto" }}>
+      {description}
+    </p>
+  </div>
+);
 
-const COMPETITOR_DATA = [
-  { name: "自社", sov: 34.2, mentions: 2481, citations: 933, traffic: 4250, color: COLORS.accent },
-  { name: "競合A", sov: 28.7, mentions: 2103, citations: 812, traffic: 3800, color: COLORS.red },
-  { name: "競合B", sov: 22.1, mentions: 1620, citations: 598, traffic: 2900, color: COLORS.orange },
-  { name: "競合C", sov: 15.0, mentions: 1098, citations: 421, traffic: 1750, color: COLORS.textDim },
-];
-
-const TOP_PAGES = [
-  { url: "/blog/ai-strategy-guide", aiTraffic: 523, totalTraffic: 2840, aiRatio: 18.4, trend: 32 },
-  { url: "/products/enterprise", aiTraffic: 412, totalTraffic: 3120, aiRatio: 13.2, trend: 18 },
-  { url: "/case-studies/retail", aiTraffic: 387, totalTraffic: 1950, aiRatio: 19.8, trend: 45 },
-  { url: "/blog/llm-optimization", aiTraffic: 341, totalTraffic: 1680, aiRatio: 20.3, trend: -8 },
-  { url: "/solutions/smb", aiTraffic: 298, totalTraffic: 2210, aiRatio: 13.5, trend: 22 },
-];
-
-const SOV_HISTORY = (() => {
-  const months = ["Sep", "Oct", "Nov", "Dec", "Jan", "Feb"];
-  let self = 24, a = 32, b = 26, c = 18;
-  return months.map(m => {
-    self += Math.round((Math.random() - 0.3) * 4);
-    a += Math.round((Math.random() - 0.52) * 3);
-    b += Math.round((Math.random() - 0.48) * 3);
-    c += Math.round((Math.random() - 0.55) * 2);
-    return { month: m, self: Math.max(self, 15), a: Math.max(a, 15), b: Math.max(b, 10), c: Math.max(c, 8) };
-  });
-})();
+// Loading spinner component
+const LoadingState = () => (
+  <div style={{
+    background: COLORS.card, borderRadius: 12, padding: "48px 24px",
+    border: `1px solid ${COLORS.border}`, textAlign: "center",
+  }}>
+    <div style={{
+      width: 32, height: 32, border: `3px solid ${COLORS.border}`,
+      borderTopColor: COLORS.accent, borderRadius: "50%",
+      animation: "spin 0.8s linear infinite",
+      margin: "0 auto 16px",
+    }} />
+    <p style={{ fontSize: 14, color: COLORS.textMuted, margin: 0 }}>データを読み込み中...</p>
+    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+  </div>
+);
 
 // ============================================================
 // COMPONENTS
@@ -258,21 +242,63 @@ const TabButton = ({ active, children, onClick }) => (
 // ============================================================
 
 export default function AIODashboard({ diagnosisData = null, diagnosisHistory = [], userEmail = "" }) {
-  const [trafficData] = useState(generateTrafficData);
   const [activeTab, setActiveTab] = useState("overview");
   const [hoveredPlatform, setHoveredPlatform] = useState(null);
   const [dateRange, setDateRange] = useState("30d");
   const [mounted, setMounted] = useState(false);
   const mob = useIsMobile();
 
+  // Ahrefs API states
+  const [ahrefsConnected, setAhrefsConnected] = useState(null); // null=loading, true/false
+  const [trafficData, setTrafficData] = useState([]);
+  const [brandRadarData, setBrandRadarData] = useState([]);
+  const [competitorData, setCompetitorData] = useState([]);
+  const [topPagesData, setTopPagesData] = useState([]);
+  const [ahrefsLoading, setAhrefsLoading] = useState(true);
+
   useEffect(() => {
     setMounted(true);
-  }, []);
 
-  const totalAITraffic = trafficData.reduce((a, d) => a + d.ai, 0);
-  const totalOrganic = trafficData.reduce((a, d) => a + d.organic, 0);
-  const totalAll = totalAITraffic + totalOrganic + trafficData.reduce((a, d) => a + d.direct + d.social, 0);
-  const aiPercent = ((totalAITraffic / totalAll) * 100).toFixed(1);
+    // Fetch all Ahrefs data in parallel
+    const fetchAhrefsData = async () => {
+      try {
+        const params = new URLSearchParams({ customer_id: "default", site_url: userEmail || "default", target: userEmail || "default" });
+        const [trafficRes, brandRes, compRes, pagesRes] = await Promise.all([
+          fetch(`/api/ahrefs/traffic?${params}`).then(r => r.json()).catch(() => ({ connected: false })),
+          fetch(`/api/ahrefs/brand-radar?${params}`).then(r => r.json()).catch(() => ({ connected: false })),
+          fetch(`/api/ahrefs/competitors?customer_id=default`).then(r => r.json()).catch(() => ({ connected: false })),
+          fetch(`/api/ahrefs/top-pages?customer_id=default`).then(r => r.json()).catch(() => ({ connected: false })),
+        ]);
+
+        const connected = trafficRes.connected !== false;
+        setAhrefsConnected(connected);
+
+        if (connected) {
+          if (trafficRes.data) setTrafficData(trafficRes.data.map((d, i) => ({
+            ...d, day: i + 1,
+            date: new Date(d.date).toLocaleDateString("ja-JP", { month: "short", day: "numeric" }),
+          })));
+          if (brandRes.platforms) setBrandRadarData(brandRes.platforms.map(p => ({
+            ...p, color: PLATFORM_COLORS[p.platform] || COLORS.textDim,
+          })));
+          if (compRes.data) setCompetitorData(compRes.data);
+          if (pagesRes.data) setTopPagesData(pagesRes.data);
+        }
+      } catch (e) {
+        console.error("Ahrefs data fetch error:", e);
+        setAhrefsConnected(false);
+      } finally {
+        setAhrefsLoading(false);
+      }
+    };
+
+    fetchAhrefsData();
+  }, [userEmail]);
+
+  const totalAITraffic = trafficData.reduce((a, d) => a + (d.ai || 0), 0);
+  const totalOrganic = trafficData.reduce((a, d) => a + (d.organic || 0), 0);
+  const totalAll = totalAITraffic + totalOrganic + trafficData.reduce((a, d) => a + (d.direct || 0) + (d.social || 0), 0);
+  const aiPercent = totalAll > 0 ? ((totalAITraffic / totalAll) * 100).toFixed(1) : "0";
 
   // --- Real data derived from diagnosisData & diagnosisHistory ---
   const latestScore = diagnosisData?.score ?? null;
@@ -618,299 +644,230 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
         {/* ===== AI TRAFFIC TAB ===== */}
         {activeTab === "ai-traffic" && (
           <div className="fade-up">
-            <div style={{
-              background: `${COLORS.orange}15`, border: `1px solid ${COLORS.orange}30`,
-              borderRadius: 8, padding: "10px 16px", marginBottom: 16,
-              display: "flex", alignItems: "center", gap: 8,
-            }}>
-              <span style={{ fontSize: 14 }}>📌</span>
-              <span style={{ fontSize: 14, color: COLORS.orange }}>
-                Ahrefs Web Analytics連携後にリアルデータを表示します。現在はサンプルデータです。
-              </span>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "repeat(3, 1fr)", gap: mob ? 10 : 16, marginBottom: 24 }}>
-              <StatCard label="AI検索トラフィック" value={totalAITraffic.toLocaleString()} change={32.4} icon="🤖" color={COLORS.green} sub="ChatGPT + Perplexity + Copilot" />
-              <StatCard label="AI流入バウンス率" value="34.2%" change={-5.1} icon="📉" color={COLORS.cyan} sub="通常トラフィックより12%低い" />
-              <StatCard label="AI滞在時間" value="4:32" change={15.3} icon="⏱️" color={COLORS.purple} sub="通常の1.8倍" />
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "2fr 1fr", gap: 16, marginBottom: 24 }}>
-              <div style={{ background: COLORS.card, borderRadius: 12, padding: mob ? 16 : 24, border: `1px solid ${COLORS.border}` }}>
-                <SectionHeader title="AI検索トラフィック推移" subtitle="chart エンドポイントからの時系列データ" />
-                <AreaChart
-                  data={trafficData}
-                  keys={["ai"]}
-                  colors={[COLORS.green]}
-                  height={200}
-                />
-              </div>
-
-              <div style={{ background: COLORS.card, borderRadius: 12, padding: 24, border: `1px solid ${COLORS.border}` }}>
-                <SectionHeader title="AI検索ソース内訳" />
-                <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 8 }}>
-                  {[
-                    { name: "ChatGPT", pct: 42, color: COLORS.green },
-                    { name: "Perplexity", pct: 28, color: COLORS.cyan },
-                    { name: "Copilot", pct: 18, color: COLORS.purple },
-                    { name: "その他AI", pct: 12, color: COLORS.textDim },
-                  ].map((s, i) => (
-                    <div key={i}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 4 }}>
-                        <span>{s.name}</span>
-                        <span style={{ fontWeight: 600, fontFamily: "'Noto Sans JP', system-ui, sans-serif" }}>{s.pct}%</span>
-                      </div>
-                      <div style={{ height: 6, background: COLORS.surface, borderRadius: 3, overflow: "hidden" }}>
-                        <div style={{
-                          width: `${s.pct}%`, height: "100%", borderRadius: 3,
-                          background: s.color, transition: "width 1s ease",
-                        }} />
-                      </div>
-                    </div>
-                  ))}
+            {ahrefsLoading ? (
+              <LoadingState />
+            ) : ahrefsConnected === false ? (
+              <NotConnectedState
+                title="Ahrefs Web Analytics 未連携"
+                description="Ahrefs Web Analyticsと連携すると、AI検索トラフィックの詳細分析が表示されます。管理画面でAHREFS_API_KEYを設定してください。"
+              />
+            ) : trafficData.length === 0 ? (
+              <NotConnectedState
+                title="トラフィックデータなし"
+                description="まだトラフィックデータが取得されていません。サイトURLの設定を確認してください。"
+              />
+            ) : (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "repeat(3, 1fr)", gap: mob ? 10 : 16, marginBottom: 24 }}>
+                  <StatCard label="AI検索トラフィック" value={totalAITraffic.toLocaleString()} icon="🤖" color={COLORS.green} sub="ChatGPT + Perplexity + Copilot" />
+                  <StatCard label="オーガニック" value={totalOrganic.toLocaleString()} icon="🔍" color={COLORS.cyan} sub="検索エンジン経由" />
+                  <StatCard label="AI比率" value={`${aiPercent}%`} icon="📊" color={COLORS.purple} sub="全トラフィック中" />
                 </div>
-              </div>
-            </div>
 
-            {/* AI Traffic by page */}
-            <div style={{ background: COLORS.card, borderRadius: 12, padding: mob ? 16 : 24, border: `1px solid ${COLORS.border}` }}>
-              <SectionHeader title="ページ別AIトラフィック詳細" subtitle="AI検索からの流入が多いページTOP 5" />
-              <div style={{ display: "flex", flexDirection: "column", gap: 2, overflowX: mob ? "auto" : undefined, WebkitOverflowScrolling: "touch" }}>
-                <div style={{
-                  display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1fr 100px", minWidth: mob ? 600 : undefined,
-                  padding: "8px 12px", fontSize: 13, color: COLORS.textDim, textTransform: "uppercase", letterSpacing: 0.5,
-                  borderBottom: `1px solid ${COLORS.border}`,
-                }}>
-                  <span>ページURL</span><span style={{ textAlign: "right" }}>AI流入</span>
-                  <span style={{ textAlign: "right" }}>全体</span><span style={{ textAlign: "right" }}>AI比率</span>
-                  <span style={{ textAlign: "right" }}>30日変化</span>
-                </div>
-                {TOP_PAGES.map((p, i) => (
-                  <div key={i} style={{
-                    display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1fr 100px",
-                    padding: "10px 12px", borderRadius: 8, fontSize: 14, alignItems: "center",
-                    background: i % 2 === 0 ? "transparent" : COLORS.surfaceHover + "30",
-                    minWidth: mob ? 600 : undefined,
-                  }}>
-                    <span style={{ color: COLORS.accent, fontFamily: "'Noto Sans JP', system-ui, sans-serif", fontSize: 13 }}>{p.url}</span>
-                    <span style={{ textAlign: "right", fontWeight: 600, fontFamily: "'Noto Sans JP', system-ui, sans-serif", color: COLORS.green }}>
-                      {p.aiTraffic.toLocaleString()}
-                    </span>
-                    <span style={{ textAlign: "right", fontFamily: "'Noto Sans JP', system-ui, sans-serif" }}>{p.totalTraffic.toLocaleString()}</span>
-                    <span style={{ textAlign: "right" }}>
-                      <Badge color={COLORS.cyan}>{p.aiRatio}%</Badge>
-                    </span>
-                    <div style={{ textAlign: "right" }}>
-                      <Sparkline
-                        data={Array.from({ length: 7 }, () => Math.round(p.aiTraffic / 30 * (0.7 + Math.random() * 0.6)))}
-                        color={p.trend >= 0 ? COLORS.green : COLORS.red}
-                        width={60} height={20}
-                      />
+                <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "2fr 1fr", gap: 16, marginBottom: 24 }}>
+                  <div style={{ background: COLORS.card, borderRadius: 12, padding: mob ? 16 : 24, border: `1px solid ${COLORS.border}` }}>
+                    <SectionHeader title="AI検索トラフィック推移" subtitle="Ahrefs Web Analytics APIデータ" />
+                    <AreaChart
+                      data={trafficData}
+                      keys={["ai"]}
+                      colors={[COLORS.green]}
+                      height={200}
+                    />
+                  </div>
+
+                  <div style={{ background: COLORS.card, borderRadius: 12, padding: 24, border: `1px solid ${COLORS.border}` }}>
+                    <SectionHeader title="トラフィック構成" />
+                    <DonutChart
+                      segments={[
+                        { value: totalAITraffic, color: COLORS.green },
+                        { value: totalOrganic, color: COLORS.cyan },
+                        { value: trafficData.reduce((a, d) => a + (d.direct || 0), 0), color: COLORS.orange },
+                        { value: trafficData.reduce((a, d) => a + (d.social || 0), 0), color: COLORS.purple },
+                      ]}
+                    />
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+                      {[
+                        { name: "AI検索", color: COLORS.green, val: totalAITraffic },
+                        { name: "オーガニック", color: COLORS.cyan, val: totalOrganic },
+                        { name: "ダイレクト", color: COLORS.orange, val: trafficData.reduce((a, d) => a + (d.direct || 0), 0) },
+                        { name: "ソーシャル", color: COLORS.purple, val: trafficData.reduce((a, d) => a + (d.social || 0), 0) },
+                      ].map((s, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: s.color }} />
+                          <span style={{ color: COLORS.textMuted }}>{s.name}</span>
+                          <span style={{ marginLeft: "auto", fontWeight: 600, fontFamily: "'Noto Sans JP', system-ui, sans-serif" }}>{s.val.toLocaleString()}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+
+                {/* AI Traffic by page */}
+                {topPagesData.length > 0 && (
+                  <div style={{ background: COLORS.card, borderRadius: 12, padding: mob ? 16 : 24, border: `1px solid ${COLORS.border}` }}>
+                    <SectionHeader title="ページ別AIトラフィック詳細" subtitle="AI検索からの流入が多いページ" />
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2, overflowX: mob ? "auto" : undefined, WebkitOverflowScrolling: "touch" }}>
+                      <div style={{
+                        display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1fr 100px", minWidth: mob ? 600 : undefined,
+                        padding: "8px 12px", fontSize: 13, color: COLORS.textDim, textTransform: "uppercase", letterSpacing: 0.5,
+                        borderBottom: `1px solid ${COLORS.border}`,
+                      }}>
+                        <span>ページURL</span><span style={{ textAlign: "right" }}>AI流入</span>
+                        <span style={{ textAlign: "right" }}>全体</span><span style={{ textAlign: "right" }}>AI比率</span>
+                        <span style={{ textAlign: "right" }}>トレンド</span>
+                      </div>
+                      {topPagesData.map((p, i) => (
+                        <div key={i} style={{
+                          display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1fr 100px",
+                          padding: "10px 12px", borderRadius: 8, fontSize: 14, alignItems: "center",
+                          background: i % 2 === 0 ? "transparent" : COLORS.surfaceHover + "30",
+                          minWidth: mob ? 600 : undefined,
+                        }}>
+                          <span style={{ color: COLORS.accent, fontFamily: "'Noto Sans JP', system-ui, sans-serif", fontSize: 13 }}>{p.url}</span>
+                          <span style={{ textAlign: "right", fontWeight: 600, fontFamily: "'Noto Sans JP', system-ui, sans-serif", color: COLORS.green }}>
+                            {p.aiTraffic.toLocaleString()}
+                          </span>
+                          <span style={{ textAlign: "right", fontFamily: "'Noto Sans JP', system-ui, sans-serif" }}>{p.totalTraffic.toLocaleString()}</span>
+                          <span style={{ textAlign: "right" }}>
+                            <Badge color={COLORS.cyan}>{p.aiRatio}%</Badge>
+                          </span>
+                          <span style={{
+                            textAlign: "right", fontSize: 13, fontWeight: 600,
+                            color: p.trend >= 0 ? COLORS.green : COLORS.red,
+                          }}>
+                            {p.trend >= 0 ? "+" : ""}{p.trend}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
 
         {/* ===== BRAND RADAR TAB ===== */}
         {activeTab === "brand-radar" && (
           <div className="fade-up">
-            <div style={{
-              background: `${COLORS.orange}15`, border: `1px solid ${COLORS.orange}30`,
-              borderRadius: 8, padding: "10px 16px", marginBottom: 16,
-              display: "flex", alignItems: "center", gap: 8,
-            }}>
-              <span style={{ fontSize: 14 }}>📌</span>
-              <span style={{ fontSize: 14, color: COLORS.orange }}>
-                Ahrefs Web Analytics連携後にリアルデータを表示します。現在はサンプルデータです。
-              </span>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: mob ? 10 : 16, marginBottom: 24 }}>
-              <StatCard label="AI言及数" value="2,481" change={18.7} icon="💬" color={COLORS.accent} sub="6プラットフォーム合計" />
-              <StatCard label="AI引用数" value="933" change={22.1} icon="🔗" color={COLORS.green} sub="被リンクページ数" />
-              <StatCard label="推定インプレッション" value="1.2M" change={45.3} icon="👁️" color={COLORS.purple} sub="検索ボリューム加重" />
-              <StatCard label="AI SoV" value="34.2%" change={12.5} icon="📊" color={COLORS.cyan} sub="業界内1位" />
-            </div>
+            {ahrefsLoading ? (
+              <LoadingState />
+            ) : ahrefsConnected === false ? (
+              <NotConnectedState
+                title="Ahrefs Brand Radar 未連携"
+                description="Ahrefs Brand Radarと連携すると、AIプラットフォームでのブランド言及・引用データが表示されます。管理画面でAHREFS_API_KEYを設定してください。"
+              />
+            ) : brandRadarData.length === 0 ? (
+              <NotConnectedState
+                title="Brand Radarデータなし"
+                description="まだBrand Radarデータが取得されていません。ターゲットの設定を確認してください。"
+              />
+            ) : (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: mob ? 10 : 16, marginBottom: 24 }}>
+                  <StatCard label="AI言及数" value={brandRadarData.reduce((a, p) => a + p.mentions, 0).toLocaleString()} icon="💬" color={COLORS.accent} sub={`${brandRadarData.length}プラットフォーム合計`} />
+                  <StatCard label="AI引用数" value={brandRadarData.reduce((a, p) => a + p.citations, 0).toLocaleString()} icon="🔗" color={COLORS.green} sub="被リンクページ数" />
+                  <StatCard label="推定インプレッション" value={brandRadarData.reduce((a, p) => a + (p.impressions || 0), 0).toLocaleString()} icon="👁️" color={COLORS.purple} sub="検索ボリューム加重" />
+                  <StatCard label="AI SoV (平均)" value={`${(brandRadarData.reduce((a, p) => a + p.sov, 0) / brandRadarData.length).toFixed(1)}%`} icon="📊" color={COLORS.cyan} />
+                </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 24 }}>
-              {/* SoV by platform */}
-              <div style={{ background: COLORS.card, borderRadius: 12, padding: 24, border: `1px solid ${COLORS.border}` }}>
-                <SectionHeader title="プラットフォーム別 Share of Voice" subtitle="Brand Radar APIデータ" />
-                {AI_PLATFORMS.map((p, i) => (
-                  <div key={i} style={{ marginBottom: 14 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ width: 6, height: 6, borderRadius: "50%", background: p.color }} />
-                        <span style={{ fontSize: 13 }}>{p.name}</span>
+                <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 24 }}>
+                  {/* SoV by platform */}
+                  <div style={{ background: COLORS.card, borderRadius: 12, padding: 24, border: `1px solid ${COLORS.border}` }}>
+                    <SectionHeader title="プラットフォーム別 Share of Voice" subtitle="Brand Radar APIデータ" />
+                    {brandRadarData.map((p, i) => (
+                      <div key={i} style={{ marginBottom: 14 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <div style={{ width: 6, height: 6, borderRadius: "50%", background: p.color }} />
+                            <span style={{ fontSize: 13 }}>{p.platform}</span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Noto Sans JP', system-ui, sans-serif" }}>{p.sov}%</span>
+                            <span style={{
+                              fontSize: 13, color: p.trend >= 0 ? COLORS.green : COLORS.red,
+                            }}>
+                              {p.trend >= 0 ? "+" : ""}{p.trend}%
+                            </span>
+                          </div>
+                        </div>
+                        <div style={{ height: 8, background: COLORS.surface, borderRadius: 4, overflow: "hidden" }}>
+                          <div style={{
+                            width: `${p.sov}%`, height: "100%", borderRadius: 4,
+                            background: `linear-gradient(90deg, ${p.color}90, ${p.color})`,
+                            transition: "width 0.8s ease",
+                          }} />
+                        </div>
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Noto Sans JP', system-ui, sans-serif" }}>{p.sov}%</span>
-                        <span style={{
-                          fontSize: 13, color: p.trend >= 0 ? COLORS.green : COLORS.red,
-                        }}>
-                          {p.trend >= 0 ? "↑" : "↓"}{Math.abs(p.trend)}%
-                        </span>
+                    ))}
+                  </div>
+
+                  {/* Mentions vs Citations */}
+                  <div style={{ background: COLORS.card, borderRadius: 12, padding: 24, border: `1px solid ${COLORS.border}` }}>
+                    <SectionHeader title="言及 vs 引用" subtitle="プラットフォーム別の言及・引用比率" />
+                    <MiniBarChart
+                      data={[
+                        brandRadarData.map(p => p.mentions),
+                        brandRadarData.map(p => p.citations),
+                      ]}
+                      colors={[COLORS.accent, COLORS.green]}
+                      height={140}
+                      labels={brandRadarData.map(p => (p.platform || "").slice(0, 4))}
+                    />
+                    <div style={{ display: "flex", gap: 16, marginTop: 12, justifyContent: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ width: 10, height: 10, borderRadius: 2, background: COLORS.accent }} />
+                        <span style={{ fontSize: 13, color: COLORS.textMuted }}>言及</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ width: 10, height: 10, borderRadius: 2, background: COLORS.green }} />
+                        <span style={{ fontSize: 13, color: COLORS.textMuted }}>引用</span>
                       </div>
                     </div>
-                    <div style={{ height: 8, background: COLORS.surface, borderRadius: 4, overflow: "hidden" }}>
-                      <div style={{
-                        width: `${p.sov}%`, height: "100%", borderRadius: 4,
-                        background: `linear-gradient(90deg, ${p.color}90, ${p.color})`,
-                        transition: "width 0.8s ease",
-                      }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Mentions vs Citations */}
-              <div style={{ background: COLORS.card, borderRadius: 12, padding: 24, border: `1px solid ${COLORS.border}` }}>
-                <SectionHeader title="言及 vs 引用" subtitle="プラットフォーム別の言及・引用比率" />
-                <MiniBarChart
-                  data={[
-                    AI_PLATFORMS.map(p => p.mentions),
-                    AI_PLATFORMS.map(p => p.citations),
-                  ]}
-                  colors={[COLORS.accent, COLORS.green]}
-                  height={140}
-                  labels={AI_PLATFORMS.map(p => p.name.slice(0, 4))}
-                />
-                <div style={{ display: "flex", gap: 16, marginTop: 12, justifyContent: "center" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: 2, background: COLORS.accent }} />
-                    <span style={{ fontSize: 13, color: COLORS.textMuted }}>言及</span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: 2, background: COLORS.green }} />
-                    <span style={{ fontSize: 13, color: COLORS.textMuted }}>引用</span>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Cited domains */}
-            <div style={{ background: COLORS.card, borderRadius: 12, padding: 24, border: `1px solid ${COLORS.border}` }}>
-              <SectionHeader title="被引用ドメイン TOP 5" subtitle="AIレスポンスで自社コンテンツが引用されるソース" />
-              {[
-                { domain: "example.co.jp/blog", citations: 312, pages: 45, growth: 28 },
-                { domain: "example.co.jp/docs", citations: 245, pages: 38, growth: 15 },
-                { domain: "example.co.jp/case", citations: 189, pages: 22, growth: 42 },
-                { domain: "example.co.jp/products", citations: 112, pages: 15, growth: -3 },
-                { domain: "example.co.jp/about", citations: 75, pages: 8, growth: 5 },
-              ].map((d, i) => (
-                <div key={i} style={{
-                  display: "grid", gridTemplateColumns: "2fr 1fr 1fr 80px", alignItems: "center",
-                  padding: "10px 12px", borderBottom: i < 4 ? `1px solid ${COLORS.border}` : "none",
-                }}>
-                  <span style={{ fontFamily: "'Noto Sans JP', system-ui, sans-serif", fontSize: 14, color: COLORS.accent }}>{d.domain}</span>
-                  <span style={{ textAlign: "right", fontSize: 14 }}><strong>{d.citations}</strong> 引用</span>
-                  <span style={{ textAlign: "right", fontSize: 14, color: COLORS.textMuted }}>{d.pages} ページ</span>
-                  <span style={{
-                    textAlign: "right", fontSize: 13, fontWeight: 600,
-                    color: d.growth >= 0 ? COLORS.green : COLORS.red,
-                  }}>
-                    {d.growth >= 0 ? "+" : ""}{d.growth}%
-                  </span>
-                </div>
-              ))}
-            </div>
+              </>
+            )}
           </div>
         )}
 
         {/* ===== COMPETITORS TAB ===== */}
         {activeTab === "competitors" && (
           <div className="fade-up">
-            <div style={{
-              background: `${COLORS.orange}15`, border: `1px solid ${COLORS.orange}30`,
-              borderRadius: 8, padding: "10px 16px", marginBottom: 16,
-              display: "flex", alignItems: "center", gap: 8,
-            }}>
-              <span style={{ fontSize: 14 }}>📌</span>
-              <span style={{ fontSize: 14, color: COLORS.orange }}>
-                Ahrefs Web Analytics連携後にリアルデータを表示します。現在はサンプルデータです。
-              </span>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: mob ? 10 : 16, marginBottom: 24 }}>
-              {COMPETITOR_DATA.map((c, i) => (
-                <div key={i} style={{
-                  background: COLORS.card, borderRadius: 12, padding: "18px 20px",
-                  border: `1px solid ${i === 0 ? COLORS.accent + "60" : COLORS.border}`,
-                  position: "relative", overflow: "hidden",
-                }}>
-                  {i === 0 && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: COLORS.accent }} />}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <span style={{ fontSize: 14, fontWeight: 600 }}>{c.name}</span>
-                    {i === 0 && <Badge color={COLORS.green}>YOU</Badge>}
-                  </div>
-                  <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "'Noto Sans JP', system-ui, sans-serif", color: c.color, marginBottom: 4 }}>
-                    {c.sov}%
-                  </div>
-                  <div style={{ fontSize: 13, color: COLORS.textDim }}>AI Share of Voice</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
-                    <div>
-                      <div style={{ fontSize: 13, color: COLORS.textDim }}>言及</div>
-                      <div style={{ fontSize: 13, fontWeight: 600, fontFamily: "'Noto Sans JP', system-ui, sans-serif" }}>{c.mentions.toLocaleString()}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 13, color: COLORS.textDim }}>引用</div>
-                      <div style={{ fontSize: 13, fontWeight: 600, fontFamily: "'Noto Sans JP', system-ui, sans-serif" }}>{c.citations.toLocaleString()}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* SoV History */}
-            <div style={{ background: COLORS.card, borderRadius: 12, padding: 24, border: `1px solid ${COLORS.border}`, marginBottom: 24 }}>
-              <SectionHeader title="Share of Voice 推移" subtitle="過去6ヶ月の競合比較トレンド" />
-              <div style={{ display: "flex", gap: 20, marginBottom: 16 }}>
-                {[
-                  { label: "自社", color: COLORS.accent },
-                  { label: "競合A", color: COLORS.red },
-                  { label: "競合B", color: COLORS.orange },
-                  { label: "競合C", color: COLORS.textDim },
-                ].map((l, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <div style={{ width: 10, height: 3, borderRadius: 2, background: l.color }} />
-                    <span style={{ fontSize: 13, color: COLORS.textMuted }}>{l.label}</span>
-                  </div>
-                ))}
-              </div>
-              <AreaChart
-                data={SOV_HISTORY.map(h => ({ date: h.month, organic: h.self, ai: h.a, direct: h.b, social: h.c }))}
-                keys={["organic", "ai", "direct", "social"]}
-                colors={[COLORS.accent, COLORS.red, COLORS.orange, COLORS.textDim]}
-                height={200}
+            {ahrefsLoading ? (
+              <LoadingState />
+            ) : ahrefsConnected === false ? (
+              <NotConnectedState
+                title="Ahrefs 競合分析 未連携"
+                description="Ahrefsと連携すると、競合他社とのAI Share of Voice比較が表示されます。管理画面でAHREFS_API_KEYを設定してください。"
               />
-            </div>
-
-            {/* Gap Analysis */}
-            <div style={{ background: COLORS.card, borderRadius: 12, padding: 24, border: `1px solid ${COLORS.border}` }}>
-              <SectionHeader title="AIメンションギャップ分析" subtitle="競合に言及があり自社にない領域" />
-              {[
-                { topic: "クラウド移行ガイド", competitor: "競合A", mentions: 45, opportunity: "HIGH" },
-                { topic: "DX推進事例", competitor: "競合B", mentions: 38, opportunity: "HIGH" },
-                { topic: "AI導入ROI計算", competitor: "競合A", mentions: 32, opportunity: "MED" },
-                { topic: "セキュリティ対策", competitor: "競合C", mentions: 28, opportunity: "MED" },
-                { topic: "API連携方法", competitor: "競合B", mentions: 22, opportunity: "LOW" },
-              ].map((g, i) => (
-                <div key={i} style={{
-                  display: "grid", gridTemplateColumns: "2fr 1fr 1fr 80px", alignItems: "center",
-                  padding: "10px 12px", borderBottom: i < 4 ? `1px solid ${COLORS.border}` : "none",
-                }}>
-                  <span style={{ fontSize: 13, fontWeight: 500 }}>{g.topic}</span>
-                  <span style={{ fontSize: 14, color: COLORS.textMuted }}>{g.competitor}</span>
-                  <span style={{ fontSize: 14, fontFamily: "'Noto Sans JP', system-ui, sans-serif" }}>{g.mentions} 件</span>
-                  <span style={{ textAlign: "right" }}>
-                    <Badge color={
-                      g.opportunity === "HIGH" ? COLORS.red :
-                      g.opportunity === "MED" ? COLORS.orange : COLORS.textDim
-                    }>{g.opportunity}</Badge>
-                  </span>
+            ) : competitorData.length === 0 ? (
+              <NotConnectedState
+                title="競合データなし"
+                description="まだ競合が設定されていません。競合追加APIを使用して競合を登録してください。"
+              />
+            ) : (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2, 1fr)" : `repeat(${Math.min(competitorData.length, 4)}, 1fr)`, gap: mob ? 10 : 16, marginBottom: 24 }}>
+                  {competitorData.map((c, i) => {
+                    const compColors = [COLORS.accent, COLORS.red, COLORS.orange, COLORS.textDim];
+                    return (
+                      <div key={c.id} style={{
+                        background: COLORS.card, borderRadius: 12, padding: "18px 20px",
+                        border: `1px solid ${i === 0 ? COLORS.accent + "60" : COLORS.border}`,
+                        position: "relative", overflow: "hidden",
+                      }}>
+                        {i === 0 && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: COLORS.accent }} />}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                          <span style={{ fontSize: 14, fontWeight: 600 }}>{c.name}</span>
+                        </div>
+                        <div style={{ fontSize: 13, color: COLORS.textMuted, wordBreak: "break-all" }}>{c.url}</div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </div>
         )}
 

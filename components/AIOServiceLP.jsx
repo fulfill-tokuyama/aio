@@ -30,9 +30,8 @@ const C = {
   cyanBg: "rgba(14,165,233,0.08)",
 };
 
-// Stripe Payment Link (test mode)
-const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/test_YOUR_PAYMENT_LINK";
-// Replace with your actual Stripe Payment Link
+// Stripe Payment Link (from environment variable)
+const STRIPE_PAYMENT_LINK = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK || "#";
 
 // ============================================================
 // Evidence Data — All sourced from official Ahrefs documentation
