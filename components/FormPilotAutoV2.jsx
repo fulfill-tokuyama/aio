@@ -119,6 +119,8 @@ export default function FormPilotAutoV2(){
   const[leads,setLeads]=useState([]);
   const[loading,setLoading]=useState(true);
   const[showAddModal,setShowAddModal]=useState(false);
+  const[showScanModal,setShowScanModal]=useState(false);
+  const[scanResults,setScanResults]=useState(null);
 
   // DB からリード読み込み
   const fetchLeads=useCallback(async()=>{
@@ -260,15 +262,11 @@ export default function FormPilotAutoV2(){
     return{byIndustry,byTemplate,bySize};
   },[leads,templates]);
 
-  // Phase 1: runScan はシミュレーションのみ（API連携は将来実装）
+  // 一括LLMOスキャンモーダルを開く
   const runScan=useCallback(()=>{
-    setScanRunning(true);
-    setTimeout(()=>{
-      setLog(p=>[{t:new Date().toISOString(),msg:`🔄 スキャン完了（シミュレーション）: LLMO調査機能は将来実装予定`,type:"scan"},...p]);
-      setAutoConfig(p=>({...p,lastScanAt:new Date().toISOString(),nextScanAt:new Date(Date.now()+p.scanInterval*36e5).toISOString(),totalScans:p.totalScans+1}));
-      setScanRunning(false);
-    },1800);
-  },[autoConfig]);
+    setScanResults(null);
+    setShowScanModal(true);
+  },[]);
 
   // Phase 1: autoSend はDB永続化対応（各リードをupdateLeadで更新）
   const autoSend=useCallback(()=>{
@@ -356,7 +354,7 @@ export default function FormPilotAutoV2(){
                 + リード追加
               </button>
               <button onClick={runScan} disabled={scanRunning} style={{padding:"5px 11px",borderRadius:4,border:"none",background:C.acc,color:C.bg,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4,opacity:scanRunning?.5:1}}>
-                {scanRunning?"⟳ スキャン中...":<><I d={ic.radar} s={11} c={C.bg}/>LLMO調査</>}
+                {scanRunning?"⟳ スキャン中...":<><I d={ic.radar} s={11} c={C.bg}/>一括LLMO調査</>}
               </button>
               <button onClick={autoSend} style={{padding:"5px 11px",borderRadius:4,border:`1px solid ${C.bdr}`,background:"transparent",color:C.tx,fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
                 <I d={ic.send} s={11} c={C.p}/>AIスコア順送信
@@ -834,6 +832,16 @@ export default function FormPilotAutoV2(){
           </div>
         </div>
       )}
+
+      {/* ===== 一括LLMOスキャンモーダル ===== */}
+      {showScanModal&&(
+        <BulkScanModal
+          onClose={()=>{setShowScanModal(false);setScanResults(null);}}
+          scanResults={scanResults}
+          setScanResults={setScanResults}
+          onComplete={()=>{fetchLeads();setAutoConfig(p=>({...p,lastScanAt:new Date().toISOString(),nextScanAt:new Date(Date.now()+p.scanInterval*36e5).toISOString(),totalScans:p.totalScans+1}));setLog(p=>[{t:new Date().toISOString(),msg:`🔬 一括LLMOスキャン完了`,type:"scan"},...p]);}}
+        />
+      )}
     </div>
   );
 }
@@ -919,5 +927,141 @@ function AddLeadForm({onSubmit}){
         {submitting?"追加中...":"リードを追加"}
       </button>
     </form>
+  );
+}
+
+// ============================================================
+// 一括LLMOスキャンモーダル
+// ============================================================
+function BulkScanModal({onClose,scanResults,setScanResults,onComplete}){
+  const[urlText,setUrlText]=useState("");
+  const[scanning,setScanning]=useState(false);
+
+  const urlCount=urlText.trim()?urlText.trim().split(/\n/).filter(l=>l.trim()).length:0;
+  const estimatedTime=Math.ceil(urlCount/3)*10;
+
+  const startScan=async()=>{
+    const urls=urlText.trim().split(/\n/).map(l=>l.trim()).filter(Boolean);
+    if(!urls.length)return;
+    setScanning(true);
+    try{
+      const res=await fetch("/api/pipeline-scan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({urls})});
+      const json=await res.json();
+      if(res.ok){
+        setScanResults(json);
+        onComplete();
+      }else{
+        setScanResults({error:json.error||"スキャンエラー"});
+      }
+    }catch(e){
+      setScanResults({error:"ネットワークエラー: "+e.message});
+    }finally{
+      setScanning(false);
+    }
+  };
+
+  const resetScan=()=>{setScanResults(null);setUrlText("");};
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.card,borderRadius:10,border:`1px solid ${C.bdr}`,width:"100%",maxWidth:560,maxHeight:"90vh",overflow:"auto",padding:24}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+          <h2 style={{fontSize:15,fontWeight:800,margin:0}}>一括LLMO調査</h2>
+          <button onClick={onClose} style={{background:"none",border:"none",color:C.sub,fontSize:18,cursor:"pointer"}}>✕</button>
+        </div>
+
+        {/* エラー表示 */}
+        {scanResults?.error&&(
+          <div style={{padding:12,borderRadius:6,background:C.rB,border:`1px solid ${C.r}`,color:C.r,fontSize:11,marginBottom:14}}>
+            {scanResults.error}
+          </div>
+        )}
+
+        {/* 入力画面 */}
+        {!scanResults?.summary&&!scanning&&(
+          <div>
+            <p style={{fontSize:11,color:C.sub,margin:"0 0 10px"}}>URLを1行に1つずつ入力してください（最大50件）</p>
+            <textarea
+              value={urlText}
+              onChange={e=>setUrlText(e.target.value)}
+              rows={8}
+              placeholder={"https://example.com\nhttps://example2.co.jp\nhttps://example3.jp"}
+              style={{width:"100%",padding:10,borderRadius:6,border:`1px solid ${C.bdr}`,background:C.sf,color:C.tx,fontSize:11,fontFamily:"'Geist Mono',monospace",resize:"vertical",boxSizing:"border-box"}}
+            />
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10}}>
+              <div style={{fontSize:10,color:urlCount>50?C.r:C.sub}}>
+                {urlCount}件{urlCount>0&&` | 推定 ${estimatedTime>60?Math.ceil(estimatedTime/60)+"分":estimatedTime+"秒"}`}
+                {urlCount>50&&" (50件まで)"}
+              </div>
+              <button onClick={startScan} disabled={!urlCount||urlCount>50} style={{padding:"8px 18px",borderRadius:5,border:"none",background:C.acc,color:C.bg,fontSize:11,fontWeight:700,cursor:urlCount&&urlCount<=50?"pointer":"default",fontFamily:"inherit",opacity:urlCount&&urlCount<=50?1:.5}}>
+                スキャン開始
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 実行中 */}
+        {scanning&&(
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 0",gap:14}}>
+            <div style={{width:36,height:36,border:`3px solid ${C.bdr}`,borderTop:`3px solid ${C.acc}`,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
+            <div style={{fontSize:12,color:C.sub}}>LLMO診断中... ({urlCount}件)</div>
+            <div style={{fontSize:10,color:C.dim}}>推定 {estimatedTime>60?Math.ceil(estimatedTime/60)+"分":estimatedTime+"秒"}</div>
+          </div>
+        )}
+
+        {/* 結果画面 */}
+        {scanResults?.summary&&(
+          <div>
+            {/* サマリーKPI */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:16}}>
+              {[
+                {label:"処理",value:scanResults.summary.processed,color:C.b},
+                {label:"成功",value:scanResults.summary.succeeded,color:C.g},
+                {label:"リード追加",value:scanResults.summary.savedAsLeads,color:C.acc},
+                {label:"重複スキップ",value:scanResults.summary.skippedDuplicate,color:C.sub},
+              ].map(k=>(
+                <div key={k.label} style={{background:C.sf,borderRadius:6,padding:"10px 8px",textAlign:"center",border:`1px solid ${C.bdr}`}}>
+                  <div style={{fontSize:18,fontWeight:800,color:k.color,fontFamily:"'Geist Mono',monospace"}}>{k.value}</div>
+                  <div style={{fontSize:8,color:C.sub,fontWeight:700,marginTop:2}}>{k.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* 結果リスト */}
+            <div style={{maxHeight:300,overflow:"auto"}}>
+              {scanResults.results?.map((r,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderBottom:`1px solid ${C.bdr}`,fontSize:11}}>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:r.status==="success"?(r.saved?C.g:C.sub):r.status==="skipped"?C.o:C.r,flexShrink:0}}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:600,color:C.tx,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.company}</div>
+                    <div style={{fontSize:9,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.url}</div>
+                  </div>
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    {r.status==="success"&&(
+                      <>
+                        <div style={{fontWeight:700,color:r.llmoScore<=40?C.r:r.llmoScore<=70?C.o:C.g,fontFamily:"'Geist Mono',monospace"}}>{r.llmoScore}</div>
+                        <div style={{fontSize:8,color:r.saved?C.g:C.dim}}>{r.saved?"追加済":"対象外"}</div>
+                      </>
+                    )}
+                    {r.status==="skipped"&&<div style={{fontSize:9,color:C.o}}>重複</div>}
+                    {r.status==="error"&&<div style={{fontSize:9,color:C.r}}>エラー</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* アクションボタン */}
+            <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:16}}>
+              <button onClick={resetScan} style={{padding:"8px 16px",borderRadius:5,border:`1px solid ${C.bdr}`,background:"transparent",color:C.tx,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+                新しいスキャン
+              </button>
+              <button onClick={onClose} style={{padding:"8px 16px",borderRadius:5,border:"none",background:C.acc,color:C.bg,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                閉じる
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

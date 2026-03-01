@@ -29,7 +29,8 @@ interface PageSpeedData {
   fid: number;
 }
 
-interface HtmlAnalysis {
+export interface HtmlAnalysis {
+  title: string;
   hasJsonLd: boolean;
   hasFaqSchema: boolean;
   hasHowToSchema: boolean;
@@ -155,6 +156,13 @@ async function checkHtml(url: string): Promise<HtmlAnalysis> {
     const html = await res.text();
     const $ = cheerio.load(html);
 
+    // Title extraction (og:site_name preferred, fallback to <title> cleaned)
+    const ogSiteName = $('meta[property="og:site_name"]').attr("content")?.trim();
+    const rawTitle = $("title").text().trim();
+    const title = ogSiteName || rawTitle
+      .replace(/[\|–—\-]\s*(ホーム|HOME|公式|トップ|TOP|Official).*/i, "")
+      .trim() || rawTitle.split(/[\|–—\-]/)[0].trim();
+
     // JSON-LD
     const jsonLdScripts = $('script[type="application/ld+json"]');
     const hasJsonLd = jsonLdScripts.length > 0;
@@ -232,6 +240,7 @@ async function checkHtml(url: string): Promise<HtmlAnalysis> {
     });
 
     return {
+      title,
       hasJsonLd, hasFaqSchema, hasHowToSchema,
       hasMetaDescription, metaDescriptionLength,
       hasH1, h1Count,
@@ -435,6 +444,7 @@ function generateInsights(
 
 function getDefaultHtmlAnalysis(): HtmlAnalysis {
   return {
+    title: "",
     hasJsonLd: false, hasFaqSchema: false, hasHowToSchema: false,
     hasMetaDescription: false, metaDescriptionLength: 0,
     hasH1: false, h1Count: 0,
