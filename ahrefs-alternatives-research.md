@@ -1,225 +1,191 @@
 # Ahrefsの代替サービス調査（2026年版）
 
-## 背景
+## 背景・課題
 
-Ahrefs（エイチレフス）は世界最大級の被リンクデータを保有するSEO分析ツールですが、以下の理由から代替を検討するケースが増えています：
-
-- **価格の高さ**: Lite $99/月〜、スケールアップ時にコストが急増
-- **データ精度の課題**: Ahrefsのオーガニックトラフィック推定値とGoogle Analyticsの実数に大きな乖離がある（例：Ahrefs推定65k vs GA実測7k）
-- **AI時代のSEO変化**: AIオーバービュー、チャット検索、マルチモーダルSERPなど新しい検索形態への対応が求められている
+AIO Insight は月額¥10,000のサービスだが、Ahrefs有料プラン（Lite $99/月 + Brand Radar $50/月 = **$149/月〜**）を契約するとデータ元コストだけで売上を超過する。Ahrefsは未契約のまま、代替手段を確定する必要がある。
 
 ---
 
-## 当サービス（AIO Insight）のAhrefs利用状況
+## 当サービスの実際のAhrefs利用状況（コード分析）
 
-### 利用中のAPI
+### Ahrefs不要で動作する部分
 
-当サービスはAhrefsの**従来のSEO機能（被リンク・キーワード・サイト監査）は使用していない**。
-利用は以下の2つのAPIに限定される：
+| 機能 | ファイル | 依存先 |
+|------|----------|--------|
+| AI可視性診断エンジン（score 0-100） | `lib/diagnosis.ts` | Google PageSpeed API + cheerio |
+| Overview タブ | `AIODashboard.jsx` L483-641 | 診断結果（diagnosisData props） |
+| 競合設定 CRUD | `api/ahrefs/competitors/route.ts` | Supabase のみ |
+| トップページ表示 | `api/ahrefs/top-pages/route.ts` | Supabase のみ |
+| LP / 問い合わせ | `AIOServiceLP.jsx` | Stripe + `/api/contact` |
 
-| API | エンドポイント | 用途 |
-|-----|--------------|------|
-| **Web Analytics** | `/web-analytics/chart`, `/web-analytics/stats` | AI検索トラフィック分析（ChatGPT/Perplexity/Copilot経由の流入） |
-| **Brand Radar** | `/brand-radar/mentions`, `/brand-radar/overview` | 6つのAIプラットフォームでのブランド露出追跡 |
+### Ahrefs APIが必要な部分（2箇所のみ）
 
-### 追跡対象AIプラットフォーム
+| 機能 | APIエンドポイント | データ |
+|------|------------------|--------|
+| AIトラフィックタブ | `/web-analytics/chart`, `/stats` | organic, ai, direct, social, total, bounceRate, avgDuration |
+| Brand Radarタブ | `/brand-radar/mentions`, `/overview` | platform, mentions, citations, sov, impressions, trend |
 
-ChatGPT / Perplexity / Gemini / Copilot / AI Overviews / AI Mode
+### Ahrefsの料金体系
 
-### ダッシュボードでの利用
-
-- AI Traffic タブ: AIトラフィック量・構成比・トップページ表示
-- Brand Radar タブ: プラットフォーム別Share of Voice・言及数・引用数
-- Competitors タブ: 競合AI露出比較
-
-### 技術的統合
-
-- APIをプログラムから直接呼び出し（Bearer token認証）
-- Supabaseにキャッシュ保存（`ahrefs_traffic_snapshots`, `ahrefs_brand_radar_snapshots` 等）
-- **API互換性が代替選定の最重要条件**
-
----
-
-## 当サービス用途に最適な代替サービス
-
-### 第1候補: SE Ranking + SE Visible（コスパ最優先）
-
-| 項目 | 内容 |
-|------|------|
-| **料金** | $18.72/月〜（AI Visibilityは追加料金なし） |
-| **AI対応** | ChatGPT, Perplexity, Gemini, AI Mode, AI Overviews |
-| **強み** | Ahrefsの1/5以下の料金でAI可視性トラッキング + 従来SEO機能フル搭載 |
-| **弱み** | AI Visibility部分のAPI公開状況は要確認 |
-| **評価** | コスパ最強。API確認が取れれば最有力候補 |
-
-### 第2候補: Otterly AI（AI可視性特化・軽量）
-
-| 項目 | 内容 |
-|------|------|
-| **料金** | $29/月（10プロンプト）〜 $989/月（1,000プロンプト） |
-| **AI対応** | ChatGPT, Perplexity, Google AI Overviews, AI Mode, Gemini, Copilot |
-| **強み** | AI検索モニタリングに完全特化。ブランド言及の自動追跡、Share of Voice |
-| **弱み** | ダッシュボード中心でAPI提供は要確認 |
-| **評価** | 当サービスの用途に最もフィットする特化型ツール |
-
-### 第3候補: Semrush AI Visibility（総合力重視）
-
-| 項目 | 内容 |
-|------|------|
-| **料金** | $199/月（Semrush One） |
-| **AI対応** | ChatGPT, Perplexity, Gemini, AI Mode（130M+プロンプトDB） |
-| **強み** | AI Visibility Index + 従来SEO + PPC + コンテンツをオールインワン。広範なAPI提供 |
-| **弱み** | Ahrefsより高額になる可能性 |
-| **評価** | API連携が最も確実。将来のLLMOスキャン機能拡張にも活用可能 |
-
-### 第4候補: Peec AI（LLMO/GEO分析特化・最多AI対応）
-
-| 項目 | 内容 |
-|------|------|
-| **料金** | €89/月（25プロンプト）〜 €499+/月（300+プロンプト） |
-| **AI対応** | ChatGPT, Perplexity, Gemini, Claude, Copilot, Google AI Overviews, DeepSeek, Grok, Llama |
-| **強み** | 最多のAIプラットフォームカバー。日次モニタリング。エンタープライズプランでAPI対応 |
-| **弱み** | ユーロ建て料金。エンタープライズ以外のAPI対応は不明 |
-| **評価** | AI対応プラットフォーム数では最強。DeepSeek/Grok/Claude対応は差別化要因 |
-
-### その他注目ツール
-
-| ツール | 料金 | 特徴 |
-|--------|------|------|
-| **Writesonic GEO** | $16/月〜 | 最安値帯。ChatGPT/Gemini/Claude対応。「AhrefsのAI版」を標榜 |
-| **AIclicks** | $39/月〜 | プロンプトレベルのモニタリング、引用分析、競合ベンチマーク |
-| **Gauge** | 要問合せ | 合成プロンプトでスコアリング。ChatGPT/Claude/Gemini/Perplexity/Copilot対応 |
-| **Scrunch AI** | 要問合せ | B2B/SaaS向け。AI回答内の誤情報検出・修正に強い |
-| **HubSpot AEO Grader** | 無料 | ChatGPT/Perplexity/Geminiでのブランド認知度スコアリング |
+| 項目 | 費用 | 備考 |
+|------|------|------|
+| Web Analytics API | **$0（無料）** | 有料プラン不要、全ユーザー利用可能 |
+| Brand Radar | **$50/月〜** | 有料アドオン |
+| Ahrefs Lite（最低プラン） | $99/月 | API利用に必要かは要確認 |
 
 ---
 
-## 移行時の重要考慮事項
+## 最終結論：推奨構成
 
-### API互換性（最重要）
+### API連携可否の調査結果
 
-当サービスはAhrefs APIを4つのエンドポイントで直接呼び出しているため、代替ツールへの移行には**APIの書き換え**が必要：
+当サービスのダッシュボードはAPIをプログラムから直接呼び出す構造（`lib/ahrefs.ts` → 4つのAPIルート → ダッシュボードfetch）のため、**APIが無いツールは統合不可能**。
+
+| ツール | API提供 | 月額 | 判定 |
+|--------|---------|------|------|
+| Otterly AI | なし（ダッシュボード + Looker Studio出力のみ） | $29〜 | ✕ 統合不可 |
+| Writesonic GEO | なし（ダッシュボードのみ） | $16〜 | ✕ 統合不可 |
+| SE Visible | 不明 | $18.72〜 | △ 要確認 |
+| Answer Socrates | なし（Webツールのみ） | $0〜$9 | ✕ 統合不可 |
+| **heeb.ai** | **あり（API-first設計）** | 要確認 | **◎ 最有力** |
+| **自前構築** | ChatGPT API + Perplexity Sonar API | API使用料のみ | **◎ 最安** |
+
+### 推奨構成
 
 ```
-app/api/ahrefs/traffic/route.ts      → 新ツールのトラフィックAPI
-app/api/ahrefs/brand-radar/route.ts  → 新ツールのブランド監視API
-app/api/ahrefs/competitors/route.ts  → 新ツールの競合API
-app/api/ahrefs/top-pages/route.ts    → 新ツールのページ分析API
+┌──────────────────────────────────────────────────────────┐
+│  AIO Insight ダッシュボード                                │
+├──────────────┬───────────────────────────────────────────┤
+│ AIトラフィック │  Ahrefs Web Analytics API（無料・変更なし）  │
+│   タブ        │  既存コードそのまま利用                      │
+├──────────────┼───────────────────────────────────────────┤
+│ Brand Radar  │  heeb.ai LLM Mentions API                │
+│   タブ        │  lib/ahrefs.ts のBR部分を差し替え           │
+├──────────────┼───────────────────────────────────────────┤
+│ Overview     │  自前診断エンジン（変更なし）                 │
+│   タブ        │  lib/diagnosis.ts                         │
+├──────────────┼───────────────────────────────────────────┤
+│ 競合分析タブ  │  Supabase CRUD（変更なし）                  │
+│              │  api/ahrefs/competitors/route.ts           │
+└──────────────┴───────────────────────────────────────────┘
 ```
 
-### DB移行
+### 費用比較
 
-Supabaseの以下テーブルのスキーマ変更が必要になる可能性：
-- `ahrefs_traffic_snapshots`
-- `ahrefs_brand_radar_snapshots`
-- `ahrefs_top_pages`
-- `ahrefs_competitor_config`
-
-### 推奨移行戦略
-
-1. **段階的移行**: Ahrefsを維持しつつ代替ツールを並行導入し、データ品質を比較
-2. **API仕様確認**: 候補ツールのトライアルで実際のAPIレスポンスを検証
-3. **ダッシュボード抽象化**: APIクライアント層を抽象化し、バックエンド切替を容易にする
+| 構成 | 月額コスト | コード変更量 |
+|------|-----------|-------------|
+| ❌ Ahrefs有料プラン | $149/月〜（約¥22,000） | なし |
+| ✅ Ahrefs WA(無料) + heeb.ai | 要確認（heeb.ai分のみ） | Brand Radar API差替えのみ |
+| ✅ Ahrefs WA(無料) + 自前構築 | $5〜$20/月（API使用料） | Brand Radar全体の自前実装 |
 
 ---
 
-## 一般的なAhrefs代替サービス一覧
+## heeb.ai（最有力候補）の詳細
 
-### Semrush（セムラッシュ）- 最も総合的な代替
+### 概要
 
-| 項目 | 内容 |
-|------|------|
-| **料金** | Pro $139.95/月、Guru $249.95/月、Business $499.95/月 |
-| **ユーザー数** | 世界700万人以上 |
-| **強み** | SEO、PPC、SNS、コンテンツマーケティングをオールインワンでカバー |
-| **特徴** | Semrush Oneプラン（$199/月）でSEO+AI Visibilityツールキットが利用可能 |
-| **おすすめ対象** | Ahrefsと同等以上の機能を求めるチーム |
+heeb.aiはAI検索可視性データに特化した**API-firstのサービス**。開発者・SEOプロフェッショナル向けに設計されており、当サービスのダッシュボード統合に最適。
 
-### SE Ranking - コスパ最強
+### 提供データ（当サービスのBrand Radarタブとの対応）
 
-| 項目 | 内容 |
-|------|------|
-| **料金** | $18.72/月〜 |
-| **強み** | Ahrefsより大幅に安価ながら高品質なSEOスイート |
-| **特徴** | レポーティングとランクトラッキングに優れる。SE Visible（AI可視性）追加料金なし |
-| **おすすめ対象** | コスト重視のエージェンシー、中堅チーム |
+| heeb.ai のデータ | 当サービスの対応フィールド | 対応状況 |
+|------------------|-------------------------|---------|
+| mentions（言及） | `mentions` | ✅ 直接対応 |
+| sentiment（感情） | ―（未使用） | 拡張可能 |
+| citations（引用） | `citations` | ✅ 直接対応 |
+| sources（引用元URL） | ―（未使用） | 拡張可能 |
+| visibility score | `sov`（Share of Voice） | ✅ マッピング可能 |
+| competitor mentions | 競合分析タブ | ✅ 拡張可能 |
 
-### Moz Pro - 堅実な選択肢
+### 対応LLM
 
-| 項目 | 内容 |
-|------|------|
-| **料金** | Standard $99/月、Medium $179/月、Large $299/月 |
-| **強み** | 学習コストが低く、ローカルSEOに強い |
-| **特徴** | コミュニティが充実、geo-intentに最適化されたチェック機能 |
-| **おすすめ対象** | 安定運用を重視するチーム、ローカルSEO |
+ChatGPT (OpenAI GPTs) / Perplexity Sonar / Gemini / Claude / Grok / Google AI Mode
 
-### Search Atlas - 2026年注目のAI駆動ツール
+### API仕様
 
-| 項目 | 内容 |
-|------|------|
-| **料金** | フラットレート制（クレジット課金なし） |
-| **強み** | OTTO SEO（AI自動化エンジン）による自動最適化 |
-| **特徴** | キーワードリサーチ、サイト監査、コンテンツ最適化、ランクトラッキング、トピカルマッピング、ホワイトラベルレポートを統合 |
-| **おすすめ対象** | AI活用で効率化したいチーム |
+```
+POST /query → job_id を取得（モデル、エンティティ、プロンプトを指定）
+GET  /result/{job_id} → 構造化JSON（mentions, sentiment, citations, sources）
+```
 
-### Serpstat - 多機能オールインワン
+### 統合時の変更箇所
 
-| 項目 | 内容 |
-|------|------|
-| **料金** | Lite $69/月〜 |
-| **強み** | 40以上のSEO/PPCツールを搭載 |
-| **特徴** | サイト分析、競合調査、バックリンクチェック、キーワードクラスタリング |
-| **おすすめ対象** | 多機能を求めるSEO/PPCプロフェッショナル |
+```
+lib/ahrefs.ts
+  ├── fetchBrandRadarMentions()  → heeb.ai POST /query + GET /result に差替え
+  └── fetchBrandRadarOverview()  → 同上
 
-### Ubersuggest - 初心者・小規模ビジネス向け
+app/api/ahrefs/brand-radar/route.ts
+  └── heeb.ai レスポンスを既存フォーマットにマッピング
 
-| 項目 | 内容 |
-|------|------|
-| **料金** | Ahrefsの数分の1程度 |
-| **強み** | シンプルで使いやすいUI |
-| **特徴** | 基本的なSEO機能をカバー |
-| **おすすめ対象** | 小規模ビジネス、SEO初心者 |
-
-### Surfer SEO - コンテンツ特化
-
-| 項目 | 内容 |
-|------|------|
-| **強み** | NLP分析によるコンテンツ最適化 |
-| **特徴** | Content Editorで上位ページとリアルタイム比較 |
-| **おすすめ対象** | コンテンツライター（Ahrefsの完全代替ではなく補完的に使用） |
-
-### Nightwatch - ランクトラッキング特化
-
-| 項目 | 内容 |
-|------|------|
-| **強み** | Google含む複数ソースからの高精度ランキングデータ |
-| **特徴** | デスクトップ/モバイル、ローカルSERP、YouTubeなど幅広い追跡 |
-| **おすすめ対象** | 正確なランクトラッキングを重視するチーム |
-
-### Majestic - バックリンク特化
-
-| 項目 | 内容 |
-|------|------|
-| **強み** | Trust Flow / Citation Flow / Tropical Flowなど独自指標 |
-| **特徴** | 被リンク分析に特化した専門ツール |
-| **おすすめ対象** | リンクビルディングを重視するSEOプロフェッショナル |
+Supabaseテーブル
+  └── ahrefs_brand_radar_snapshots → スキーマは概ね互換（raw_dataのみ変更）
+```
 
 ---
 
-## まとめ
+## 代替案：自前構築（最安オプション）
 
-### 当サービス（AIO Insight）の結論
+ChatGPT API + Perplexity Sonar API を使い、Brand Radar機能を自前実装する方法。
 
-当サービスはAhrefsの**AI検索可視性トラッキング機能**のみを利用しているため、従来のSEOツールとの比較は本質的ではない。
+### 実装概要
 
-**推奨順位：**
+```
+1. Vercel Cron（既存の6時間間隔を流用）でバッチ実行
+2. 顧客のブランド名 + 業界キーワードでプロンプト生成
+3. ChatGPT API / Perplexity Sonar API にリクエスト送信
+4. レスポンスをパースしてブランド言及・引用・感情を抽出
+5. 結果を ahrefs_brand_radar_snapshots テーブルに保存
+6. ダッシュボードは既存コードがそのままデータを表示
+```
 
-1. **SE Ranking + SE Visible** — コスパ最優先（$18.72/月〜、AI Visibility追加料金なし）
-2. **Otterly AI** — AI可視性特化で当サービスの用途に最もフィット（$29/月〜）
-3. **Semrush AI Visibility** — 総合力 + API確実性（$199/月）
-4. **Ahrefs継続** — API書き換え不要で最もリスクが低い
+### 必要なAPI
 
-**次のアクション：**
-- SE Ranking / Otterly AI / Semrush のトライアルでAPI仕様を確認
-- 並行運用でデータ品質を比較
-- APIクライアント層の抽象化リファクタリングを検討
+| API | 費用 | 備考 |
+|-----|------|------|
+| OpenAI API (GPT-4o-mini) | ~$0.15/1Mトークン | ブランドチェック用途なら月$2-5程度 |
+| Perplexity Sonar API | ~$1/1000リクエスト | 引用URL付きレスポンスが特徴 |
+
+### メリット・デメリット
+
+| | メリット | デメリット |
+|---|---------|-----------|
+| **メリット** | 最安（$5-20/月）、完全にカスタマイズ可能、サードパーティ依存なし | 実装工数が大きい、データ品質の担保が必要 |
+| **デメリット** | — | プロンプト設計・レスポンスパース・精度検証が必要 |
+
+---
+
+## 変更不要な部分（確認済み）
+
+以下は現状のまま動作し、変更不要：
+
+- `lib/diagnosis.ts` — AI可視性診断エンジン（PageSpeed + cheerioベース）
+- `app/api/ahrefs/traffic/route.ts` — Ahrefs WA API（無料）
+- `app/api/ahrefs/competitors/route.ts` — Supabase CRUDのみ
+- `app/api/ahrefs/top-pages/route.ts` — Supabase読取のみ
+- `components/AIODashboard.jsx` Overview タブ — diagnosisDataのみ使用
+- `components/FormPilotAutoV2.jsx` — Ahrefs非依存
+
+---
+
+## LP文言の修正箇所
+
+Brand Radar の代替に移行した場合、以下のAhrefs言及を更新する必要がある：
+
+| ファイル | 行 | 現在の文言 | 変更内容 |
+|----------|-----|-----------|---------|
+| `AIOServiceLP.jsx` | L359 | "Ahrefs Web Analytics API × Brand Radar" | データソース名を変更 |
+| `AIOServiceLP.jsx` | L39-117 | EVIDENCE配列のBrand Radar関連エビデンス | 新データソースのエビデンスに差替え |
+| `AIODashboard.jsx` | L427 | "× Ahrefs Web Analytics" | 汎用表記に変更 |
+| `AIODashboard.jsx` | L652,758 | "Ahrefs ... 未連携" | 新ツール名に変更 |
+| `AIODashboard.jsx` | L882 | "Powered by Ahrefs ..." | 変更 |
+
+---
+
+## 次のアクション
+
+1. **heeb.ai の料金・API仕様を確認**（無料トライアルがあれば試用）
+2. **Ahrefs WA の無料利用可否を確認**（有料プランなしでAPIキーが取得できるか）
+3. 確認後、`lib/ahrefs.ts` のBrand Radar部分をheeb.ai（または自前実装）に差替え
+4. LP・ダッシュボードの文言を更新
+5. Supabaseテーブルの `raw_data` カラムを新APIレスポンスに対応
