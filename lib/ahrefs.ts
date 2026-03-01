@@ -61,16 +61,3 @@ export async function fetchWebAnalyticsStats(
   });
 }
 
-/** Fetch Brand Radar mentions data */
-export async function fetchBrandRadarMentions(target: string) {
-  return ahrefsRequest("/brand-radar/mentions", {
-    target,
-  });
-}
-
-/** Fetch Brand Radar overview */
-export async function fetchBrandRadarOverview(target: string) {
-  return ahrefsRequest("/brand-radar/overview", {
-    target,
-  });
-}

@@ -34,7 +34,7 @@ const C = {
 const STRIPE_PAYMENT_LINK = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK || "#";
 
 // ============================================================
-// Evidence Data — All sourced from official Ahrefs documentation
+// Evidence Data
 // ============================================================
 const EVIDENCE = [
   {
@@ -42,17 +42,17 @@ const EVIDENCE = [
     icon: "🔬",
     items: [
       {
+        claim: "3つのAIプラットフォームでブランド言及を自動検出",
+        source: "AI Brand Monitor 仕様",
+        url: "#",
+        detail: "ChatGPT (OpenAI gpt-4o-mini)、Perplexity (Sonar)、Gemini (2.0 flash-lite) の3プラットフォームに対して業界特化プロンプトを送信し、ブランド言及・引用を自動検出します。",
+        verified: true,
+      },
+      {
         claim: "Web Analytics APIは完全無料・APIユニット不要",
         source: "Ahrefs公式ドキュメント",
         url: "https://docs.ahrefs.com/docs/api/web-analytics/",
         detail: "statsとchartの2つのエンドポイントに対応。WAレポートの「API」ボタンからクエリを自動生成可能。Enterpriseプラン不要で全ユーザーが利用可能。",
-        verified: true,
-      },
-      {
-        claim: "Brand Radarは月間260M+のプロンプトを分析",
-        source: "Ahrefs Brand Radar公式ページ",
-        url: "https://ahrefs.com/brand-radar",
-        detail: "ChatGPT (10.6M)、Perplexity (13.1M)、Gemini (7.2M)、Copilot (13.3M)、AI Overviews (134M)、AI Mode (13.5M)の合計。検索ベースのプロンプトを使用し、合成クエリではない。",
         verified: true,
       },
       {
@@ -69,18 +69,18 @@ const EVIDENCE = [
     icon: "⚠️",
     items: [
       {
-        claim: "Brand Radarの指標は「方向性指標」であり絶対値ではない",
-        source: "Ahrefs Brand Radar Methodology",
-        url: "https://ahrefs.com/blog/brand-radar-methodology/",
-        detail: "「Metrics are directional indicators, not exact traffic counts – best understood as modeled visibility signals, and not performance metrics.」トレンド把握には有効だが、精密なトラフィック予測には使えない。",
+        claim: "AI Brand Monitorの指標は「方向性指標」であり絶対値ではない",
+        source: "AI Brand Monitor",
+        url: "#",
+        detail: "AIプラットフォームへのプロンプトベースの検出であり、実際のユーザー検索とは異なります。トレンド把握には有効ですが、精密なトラフィック予測には使えません。",
         verified: true,
         isWarning: true,
       },
       {
-        claim: "AIプロンプトは月次更新・90日レポートウィンドウ",
-        source: "Ahrefs Brand Radar Methodology",
-        url: "https://ahrefs.com/blog/brand-radar-methodology/",
-        detail: "プロンプトセットは月次で更新・テストされ、90日間のレポートウィンドウで報告。リアルタイムの変化は捕捉しきれない場合がある。",
+        claim: "プロンプトは業界に合わせてカスタマイズ可能",
+        source: "AI Brand Monitor",
+        url: "#",
+        detail: "デフォルトでは5つの日本語プロンプトを使用しますが、カスタムプロンプトの設定も可能です。プロンプトの内容によって結果が変わる場合があります。",
         verified: true,
         isWarning: true,
       },
@@ -356,7 +356,7 @@ export default function AIOServiceLP() {
             fontSize: 18, color: C.textSub, maxWidth: 600, margin: "0 auto 36px",
             lineHeight: 1.7, animationDelay: "200ms",
           }}>
-            Ahrefs Web Analytics API × Brand Radar を活用した
+            AI Brand Monitor + Web Analytics を活用した
             <br />AI最適化ダッシュボード。ChatGPT・Perplexity・Geminiでの
             <br />ブランド可視性を計測・分析・改善。
           </p>
@@ -387,7 +387,7 @@ export default function AIOServiceLP() {
           }}>
             {[
               { icon: "🔒", label: "Cookie不使用" },
-              { icon: "📊", label: "Ahrefs公式API" },
+              { icon: "📊", label: "AI Brand Monitor" },
               { icon: "⚡", label: "リアルタイム更新" },
               { icon: "🌐", label: "6 AIプラットフォーム対応" },
             ].map((b, i) => (
@@ -405,13 +405,13 @@ export default function AIOServiceLP() {
         <SectionTitle
           tag="Features"
           title="AIOダッシュボードでできること"
-          sub="Ahrefs Web Analytics APIの無料エンドポイント（stats/chart）とBrand Radar APIを統合し、AI時代のマーケティングインテリジェンスを提供します"
+          sub="AI Brand MonitorとWeb Analytics APIを統合し、AI時代のマーケティングインテリジェンスを提供します"
         />
         <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "repeat(3, 1fr)", gap: 18 }}>
           <FeatureCard delay={0} icon="🤖" title="AIトラフィック計測"
             desc="ChatGPT、Perplexity、Copilotからの流入を自動識別。従来のGA4では分離できないAI検索トラフィックを正確に把握。Web Analytics API (chart) で時系列推移も可視化。" />
           <FeatureCard delay={80} icon="📡" title="AI Share of Voice"
-            desc="Brand Radar APIにより、6つのAIプラットフォームでの自社ブランド言及率・引用率をモニタリング。競合との可視性比較で戦略的な意思決定を支援。" />
+            desc="AI Brand Monitorにより、ChatGPT・Perplexity・Geminiでの自社ブランド言及率・引用率をモニタリング。競合との可視性比較で戦略的な意思決定を支援。" />
           <FeatureCard delay={160} icon="⚔️" title="競合AIギャップ分析"
             desc="競合が言及されているが自社が言及されていない領域を特定。コンテンツ改善の優先順位を明確にし、AI検索でのシェア拡大を実現。" />
           <FeatureCard delay={240} icon="📄" title="月次レポート自動生成"
@@ -529,9 +529,9 @@ export default function AIOServiceLP() {
                 透明性へのコミットメント
               </div>
               <p style={{ fontSize: 13, color: C.textSub, lineHeight: 1.7, margin: 0 }}>
-                本サービスのデータはすべてAhrefs公式APIから取得しています。Brand Radarの数値は方向性指標であり、
-                絶対的なトラフィック数値ではありません。この制約を正直にお伝えした上で、トレンドの把握と戦略的な意思決定に
-                有効なインサイトを提供します。不明点があれば、いつでもお気軽にお問い合わせください。
+                トラフィックデータはAhrefs Web Analytics APIから、ブランド言及データはAI Brand Monitor（ChatGPT・Perplexity・Gemini）から取得しています。
+                AI Brand Monitorの数値は方向性指標であり、絶対的なトラフィック数値ではありません。この制約を正直にお伝えした上で、
+                トレンドの把握と戦略的な意思決定に有効なインサイトを提供します。不明点があれば、いつでもお気軽にお問い合わせください。
               </p>
             </div>
           </div>
@@ -617,7 +617,7 @@ export default function AIOServiceLP() {
           {[
             { q: "契約期間の縛りはありますか？", a: "ありません。月額制でいつでも解約可能です。Stripeのサブスクリプション管理から簡単に手続きできます。" },
             { q: "導入に技術的な知識は必要ですか？", a: "不要です。Ahrefs Web Analyticsのスクリプト設置（2KBのコード1行）のみお願いしています。設置方法のサポートも無料で行います。" },
-            { q: "データの正確性はどの程度ですか？", a: "Web Analyticsデータは自社サイトの実トラフィックを計測するため高精度です。Brand Radarの指標はAhrefs公式が「方向性指標」と定義しており、トレンド把握に最適ですが、絶対値としての利用は推奨しません。詳しくはエビデンスセクションをご確認ください。" },
+            { q: "データの正確性はどの程度ですか？", a: "Web Analyticsデータは自社サイトの実トラフィックを計測するため高精度です。AI Brand Monitorの指標はプロンプトベースの「方向性指標」であり、トレンド把握に最適ですが、絶対値としての利用は推奨しません。詳しくはエビデンスセクションをご確認ください。" },
           ].map((faq, i) => (
             <div key={i} style={{
               padding: "18px 0", borderBottom: i < 2 ? `1px solid ${C.border}` : "none",
@@ -766,7 +766,7 @@ export default function AIOServiceLP() {
             <span style={{ fontSize: 11, color: C.textDim }}>by Fulfill Corporation / BeginAI</span>
           </div>
           <div style={{ fontSize: 11, color: C.textDim }}>
-            データソース: Ahrefs Web Analytics API (stats/chart) + Brand Radar API | © 2026
+            データソース: AI Brand Monitor + Ahrefs Web Analytics API | © 2026
           </div>
         </div>
       </footer>

@@ -250,6 +250,7 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
 
   // Ahrefs API states
   const [ahrefsConnected, setAhrefsConnected] = useState(null); // null=loading, true/false
+  const [brandRadarConnected, setBrandRadarConnected] = useState(null); // null=loading, true/false
   const [trafficData, setTrafficData] = useState([]);
   const [brandRadarData, setBrandRadarData] = useState([]);
   const [competitorData, setCompetitorData] = useState([]);
@@ -273,16 +274,24 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
         const connected = trafficRes.connected !== false;
         setAhrefsConnected(connected);
 
+        // Brand Radar connected は独立判定
+        const brConnected = brandRes.connected !== false;
+        setBrandRadarConnected(brConnected);
+
         if (connected) {
           if (trafficRes.data) setTrafficData(trafficRes.data.map((d, i) => ({
             ...d, day: i + 1,
             date: new Date(d.date).toLocaleDateString("ja-JP", { month: "short", day: "numeric" }),
           })));
-          if (brandRes.platforms) setBrandRadarData(brandRes.platforms.map(p => ({
-            ...p, color: PLATFORM_COLORS[p.platform] || COLORS.textDim,
-          })));
           if (compRes.data) setCompetitorData(compRes.data);
           if (pagesRes.data) setTopPagesData(pagesRes.data);
+        }
+
+        // Brand Radar データは ahrefsConnected とは独立
+        if (brConnected && brandRes.platforms) {
+          setBrandRadarData(brandRes.platforms.map(p => ({
+            ...p, color: PLATFORM_COLORS[p.platform] || COLORS.textDim,
+          })));
         }
       } catch (e) {
         console.error("Ahrefs data fetch error:", e);
@@ -423,7 +432,7 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
               AIO Dashboard
             </h1>
             {!mob && <p style={{ fontSize: 13, color: COLORS.textDim, margin: 0 }}>
-              AI Optimization Intelligence × Ahrefs Web Analytics
+              AI Optimization Intelligence
             </p>}
           </div>
         </div>
@@ -648,8 +657,8 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
               <LoadingState />
             ) : ahrefsConnected === false ? (
               <NotConnectedState
-                title="Ahrefs Web Analytics 未連携"
-                description="Ahrefs Web Analyticsと連携すると、AI検索トラフィックの詳細分析が表示されます。管理画面でAHREFS_API_KEYを設定してください。"
+                title="AIトラフィック分析 未連携"
+                description="AIトラフィック分析を有効にするには、管理画面で設定してください。"
               />
             ) : trafficData.length === 0 ? (
               <NotConnectedState
@@ -752,10 +761,10 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
           <div className="fade-up">
             {ahrefsLoading ? (
               <LoadingState />
-            ) : ahrefsConnected === false ? (
+            ) : brandRadarConnected === false ? (
               <NotConnectedState
-                title="Ahrefs Brand Radar 未連携"
-                description="Ahrefs Brand Radarと連携すると、AIプラットフォームでのブランド言及・引用データが表示されます。管理画面でAHREFS_API_KEYを設定してください。"
+                title="AI Brand Monitor 未連携"
+                description="ブランドモニターを有効にすると、AIプラットフォームでのブランド言及・引用データが表示されます。"
               />
             ) : brandRadarData.length === 0 ? (
               <NotConnectedState
@@ -774,7 +783,7 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
                 <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 24 }}>
                   {/* SoV by platform */}
                   <div style={{ background: COLORS.card, borderRadius: 12, padding: 24, border: `1px solid ${COLORS.border}` }}>
-                    <SectionHeader title="プラットフォーム別 Share of Voice" subtitle="Brand Radar APIデータ" />
+                    <SectionHeader title="プラットフォーム別 Share of Voice" subtitle="AI Brand Monitor" />
                     {brandRadarData.map((p, i) => (
                       <div key={i} style={{ marginBottom: 14 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
@@ -838,8 +847,8 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
               <LoadingState />
             ) : ahrefsConnected === false ? (
               <NotConnectedState
-                title="Ahrefs 競合分析 未連携"
-                description="Ahrefsと連携すると、競合他社とのAI Share of Voice比較が表示されます。管理画面でAHREFS_API_KEYを設定してください。"
+                title="競合分析 未連携"
+                description="競合分析を有効にすると、競合他社とのAI Share of Voice比較が表示されます。"
               />
             ) : competitorData.length === 0 ? (
               <NotConnectedState
@@ -879,7 +888,7 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
           gap: mob ? 8 : 0,
         }}>
           <div style={{ fontSize: 13, color: COLORS.textDim }}>
-            Powered by Ahrefs Web Analytics API (stats/chart) + Brand Radar API
+            Powered by AI Brand Monitor + Web Analytics
           </div>
           <div style={{ fontSize: 13, color: COLORS.textDim }}>
             Fulfill Corporation × BeginAI © 2026
