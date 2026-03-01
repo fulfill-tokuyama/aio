@@ -7,27 +7,27 @@ import { useIsMobile } from "../hooks/useIsMobile";
 // ============================================================
 
 const C = {
-  bg: "#FFFFFF",
-  bgAlt: "#F9FAFB",
-  surface: "#F3F4F6",
-  card: "#FFFFFF",
-  cardHover: "#F9FAFB",
-  border: "#E5E7EB",
-  borderAccent: "#D1D5DB",
-  text: "#111827",
-  textSub: "#4B5563",
-  textDim: "#9CA3AF",
-  accent: "#2563EB",
-  accentLight: "#3B82F6",
-  accentGlow: "rgba(37,99,235,0.07)",
-  accentGlow2: "rgba(37,99,235,0.04)",
-  green: "#059669",
-  greenBg: "rgba(5,150,105,0.08)",
-  amber: "#D97706",
-  amberBg: "rgba(217,119,6,0.08)",
-  red: "#DC2626",
-  cyan: "#0891B2",
-  cyanBg: "rgba(8,145,178,0.08)",
+  bg: "#08090E",
+  bgAlt: "#0D0F17",
+  surface: "#12151F",
+  card: "#161A28",
+  cardHover: "#1C2133",
+  border: "#1E2436",
+  borderAccent: "#2A3350",
+  text: "#E8ECF4",
+  textSub: "#9BA4B8",
+  textDim: "#5C6478",
+  accent: "#4F6EF7",
+  accentLight: "#6B8AFF",
+  accentGlow: "rgba(79,110,247,0.12)",
+  accentGlow2: "rgba(79,110,247,0.06)",
+  green: "#22C55E",
+  greenBg: "rgba(34,197,94,0.1)",
+  amber: "#F59E0B",
+  amberBg: "rgba(245,158,11,0.1)",
+  red: "#EF4444",
+  cyan: "#0EA5E9",
+  cyanBg: "rgba(14,165,233,0.08)",
 };
 
 // Stripe Payment Link (test mode)
@@ -232,10 +232,10 @@ export default function AIOServiceLP() {
   return (
     <div style={{
       minHeight: "100vh", background: C.bg, color: C.text,
-      fontFamily: "'Noto Sans JP', system-ui, sans-serif",
+      fontFamily: "'Outfit', 'Noto Sans JP', sans-serif",
       opacity: mounted ? 1 : 0, transition: "opacity 0.6s",
     }}>
-      <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
 
       <style>{`
         @keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
@@ -564,7 +564,7 @@ export default function AIOServiceLP() {
                   AIO Insight プラン
                 </div>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-                  <span style={{ fontSize: 48, fontWeight: 800, color: C.text, fontFamily: "'Noto Sans JP', system-ui, sans-serif" }}>¥10,000</span>
+                  <span style={{ fontSize: 48, fontWeight: 800, color: C.text, fontFamily: "Outfit" }}>¥10,000</span>
                   <span style={{ fontSize: 14, color: C.textDim }}>/月（税別）</span>
                 </div>
               </div>
