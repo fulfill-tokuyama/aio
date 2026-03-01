@@ -20,7 +20,6 @@ const C = {
   pk:"#F472B6",pkB:"rgba(244,114,182,.08)",
   st:"#635BFF",
 };
-const uid=()=>Math.random().toString(36).slice(2,8);
 
 const WEAKNESS_SIGNALS = [
   "構造化データ未実装","FAQ schema なし","HowTo markup なし",
@@ -30,48 +29,8 @@ const WEAKNESS_SIGNALS = [
 ];
 const INDUSTRIES = ["IT・SaaS","製造業","不動産","士業","医療","EC","飲食","教育","人材","金融","建設","物流"];
 const REGIONS = ["東京","大阪","名古屋","福岡","札幌","仙台","横浜","神戸","京都","広島"];
-const PREFIXES = ["テック","デジタル","クラウド","スマート","ネクスト","フューチャー","グロース","プライム","アドバンス","イノベ","サイバー","メディア","ワークス","エッジ","コア"];
-const SUFFIXES = ["ソリューションズ","テクノロジー","ラボ","ジャパン","コンサルティング","システムズ","パートナーズ","マーケティング","エンジニアリング","サービス","グループ","ホールディングス"];
 const COMPANY_SIZES = ["1-10名","11-50名","51-200名","201-500名","500名以上"];
 const REVENUE_RANGES = ["〜5000万","5000万〜1億","1億〜5億","5億〜20億","20億以上"];
-
-function genLead(){
-  const p=PREFIXES[Math.floor(Math.random()*PREFIXES.length)];
-  const s=SUFFIXES[Math.floor(Math.random()*SUFFIXES.length)];
-  const ext=["co.jp","jp","com","io","net"][Math.floor(Math.random()*5)];
-  const company=p+s;
-  const domain=`${p.toLowerCase()}${s.toLowerCase().slice(0,3)}.${ext}`;
-  const weaknesses=[];
-  const numW=2+Math.floor(Math.random()*4);
-  const shuffled=[...WEAKNESS_SIGNALS].sort(()=>Math.random()-.5);
-  for(let i=0;i<numW;i++)weaknesses.push(shuffled[i]);
-  const companySize=COMPANY_SIZES[Math.floor(Math.random()*COMPANY_SIZES.length)];
-  const revenue=REVENUE_RANGES[Math.floor(Math.random()*REVENUE_RANGES.length)];
-  const hasAdSpend=Math.random()>.5;
-  const llmoScore=Math.floor(Math.random()*40);
-  // AI Lead Score: composite of weakness, size, industry fit, ad spend
-  const sizeBonus={"1-10名":5,"11-50名":15,"51-200名":25,"201-500名":20,"500名以上":10}[companySize];
-  const industryBonus=["IT・SaaS","EC","金融","不動産"].includes(INDUSTRIES[Math.floor(Math.random()*INDUSTRIES.length)])?15:5;
-  const aiScore=Math.min(99,Math.max(10,100-llmoScore+sizeBonus+industryBonus+(hasAdSpend?12:0)+(weaknesses.length*3)+Math.floor(Math.random()*10)));
-  return{
-    id:uid(),company,url:`https://${domain}`,
-    industry:INDUSTRIES[Math.floor(Math.random()*INDUSTRIES.length)],
-    region:REGIONS[Math.floor(Math.random()*REGIONS.length)],
-    weaknesses,llmoScore,companySize,revenue,hasAdSpend,
-    aiScore, // NEW: AI lead priority score
-    formUrl:"",
-    phase:"discovered",
-    stripeStatus:null,mrr:0,
-    scheduledAt:null,sentAt:null,repliedAt:null,
-    discoveredAt:new Date(Date.now()-Math.random()*30*864e5).toISOString(),
-    templateUsed:null, // NEW: which A/B template
-    followUpCount:0, // NEW: follow-up tracking
-    followUpScheduled:null,
-    diagnosisSent:false, // NEW: free report attached?
-    openedEmail:Math.random()>.6, // NEW: simulated open tracking
-    clickedLink:Math.random()>.8, // NEW: simulated click tracking
-  };
-}
 
 // ============================================================
 // Icons
@@ -157,19 +116,46 @@ export default function FormPilotAutoV2(){
   const[view,setView]=useState("pipeline");
   const[sidebarOpen,setSidebarOpen]=useState(false);
   const mob=useIsMobile();
-  const[leads,setLeads]=useState(()=>{
-    const arr=Array.from({length:120},genLead);
-    arr.sort((a,b)=>b.aiScore-a.aiScore);
-    // Distribute phases: 65 discovered, 20 form_found, 13 queued, 10 sent, 4 replied, 8 customer
-    arr.forEach((l,i)=>{
-      if(i<8){l.phase="customer";l.stripeStatus="active";l.mrr=10000;l.formUrl=l.url+"/contact";l.templateUsed="t1";l.diagnosisSent=true;}
-      else if(i<12){l.phase="replied";l.formUrl=l.url+"/contact";l.templateUsed=["t1","t2","t3"][i%3];l.repliedAt=new Date(Date.now()-Math.random()*7*864e5).toISOString();}
-      else if(i<22){l.phase="sent";l.formUrl=l.url+"/inquiry";l.sentAt=new Date(Date.now()-Math.random()*14*864e5).toISOString();l.templateUsed=["t1","t2","t3"][i%3];l.followUpCount=i<18?1:0;}
-      else if(i<35){l.phase="queued";l.formUrl=l.url+"/contact";l.scheduledAt=new Date(Date.now()+Math.random()*7*864e5).toISOString();}
-      else if(i<55){l.phase="form_found";l.formUrl=l.url+"/contact";}
-    });
-    return arr;
-  });
+  const[leads,setLeads]=useState([]);
+  const[loading,setLoading]=useState(true);
+  const[showAddModal,setShowAddModal]=useState(false);
+
+  // DB からリード読み込み
+  const fetchLeads=useCallback(async()=>{
+    try{
+      const res=await fetch("/api/pipeline-leads");
+      const json=await res.json();
+      if(json.leads)setLeads(json.leads);
+    }catch(e){console.error("fetchLeads error:",e);}
+    finally{setLoading(false);}
+  },[]);
+  useEffect(()=>{fetchLeads();},[fetchLeads]);
+
+  // CRUD: 更新（楽観的更新）
+  const updateLead=useCallback(async(id,updates)=>{
+    setLeads(p=>p.map(l=>l.id===id?{...l,...updates}:l));
+    try{
+      await fetch("/api/pipeline-leads",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,...updates})});
+    }catch(e){console.error("updateLead error:",e);fetchLeads();}
+  },[fetchLeads]);
+
+  // CRUD: 削除（楽観的更新）
+  const deleteLead=useCallback(async(id)=>{
+    setLeads(p=>p.filter(l=>l.id!==id));
+    try{
+      await fetch("/api/pipeline-leads",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
+    }catch(e){console.error("deleteLead error:",e);fetchLeads();}
+  },[fetchLeads]);
+
+  // CRUD: 追加
+  const addLead=useCallback(async(leadData)=>{
+    try{
+      const res=await fetch("/api/pipeline-leads",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(leadData)});
+      const json=await res.json();
+      if(json.lead){setLeads(p=>[json.lead,...p]);return true;}
+      return false;
+    }catch(e){console.error("addLead error:",e);return false;}
+  },[]);
 
   const[templates,setTemplates]=useState(()=>{
     const t=[...TEMPLATES];
@@ -270,41 +256,30 @@ export default function FormPilotAutoV2(){
     return{byIndustry,byTemplate,bySize};
   },[leads,templates]);
 
+  // Phase 1: runScan はシミュレーションのみ（API連携は将来実装）
   const runScan=useCallback(()=>{
     setScanRunning(true);
     setTimeout(()=>{
-      const n=Array.from({length:autoConfig.batchSize},genLead);
-      setLeads(p=>[...n,...p].sort((a,b)=>b.aiScore-a.aiScore));
-      const hot=n.filter(l=>l.aiScore>=autoConfig.aiScoreMinForPriority);
-      const msgs=[{t:new Date().toISOString(),msg:`🔄 スキャン完了: ${n.length}件発見`,type:"scan"}];
-      if(hot.length)msgs.unshift({t:new Date().toISOString(),msg:`🏆 ホットリード${hot.length}件! (スコア${autoConfig.aiScoreMinForPriority}+)`,type:"alert"});
-      setLog(p=>[...msgs,...p]);
+      setLog(p=>[{t:new Date().toISOString(),msg:`🔄 スキャン完了（シミュレーション）: LLMO調査機能は将来実装予定`,type:"scan"},...p]);
       setAutoConfig(p=>({...p,lastScanAt:new Date().toISOString(),nextScanAt:new Date(Date.now()+p.scanInterval*36e5).toISOString(),totalScans:p.totalScans+1}));
       setScanRunning(false);
-      if(autoConfig.autoFormScan){
-        setTimeout(()=>{
-          setLeads(p=>p.map(l=>l.phase==="discovered"&&!l.formUrl&&Math.random()>.3?{...l,formUrl:l.url+"/contact",phase:"form_found"}:l));
-          setLog(p=>[{t:new Date().toISOString(),msg:"🔍 フォーム自動探索完了",type:"form"},...p]);
-        },1200);
-      }
     },1800);
   },[autoConfig]);
 
+  // Phase 1: autoSend はDB永続化対応（各リードをupdateLeadで更新）
   const autoSend=useCallback(()=>{
     const ready=leads.filter(l=>l.phase==="form_found").sort((a,b)=>b.aiScore-a.aiScore).slice(0,autoConfig.sendThreshold);
     if(!ready.length)return;
     const tIds=templates.map(t=>t.id);
-    setLeads(p=>p.map(l=>{
-      const r=ready.find(x=>x.id===l.id);
-      if(!r)return l;
-      const tpl=autoConfig.abTestEnabled?tIds[ready.indexOf(r)%tIds.length]:tIds[0];
-      return{...l,phase:"sent",sentAt:new Date().toISOString(),templateUsed:tpl,diagnosisSent:autoConfig.autoDiagnosis};
-    }));
+    ready.forEach((r,idx)=>{
+      const tpl=autoConfig.abTestEnabled?tIds[idx%tIds.length]:tIds[0];
+      updateLead(r.id,{phase:"sent",sentAt:new Date().toISOString(),templateUsed:tpl,diagnosisSent:autoConfig.autoDiagnosis});
+    });
     if(autoConfig.abTestEnabled){
       setTemplates(p=>p.map((t,i)=>{const c=ready.filter((_,j)=>j%tIds.length===i).length;return{...t,sent:t.sent+c};}));
     }
     setLog(p=>[{t:new Date().toISOString(),msg:`📨 AIスコア優先で${ready.length}件送信${autoConfig.autoDiagnosis?" + 診断レポート添付":""}`,type:"send"},...p]);
-  },[leads,autoConfig,templates]);
+  },[leads,autoConfig,templates,updateLead]);
 
   const nav=[
     {id:"pipeline",icon:ic.activity,label:"パイプライン"},
@@ -373,6 +348,9 @@ export default function FormPilotAutoV2(){
           </div>
           <div style={{display:"flex",gap:6,alignItems:"center"}}>
             {view==="leads"&&<>
+              <button onClick={()=>setShowAddModal(true)} style={{padding:"5px 11px",borderRadius:4,border:"none",background:C.g,color:C.bg,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
+                + リード追加
+              </button>
               <button onClick={runScan} disabled={scanRunning} style={{padding:"5px 11px",borderRadius:4,border:"none",background:C.acc,color:C.bg,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4,opacity:scanRunning?.5:1}}>
                 {scanRunning?"⟳ スキャン中...":<><I d={ic.radar} s={11} c={C.bg}/>LLMO調査</>}
               </button>
@@ -380,14 +358,22 @@ export default function FormPilotAutoV2(){
                 <I d={ic.send} s={11} c={C.p}/>AIスコア順送信
               </button>
             </>}
-            <div style={{padding:"4px 8px",borderRadius:3,background:C.gB,color:C.g,fontSize:9,fontWeight:700}}>{leads.length} リード</div>
+            <div style={{padding:"4px 8px",borderRadius:3,background:C.gB,color:C.g,fontSize:9,fontWeight:700}}>{loading?"読込中...":leads.length+" リード"}</div>
           </div>
         </header>
 
         <div style={{flex:1,overflow:"auto",padding:mob?10:16}}>
 
+          {/* ===== LOADING ===== */}
+          {loading&&(
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"60vh",gap:12}}>
+              <div style={{width:32,height:32,border:`3px solid ${C.bdr}`,borderTop:`3px solid ${C.acc}`,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
+              <div style={{fontSize:12,color:C.sub}}>リードを読み込み中...</div>
+            </div>
+          )}
+
           {/* ===== PIPELINE ===== */}
-          {view==="pipeline"&&(
+          {!loading&&view==="pipeline"&&(
             <div className="fi">
               <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>自動営業パイプライン</div>
               <div style={{display:"grid",gridTemplateColumns:mob?"repeat(3,1fr)":"repeat(6,1fr)",gap:5,marginBottom:20}}>
@@ -458,7 +444,7 @@ export default function FormPilotAutoV2(){
           )}
 
           {/* ===== LEADS ===== */}
-          {view==="leads"&&!selectedLead&&(
+          {!loading&&view==="leads"&&!selectedLead&&(
             <div className="fi">
               <div style={{display:"flex",gap:5,marginBottom:10,alignItems:"center",flexWrap:"wrap"}}>
                 <div style={{position:"relative",flex:"0 0 180px"}}>
@@ -491,9 +477,9 @@ export default function FormPilotAutoV2(){
                     <span style={{fontSize:9}}>{l.openedEmail&&l.sentAt?"👁":"—"}</span>
                     <span style={{fontSize:9,color:l.followUpCount?C.pk:C.dim}}>{l.followUpCount||"—"}</span>
                     <div style={{display:"flex",gap:2}} onClick={e=>e.stopPropagation()}>
-                      {l.phase==="discovered"&&<button onClick={()=>setLeads(p=>p.map(x=>x.id===l.id?{...x,formUrl:x.url+"/contact",phase:"form_found"}:x))} style={{padding:"2px 5px",borderRadius:2,border:`1px solid ${C.bdr}`,background:"transparent",color:C.b,fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>探索</button>}
-                      {l.phase==="form_found"&&<button onClick={()=>setLeads(p=>p.map(x=>x.id===l.id?{...x,phase:"queued",scheduledAt:new Date(Date.now()+864e5).toISOString()}:x))} style={{padding:"2px 5px",borderRadius:2,border:`1px solid ${C.bdr}`,background:"transparent",color:C.o,fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>予約</button>}
-                      <button onClick={()=>setLeads(p=>p.filter(x=>x.id!==l.id))} style={{padding:"2px 4px",borderRadius:2,border:"none",background:"transparent",color:C.dim,fontSize:8,cursor:"pointer"}}>✕</button>
+                      {l.phase==="discovered"&&<button onClick={()=>updateLead(l.id,{formUrl:l.url+"/contact",phase:"form_found"})} style={{padding:"2px 5px",borderRadius:2,border:`1px solid ${C.bdr}`,background:"transparent",color:C.b,fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>探索</button>}
+                      {l.phase==="form_found"&&<button onClick={()=>updateLead(l.id,{phase:"queued",scheduledAt:new Date(Date.now()+864e5).toISOString()})} style={{padding:"2px 5px",borderRadius:2,border:`1px solid ${C.bdr}`,background:"transparent",color:C.o,fontSize:8,cursor:"pointer",fontFamily:"inherit"}}>予約</button>}
+                      <button onClick={()=>deleteLead(l.id)} style={{padding:"2px 4px",borderRadius:2,border:"none",background:"transparent",color:C.dim,fontSize:8,cursor:"pointer"}}>✕</button>
                     </div>
                   </div>
                 ))}
@@ -507,7 +493,7 @@ export default function FormPilotAutoV2(){
           )}
 
           {/* Lead Detail */}
-          {view==="leads"&&selectedLead&&(
+          {!loading&&view==="leads"&&selectedLead&&(
             <div className="fi">
               <button onClick={()=>setSelectedLead(null)} style={{padding:"5px 10px",borderRadius:4,border:`1px solid ${C.bdr}`,background:"transparent",color:C.sub,fontSize:10,cursor:"pointer",fontFamily:"inherit",marginBottom:12}}>← 一覧に戻る</button>
               <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
@@ -653,7 +639,7 @@ export default function FormPilotAutoV2(){
                         <div style={{fontSize:10,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.company}</div>
                         <div style={{fontSize:8,color:C.dim}}>FU {l.followUpCount}/{autoConfig.followUpMaxCount}回 · {l.openedEmail?"開封済":"未開封"}</div>
                       </div>
-                      <button onClick={()=>setLeads(p=>p.map(x=>x.id===l.id?{...x,followUpCount:x.followUpCount+1}:x))} style={{padding:"3px 7px",borderRadius:3,border:`1px solid ${C.pk}40`,background:C.pkB,color:C.pk,fontSize:8,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>FU送信</button>
+                      <button onClick={()=>updateLead(l.id,{followUpCount:l.followUpCount+1})} style={{padding:"3px 7px",borderRadius:3,border:`1px solid ${C.pk}40`,background:C.pkB,color:C.pk,fontSize:8,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>FU送信</button>
                     </div>
                   ))}
                 </div>
@@ -830,6 +816,103 @@ export default function FormPilotAutoV2(){
 
         </div>
       </main>
+
+      {/* ===== リード追加モーダル ===== */}
+      {showAddModal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>setShowAddModal(false)}>
+          <div onClick={e=>e.stopPropagation()} style={{background:C.card,borderRadius:10,border:`1px solid ${C.bdr}`,width:"100%",maxWidth:480,maxHeight:"90vh",overflow:"auto",padding:24}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+              <h2 style={{fontSize:15,fontWeight:800,margin:0}}>リード追加</h2>
+              <button onClick={()=>setShowAddModal(false)} style={{background:"none",border:"none",color:C.sub,fontSize:18,cursor:"pointer"}}>✕</button>
+            </div>
+            <AddLeadForm onSubmit={async(data)=>{const ok=await addLead(data);if(ok)setShowAddModal(false);return ok;}}/>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+// ============================================================
+// リード追加フォーム
+// ============================================================
+function AddLeadForm({onSubmit}){
+  const[form,setForm]=useState({company:"",url:"",industry:"",region:"",companySize:"",revenue:"",notes:""});
+  const[submitting,setSubmitting]=useState(false);
+  const[error,setError]=useState("");
+  const set=(k,v)=>setForm(p=>({...p,[k]:v}));
+
+  const handleSubmit=async(e)=>{
+    e.preventDefault();
+    if(!form.company.trim()||!form.url.trim()){setError("会社名とURLは必須です");return;}
+    setError("");setSubmitting(true);
+    const ok=await onSubmit({
+      company:form.company.trim(),
+      url:form.url.trim(),
+      industry:form.industry||null,
+      region:form.region||null,
+      companySize:form.companySize||null,
+      revenue:form.revenue||null,
+      notes:form.notes.trim()||null,
+      phase:"discovered",
+    });
+    setSubmitting(false);
+    if(!ok)setError("追加に失敗しました");
+  };
+
+  const inputStyle={width:"100%",padding:"8px 10px",borderRadius:5,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:11,outline:"none",boxSizing:"border-box",fontFamily:"inherit"};
+  const labelStyle={fontSize:10,color:C.sub,fontWeight:600,display:"block",marginBottom:4};
+
+  return(
+    <form onSubmit={handleSubmit}>
+      <div style={{marginBottom:12}}>
+        <label style={labelStyle}>会社名 <span style={{color:C.r}}>*</span></label>
+        <input value={form.company} onChange={e=>set("company",e.target.value)} placeholder="例: テックソリューションズ" style={inputStyle}/>
+      </div>
+      <div style={{marginBottom:12}}>
+        <label style={labelStyle}>URL <span style={{color:C.r}}>*</span></label>
+        <input value={form.url} onChange={e=>set("url",e.target.value)} placeholder="例: https://example.co.jp" style={inputStyle}/>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+        <div>
+          <label style={labelStyle}>業種</label>
+          <select value={form.industry} onChange={e=>set("industry",e.target.value)} style={inputStyle}>
+            <option value="">選択してください</option>
+            {INDUSTRIES.map(i=><option key={i} value={i}>{i}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={labelStyle}>地域</label>
+          <select value={form.region} onChange={e=>set("region",e.target.value)} style={inputStyle}>
+            <option value="">選択してください</option>
+            {REGIONS.map(r=><option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+        <div>
+          <label style={labelStyle}>企業規模</label>
+          <select value={form.companySize} onChange={e=>set("companySize",e.target.value)} style={inputStyle}>
+            <option value="">選択してください</option>
+            {COMPANY_SIZES.map(s=><option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={labelStyle}>売上規模</label>
+          <select value={form.revenue} onChange={e=>set("revenue",e.target.value)} style={inputStyle}>
+            <option value="">選択してください</option>
+            {REVENUE_RANGES.map(r=><option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
+      </div>
+      <div style={{marginBottom:16}}>
+        <label style={labelStyle}>メモ</label>
+        <textarea value={form.notes} onChange={e=>set("notes",e.target.value)} rows={3} placeholder="備考・メモ" style={{...inputStyle,resize:"vertical"}}/>
+      </div>
+      {error&&<div style={{fontSize:10,color:C.r,marginBottom:10}}>{error}</div>}
+      <button type="submit" disabled={submitting} style={{width:"100%",padding:"10px",borderRadius:5,border:"none",background:C.g,color:C.bg,fontSize:12,fontWeight:700,cursor:submitting?"default":"pointer",fontFamily:"inherit",opacity:submitting?.6:1}}>
+        {submitting?"追加中...":"リードを追加"}
+      </button>
+    </form>
   );
 }
