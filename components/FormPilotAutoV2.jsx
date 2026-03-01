@@ -124,6 +124,7 @@ export default function FormPilotAutoV2(){
   const fetchLeads=useCallback(async()=>{
     try{
       const res=await fetch("/api/pipeline-leads");
+      if(!res.ok){console.error("fetchLeads: status",res.status);return;}
       const json=await res.json();
       if(json.leads)setLeads(json.leads);
     }catch(e){console.error("fetchLeads error:",e);}
@@ -135,7 +136,8 @@ export default function FormPilotAutoV2(){
   const updateLead=useCallback(async(id,updates)=>{
     setLeads(p=>p.map(l=>l.id===id?{...l,...updates}:l));
     try{
-      await fetch("/api/pipeline-leads",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,...updates})});
+      const res=await fetch("/api/pipeline-leads",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,...updates})});
+      if(!res.ok)fetchLeads();
     }catch(e){console.error("updateLead error:",e);fetchLeads();}
   },[fetchLeads]);
 
@@ -143,7 +145,8 @@ export default function FormPilotAutoV2(){
   const deleteLead=useCallback(async(id)=>{
     setLeads(p=>p.filter(l=>l.id!==id));
     try{
-      await fetch("/api/pipeline-leads",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
+      const res=await fetch("/api/pipeline-leads",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
+      if(!res.ok)fetchLeads();
     }catch(e){console.error("deleteLead error:",e);fetchLeads();}
   },[fetchLeads]);
 
@@ -151,6 +154,7 @@ export default function FormPilotAutoV2(){
   const addLead=useCallback(async(leadData)=>{
     try{
       const res=await fetch("/api/pipeline-leads",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(leadData)});
+      if(!res.ok)return false;
       const json=await res.json();
       if(json.lead){setLeads(p=>[json.lead,...p]);return true;}
       return false;
