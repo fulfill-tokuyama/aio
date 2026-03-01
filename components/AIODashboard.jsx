@@ -287,52 +287,85 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
     score: h.score,
   }));
 
-  // Category breakdown from latest diagnosisData.htmlAnalysis (the breakdown is stored in the report)
-  const breakdown = diagnosisData?.htmlAnalysis?.breakdown || diagnosisData?.pagespeedData ? null : null;
-  // We can reconstruct breakdown from htmlAnalysis fields if available
+  // Category breakdown from latest diagnosisData.htmlAnalysis (reconstructed using same logic as diagnosis.ts)
   const categoryBreakdown = (() => {
     if (!diagnosisData) return null;
     const ha = diagnosisData.htmlAnalysis || {};
     const ps = diagnosisData.pagespeedData;
-    // Reconstruct scores using same logic as diagnosis.ts
-    let coreWebVitals = 10;
-    if (ps) {
-      coreWebVitals = 0;
-      if (ps.lcp < 2500) coreWebVitals += 10; else if (ps.lcp < 4000) coreWebVitals += 5;
-      if (ps.cls < 0.1) coreWebVitals += 8; else if (ps.cls < 0.25) coreWebVitals += 4;
-      if (ps.fid < 100) coreWebVitals += 7; else if (ps.fid < 300) coreWebVitals += 3;
-    }
-    let structuredData = 0;
-    if (ha.hasJsonLd) structuredData += 10;
-    if (ha.hasFaqSchema) structuredData += 5;
-    if (ha.hasHowToSchema) structuredData += 5;
-    let metaSeo = 0;
-    if (ha.hasMetaDescription) {
-      metaSeo += (ha.metaDescriptionLength >= 50 && ha.metaDescriptionLength <= 160) ? 6 : 3;
-    }
-    if (ha.hasH1) metaSeo += ha.h1Count === 1 ? 5 : 3;
-    if (ha.hasOgTags) metaSeo += 5;
-    if (ha.hasCanonical) metaSeo += 4;
+
+    // E-E-A-T (max 25): 著者(7) + 著者ページ(3) + 更新日(5) + 鮮度(5) + Organization(3) + 外部引用(2)
     let eeat = 0;
-    if (ha.hasAuthorMarkup) eeat += 8;
-    if (ha.hasDateModified) eeat += 7;
-    let crawlability = 0;
-    // crawlability info isn't stored in htmlAnalysis, estimate from score
-    const knownTotal = coreWebVitals + structuredData + metaSeo + eeat;
-    let content = 0;
-    if (ha.hasLangAttr) content += 3;
-    if (ha.contentLength > 1000) content += 4; else if (ha.contentLength > 300) content += 2;
-    if (ha.internalLinkCount >= 5) content += 3; else if (ha.internalLinkCount >= 2) content += 1;
+    if (ha.hasAuthorMarkup) eeat += 7;
+    if (ha.hasAuthorPageLink) eeat += 3;
+    if (ha.hasDateModified) eeat += 5;
+    if (ha.dateModifiedValue) {
+      const daysDiff = (Date.now() - new Date(ha.dateModifiedValue).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysDiff <= 90) eeat += 5;
+      else if (daysDiff <= 180) eeat += 3;
+      else if (daysDiff <= 365) eeat += 1;
+    }
+    if (ha.hasOrganizationSchema) eeat += 3;
+    if (ha.hasExternalCitations) eeat += 2;
+
+    // コンテンツ品質・構造 (max 25): テキスト(5) + H2+H3(5) + Q&A(4) + lang(2) + 内部リンク(4) + セマンティック(3) + リスト(2)
+    let contentQuality = 0;
+    if (ha.contentLength >= 3000) contentQuality += 5;
+    else if (ha.contentLength >= 1500) contentQuality += 3;
+    if ((ha.h2Count || 0) >= 3 && (ha.h3Count || 0) >= 2) contentQuality += 5;
+    else if ((ha.h2Count || 0) >= 2) contentQuality += 3;
+    else if ((ha.h2Count || 0) >= 1) contentQuality += 1;
+    if (ha.hasQAFormat) contentQuality += 4;
+    if (ha.hasLangAttr) contentQuality += 2;
+    if (ha.internalLinkCount >= 5) contentQuality += 4;
+    else if (ha.internalLinkCount >= 3) contentQuality += 2;
+    else if (ha.internalLinkCount >= 1) contentQuality += 1;
+    if (ha.hasSemanticHtml) contentQuality += 3;
+    if (ha.hasListStructure) contentQuality += 2;
+
+    // 構造化データ (max 20): JSON-LD(5) + スキーマ種類(6) + FAQ(3) + HowTo(2) + Breadcrumb(2) + Product(2)
+    let structuredData = 0;
+    if (ha.hasJsonLd) structuredData += 5;
+    const stc = ha.schemaTypeCount || 0;
+    if (stc >= 4) structuredData += 6;
+    else if (stc === 3) structuredData += 4;
+    else if (stc === 2) structuredData += 3;
+    if (ha.hasFaqSchema) structuredData += 3;
+    if (ha.hasHowToSchema) structuredData += 2;
+    if (ha.hasBreadcrumbSchema) structuredData += 2;
+    if (ha.hasProductSchema) structuredData += 2;
+
+    // AIクローラビリティ (max 15): sitemap(4) + robots(3) + AI非ブロック(3) + SSR(3) + canonical(2)
+    // crawlability details not fully in htmlAnalysis, derive from total score
+    const knownTotal = eeat + contentQuality + structuredData;
+    let techPerformance = 2; // default partial credit
+    if (ps) {
+      techPerformance = 0;
+      if (ps.seoScore >= 90) techPerformance += 3;
+      else if (ps.seoScore >= 70) techPerformance += 2;
+      else if (ps.seoScore >= 50) techPerformance += 1;
+      const lcpOk = ps.lcp < 2500;
+      const clsOk = ps.cls < 0.1;
+      if (lcpOk && clsOk) techPerformance += 2;
+      else if (lcpOk || clsOk) techPerformance += 1;
+    }
+    // メタ・エンティティ (max 10)
+    let metaEntity = 0;
+    if (ha.hasMetaDescription) metaEntity += 3;
+    if (ha.hasH1) metaEntity += ha.h1Count === 1 ? 2 : 1;
+    if (ha.hasOgTags) metaEntity += 3;
+    if (ha.title && ha.hasOgTags && ha.hasMetaDescription) metaEntity += 2;
+
     // Derive crawlability from total score
-    crawlability = Math.max(0, (diagnosisData.score || 0) - knownTotal - content);
-    crawlability = Math.min(crawlability, 10);
+    let crawlability = Math.max(0, (diagnosisData.score || 0) - knownTotal - metaEntity - techPerformance);
+    crawlability = Math.min(crawlability, 15);
+
     return [
-      { label: "Core Web Vitals", score: coreWebVitals, max: 25, color: COLORS.accent },
-      { label: "構造化データ", score: structuredData, max: 20, color: COLORS.green },
-      { label: "Meta/SEO", score: metaSeo, max: 20, color: COLORS.cyan },
-      { label: "E-E-A-T", score: eeat, max: 15, color: COLORS.purple },
-      { label: "クロール", score: crawlability, max: 10, color: COLORS.orange },
-      { label: "コンテンツ", score: content, max: 10, color: COLORS.red },
+      { label: "E-E-A-T", score: eeat, max: 25, color: COLORS.purple },
+      { label: "コンテンツ品質", score: contentQuality, max: 25, color: COLORS.green },
+      { label: "構造化データ", score: structuredData, max: 20, color: COLORS.cyan },
+      { label: "AIクロール", score: crawlability, max: 15, color: COLORS.orange },
+      { label: "メタ・エンティティ", score: metaEntity, max: 10, color: COLORS.accent },
+      { label: "技術パフォーマンス", score: techPerformance, max: 5, color: COLORS.red },
     ];
   })();
 

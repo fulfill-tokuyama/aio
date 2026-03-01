@@ -5,12 +5,12 @@ interface DiagnosisEmailData {
   name: string;
   score: number;
   breakdown: {
-    coreWebVitals: number;
-    structuredData: number;
-    metaSeo: number;
     eeat: number;
+    contentQuality: number;
+    structuredData: number;
     crawlability: number;
-    content: number;
+    metaEntity: number;
+    techPerformance: number;
   };
   weaknesses: string[];
   suggestions: string[];
@@ -39,12 +39,12 @@ export function buildDiagnosisEmailHtml(data: DiagnosisEmailData): string {
   const scoreLabel = getScoreLabel(data.score);
 
   const breakdownRows = [
-    { label: "Core Web Vitals", score: data.breakdown.coreWebVitals, max: 25 },
+    { label: "E-E-A-Tシグナル", score: data.breakdown.eeat, max: 25 },
+    { label: "コンテンツ品質・構造", score: data.breakdown.contentQuality, max: 25 },
     { label: "構造化データ", score: data.breakdown.structuredData, max: 20 },
-    { label: "メタ/SEO基本", score: data.breakdown.metaSeo, max: 20 },
-    { label: "E-E-A-Tシグナル", score: data.breakdown.eeat, max: 15 },
-    { label: "クローラビリティ", score: data.breakdown.crawlability, max: 10 },
-    { label: "コンテンツ", score: data.breakdown.content, max: 10 },
+    { label: "AIクローラビリティ", score: data.breakdown.crawlability, max: 15 },
+    { label: "メタ・エンティティ", score: data.breakdown.metaEntity, max: 10 },
+    { label: "技術パフォーマンス", score: data.breakdown.techPerformance, max: 5 },
   ];
 
   return `<!DOCTYPE html>

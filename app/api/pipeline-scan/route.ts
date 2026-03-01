@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { runDiagnosis } from "@/lib/diagnosis";
+import { runDiagnosis, Weakness } from "@/lib/diagnosis";
 
 export const maxDuration = 300;
 
@@ -22,10 +22,38 @@ function domainToCompany(url: string): string {
   }
 }
 
-// AIスコア算出: LLMOスコアが低いほど営業チャンス → AIスコアが高い
-function calculateAiScore(llmoScore: number, weaknesses: string[]): number {
-  const weaknessBonus = Math.min(weaknesses.length, 10) * 1.5;
-  return Math.round(100 - llmoScore + weaknessBonus);
+// AIスコア算出: 重要度加重方式
+// baseScore = 100 - llmoScore
+// weaknessBonus = min(Σ各弱点の重み, 30)
+// criticalMultiplier = critical弱点が2つ以上 ? 1.10 : 1.0
+// aiScore = clamp((baseScore + weaknessBonus) × criticalMultiplier, 0, 150)
+const SEVERITY_WEIGHT: Record<string, number> = {
+  critical: 4.0,
+  high: 2.5,
+  medium: 1.5,
+  low: 0.5,
+};
+
+function calculateAiScore(llmoScore: number, weaknesses: string[], weaknessDetails?: Weakness[]): number {
+  const baseScore = 100 - llmoScore;
+
+  let weaknessBonus: number;
+  let criticalCount = 0;
+
+  if (weaknessDetails && weaknessDetails.length > 0) {
+    weaknessBonus = Math.min(
+      weaknessDetails.reduce((sum, w) => sum + (SEVERITY_WEIGHT[w.severity] || 1), 0),
+      30
+    );
+    criticalCount = weaknessDetails.filter(w => w.severity === "critical").length;
+  } else {
+    // Fallback for legacy data without weaknessDetails
+    weaknessBonus = Math.min(weaknesses.length * 1.5, 30);
+  }
+
+  const criticalMultiplier = criticalCount >= 2 ? 1.10 : 1.0;
+  const raw = (baseScore + weaknessBonus) * criticalMultiplier;
+  return Math.round(Math.max(0, Math.min(150, raw)));
 }
 
 // 既存pipeline_leadsのURL一覧を取得
@@ -118,7 +146,7 @@ export async function POST(req: NextRequest) {
           const { url, diagnosis } = result.value;
           const company = diagnosis.htmlAnalysis.title || domainToCompany(url);
           const llmoScore = diagnosis.score;
-          const aiScore = calculateAiScore(llmoScore, diagnosis.weaknesses);
+          const aiScore = calculateAiScore(llmoScore, diagnosis.weaknesses, diagnosis.weaknessDetails);
           const saved = llmoScore <= llmoScoreMax;
 
           if (saved) {
