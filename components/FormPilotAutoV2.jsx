@@ -121,6 +121,7 @@ export default function FormPilotAutoV2(){
   const[showAddModal,setShowAddModal]=useState(false);
   const[showScanModal,setShowScanModal]=useState(false);
   const[scanResults,setScanResults]=useState(null);
+  const[showResearchModal,setShowResearchModal]=useState(false);
 
   // DB からリード読み込み
   const fetchLeads=useCallback(async()=>{
@@ -385,6 +386,9 @@ export default function FormPilotAutoV2(){
               </button>
               <button onClick={runScan} disabled={scanRunning} style={{padding:"5px 11px",borderRadius:4,border:"none",background:C.acc,color:C.bg,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4,opacity:scanRunning?.5:1}}>
                 {scanRunning?"⟳ スキャン中...":<><I d={ic.radar} s={11} c={C.bg}/>一括LLMO調査</>}
+              </button>
+              <button onClick={()=>setShowResearchModal(true)} style={{padding:"5px 11px",borderRadius:4,border:`1px solid ${C.cy}`,background:`${C.cy}12`,color:C.cy,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
+                <I d={ic.search} s={11} c={C.cy}/>リード調査
               </button>
               <button onClick={autoSend} disabled={sending} style={{padding:"5px 11px",borderRadius:4,border:`1px solid ${C.bdr}`,background:"transparent",color:C.tx,fontSize:10,fontWeight:600,cursor:sending?"default":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4,opacity:sending?.5:1}}>
                 <I d={ic.send} s={11} c={C.p}/>{sending?"送信中...":"AIスコア順送信"}
@@ -872,6 +876,14 @@ export default function FormPilotAutoV2(){
           onComplete={()=>{fetchLeads();setAutoConfig(p=>({...p,lastScanAt:new Date().toISOString(),nextScanAt:new Date(Date.now()+p.scanInterval*36e5).toISOString(),totalScans:p.totalScans+1}));setLog(p=>[{t:new Date().toISOString(),msg:`🔬 一括LLMOスキャン完了`,type:"scan"},...p]);}}
         />
       )}
+
+      {/* ===== リード調査モーダル ===== */}
+      {showResearchModal&&(
+        <LeadResearchModal
+          onClose={()=>setShowResearchModal(false)}
+          onComplete={()=>{fetchLeads();setLog(p=>[{t:new Date().toISOString(),msg:`リード調査完了`,type:"scan"},...p]);}}
+        />
+      )}
     </div>
   );
 }
@@ -1086,6 +1098,372 @@ function BulkScanModal({onClose,scanResults,setScanResults,onComplete}){
                 新しいスキャン
               </button>
               <button onClick={onClose} style={{padding:"8px 16px",borderRadius:5,border:"none",background:C.acc,color:C.bg,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                閉じる
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// リード調査モーダル（4パターン統合）
+// ============================================================
+function LeadResearchModal({onClose,onComplete}){
+  const[tab,setTab]=useState("import");
+  const[running,setRunning]=useState(false);
+  const[result,setResult]=useState(null);
+  const[error,setError]=useState("");
+
+  // ① インポート用
+  const[importText,setImportText]=useState("");
+  const[importFormat,setImportFormat]=useState("auto");
+
+  // ② Google Places用
+  const[gpIndustries,setGpIndustries]=useState([]);
+  const[gpRegions,setGpRegions]=useState([]);
+  const[gpKeyword,setGpKeyword]=useState("");
+  const[gpLimit,setGpLimit]=useState(20);
+
+  // ③ 無料API用
+  const[freeMethod,setFreeMethod]=useState("houjin");
+  const[freeKeyword,setFreeKeyword]=useState("");
+  const[freeIndustries,setFreeIndustries]=useState([]);
+  const[freeRegions,setFreeRegions]=useState([]);
+
+  // ④ スクレイピング用
+  const[scrapeMode,setScrapeMode]=useState("google");
+  const[scrapeKeyword,setScrapeKeyword]=useState("");
+  const[scrapeIndustries,setScrapeIndustries]=useState([]);
+  const[scrapeRegions,setScrapeRegions]=useState([]);
+  const[scrapeDirectoryUrls,setScrapeDirectoryUrls]=useState("");
+
+  const reset=()=>{setResult(null);setError("");};
+
+  const tabs=[
+    {id:"import",label:"URLリスト",desc:"CSV/テキスト",icon:ic.file,color:C.g},
+    {id:"places",label:"有料API",desc:"Google Places",icon:ic.globe,color:C.acc},
+    {id:"free",label:"無料API",desc:"法人番号/Google",icon:ic.search,color:C.b},
+    {id:"scrape",label:"スクレイピング",desc:"API不要",icon:ic.activity,color:C.p},
+  ];
+
+  const inputStyle={width:"100%",padding:"8px 10px",borderRadius:5,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:11,outline:"none",boxSizing:"border-box",fontFamily:"inherit"};
+  const labelStyle={fontSize:10,color:C.sub,fontWeight:600,display:"block",marginBottom:4};
+  const chipStyle=(active)=>({padding:"4px 10px",borderRadius:4,border:`1px solid ${active?C.acc:C.bdr}`,background:active?`${C.acc}18`:"transparent",color:active?C.acc:C.sub,fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit"});
+
+  const toggleArrayItem=(arr,setArr,item)=>{
+    setArr(prev=>prev.includes(item)?prev.filter(x=>x!==item):[...prev,item]);
+  };
+
+  // ① インポート実行
+  const runImport=async()=>{
+    if(!importText.trim()){setError("コンテンツを入力してください");return;}
+    setRunning(true);setError("");
+    try{
+      const res=await fetch("/api/research/import",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({content:importText,format:importFormat})});
+      const json=await res.json();
+      if(!res.ok){setError(json.error||"インポートエラー");return;}
+      setResult({type:"import",...json});
+      onComplete();
+    }catch(e){setError("ネットワークエラー: "+e.message);}
+    finally{setRunning(false);}
+  };
+
+  // ② Google Places 実行
+  const runGooglePlaces=async()=>{
+    if(!gpIndustries.length||!gpRegions.length){setError("業種と地域を選択してください");return;}
+    setRunning(true);setError("");
+    try{
+      const res=await fetch("/api/research/google-places",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({industries:gpIndustries,regions:gpRegions,keyword:gpKeyword||undefined,limit:gpLimit})});
+      const json=await res.json();
+      if(!res.ok){setError(json.error||"API エラー");if(json.setup)setResult({type:"setup",setup:json.setup});return;}
+      setResult({type:"places",...json});
+      onComplete();
+    }catch(e){setError("ネットワークエラー: "+e.message);}
+    finally{setRunning(false);}
+  };
+
+  // ③ 無料API実行
+  const runFreeSearch=async()=>{
+    setRunning(true);setError("");
+    try{
+      const res=await fetch("/api/research/free-search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({method:freeMethod,keyword:freeKeyword||undefined,industries:freeIndustries.length?freeIndustries:undefined,regions:freeRegions.length?freeRegions:undefined})});
+      const json=await res.json();
+      if(!res.ok){setError(json.error||"検索エラー");if(json.setup)setResult({type:"setup",setup:json.setup});return;}
+      setResult({type:"free",...json});
+      onComplete();
+    }catch(e){setError("ネットワークエラー: "+e.message);}
+    finally{setRunning(false);}
+  };
+
+  // ④ スクレイピング実行
+  const runScrape=async()=>{
+    setRunning(true);setError("");
+    try{
+      const dirUrls=scrapeDirectoryUrls.trim()?scrapeDirectoryUrls.trim().split(/\n/).map(l=>l.trim()).filter(Boolean):undefined;
+      const res=await fetch("/api/research/scrape",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:scrapeMode,keyword:scrapeKeyword||undefined,industries:scrapeIndustries.length?scrapeIndustries:undefined,regions:scrapeRegions.length?scrapeRegions:undefined,directoryUrls:dirUrls})});
+      const json=await res.json();
+      if(!res.ok){setError(json.error||"スクレイピングエラー");return;}
+      setResult({type:"scrape",...json});
+      onComplete();
+    }catch(e){setError("ネットワークエラー: "+e.message);}
+    finally{setRunning(false);}
+  };
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.card,borderRadius:10,border:`1px solid ${C.bdr}`,width:"100%",maxWidth:640,maxHeight:"90vh",overflow:"auto",padding:24}}>
+        {/* ヘッダー */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <h2 style={{fontSize:15,fontWeight:800,margin:0}}>リード調査</h2>
+          <button onClick={onClose} style={{background:"none",border:"none",color:C.sub,fontSize:18,cursor:"pointer"}}>✕</button>
+        </div>
+
+        {/* タブ切り替え */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:18}}>
+          {tabs.map(t=>(
+            <button key={t.id} onClick={()=>{setTab(t.id);reset();}} style={{padding:"8px 4px",borderRadius:6,border:`1px solid ${tab===t.id?t.color:C.bdr}`,background:tab===t.id?`${t.color}12`:"transparent",cursor:"pointer",fontFamily:"inherit",textAlign:"center"}}>
+              <div style={{display:"flex",justifyContent:"center",marginBottom:3}}><I d={t.icon} s={14} c={tab===t.id?t.color:C.dim}/></div>
+              <div style={{fontSize:10,fontWeight:700,color:tab===t.id?t.color:C.sub}}>{t.label}</div>
+              <div style={{fontSize:8,color:C.dim}}>{t.desc}</div>
+            </button>
+          ))}
+        </div>
+
+        {/* エラー表示 */}
+        {error&&<div style={{padding:10,borderRadius:6,background:C.rB,border:`1px solid ${C.r}`,color:C.r,fontSize:11,marginBottom:14}}>{error}</div>}
+
+        {/* セットアップ案内 */}
+        {result?.type==="setup"&&result.setup&&(
+          <div style={{padding:14,borderRadius:6,background:C.bB,border:`1px solid ${C.b}`,marginBottom:14}}>
+            <div style={{fontSize:12,fontWeight:700,color:C.b,marginBottom:8}}>セットアップ手順</div>
+            {result.setup.steps?.map((s,i)=><div key={i} style={{fontSize:10,color:C.tx,marginBottom:3}}>{s}</div>)}
+            {result.setup.cost&&<div style={{fontSize:9,color:C.sub,marginTop:6}}>コスト: {result.setup.cost}</div>}
+            {result.setup.estimatedCost&&<div style={{fontSize:9,color:C.sub,marginTop:6}}>コスト: {result.setup.estimatedCost}</div>}
+          </div>
+        )}
+
+        {/* ローディング */}
+        {running&&(
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"30px 0",gap:10}}>
+            <div style={{width:32,height:32,border:`3px solid ${C.bdr}`,borderTop:`3px solid ${C.cy}`,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
+            <div style={{fontSize:11,color:C.sub}}>
+              {tab==="import"?"インポート中...":tab==="places"?"Google Places 検索中...":tab==="free"?"検索中...":"スクレイピング中..."}
+            </div>
+          </div>
+        )}
+
+        {/* ===== ① URLリストインポート ===== */}
+        {tab==="import"&&!running&&!result?.summary&&(
+          <div>
+            <div style={{marginBottom:12}}>
+              <label style={labelStyle}>フォーマット</label>
+              <div style={{display:"flex",gap:6}}>
+                {[{id:"auto",l:"自動検出"},{id:"csv",l:"CSV"},{id:"text",l:"URL一覧"}].map(f=>(
+                  <button key={f.id} onClick={()=>setImportFormat(f.id)} style={chipStyle(importFormat===f.id)}>{f.l}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{marginBottom:12}}>
+              <label style={labelStyle}>URLリスト（CSVまたは1行1URL、最大500件）</label>
+              <textarea value={importText} onChange={e=>setImportText(e.target.value)} rows={10}
+                placeholder={"CSV形式:\nURL,会社名,業種,地域\nhttps://example.co.jp,テックソリューションズ,IT・SaaS,東京\n\nまたは URL一覧:\nhttps://example.co.jp\nhttps://example2.com"}
+                style={{width:"100%",padding:10,borderRadius:6,border:`1px solid ${C.bdr}`,background:C.sf,color:C.tx,fontSize:11,fontFamily:"'Geist Mono',monospace",resize:"vertical",boxSizing:"border-box"}}
+              />
+              <div style={{fontSize:9,color:C.sub,marginTop:4}}>
+                {importText.trim()?`${importText.trim().split(/\n/).filter(l=>l.trim()).length}行検出`:""}
+              </div>
+            </div>
+            <button onClick={runImport} disabled={!importText.trim()} style={{width:"100%",padding:"10px",borderRadius:5,border:"none",background:C.g,color:C.bg,fontSize:12,fontWeight:700,cursor:importText.trim()?"pointer":"default",fontFamily:"inherit",opacity:importText.trim()?1:.5}}>
+              インポート実行
+            </button>
+          </div>
+        )}
+
+        {/* ===== ② Google Places API ===== */}
+        {tab==="places"&&!running&&!result?.summary&&(
+          <div>
+            <div style={{marginBottom:12}}>
+              <label style={labelStyle}>業種（複数選択可）<span style={{color:C.r}}> *</span></label>
+              <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                {INDUSTRIES.map(ind=>(
+                  <button key={ind} onClick={()=>toggleArrayItem(gpIndustries,setGpIndustries,ind)} style={chipStyle(gpIndustries.includes(ind))}>{ind}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{marginBottom:12}}>
+              <label style={labelStyle}>地域（複数選択可）<span style={{color:C.r}}> *</span></label>
+              <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                {REGIONS.map(reg=>(
+                  <button key={reg} onClick={()=>toggleArrayItem(gpRegions,setGpRegions,reg)} style={chipStyle(gpRegions.includes(reg))}>{reg}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+              <div>
+                <label style={labelStyle}>キーワード（任意）</label>
+                <input value={gpKeyword} onChange={e=>setGpKeyword(e.target.value)} placeholder="例: ホームページ制作" style={inputStyle}/>
+              </div>
+              <div>
+                <label style={labelStyle}>取得上限</label>
+                <select value={gpLimit} onChange={e=>setGpLimit(Number(e.target.value))} style={inputStyle}>
+                  <option value={10}>10件</option>
+                  <option value={20}>20件</option>
+                  <option value={40}>40件</option>
+                  <option value={60}>60件</option>
+                </select>
+              </div>
+            </div>
+            <div style={{padding:8,borderRadius:4,background:C.oB,border:`1px solid ${C.o}33`,marginBottom:12}}>
+              <div style={{fontSize:9,color:C.o,fontWeight:600}}>有料API</div>
+              <div style={{fontSize:9,color:C.sub}}>Text Search: ~$32/1000件、Place Details: ~$17/1000件</div>
+            </div>
+            <button onClick={runGooglePlaces} disabled={!gpIndustries.length||!gpRegions.length} style={{width:"100%",padding:"10px",borderRadius:5,border:"none",background:C.acc,color:C.bg,fontSize:12,fontWeight:700,cursor:gpIndustries.length&&gpRegions.length?"pointer":"default",fontFamily:"inherit",opacity:gpIndustries.length&&gpRegions.length?1:.5}}>
+              Google Places で検索
+            </button>
+          </div>
+        )}
+
+        {/* ===== ③ 無料API ===== */}
+        {tab==="free"&&!running&&!result?.summary&&(
+          <div>
+            <div style={{marginBottom:12}}>
+              <label style={labelStyle}>検索方法</label>
+              <div style={{display:"flex",gap:6}}>
+                {[{id:"houjin",l:"法人番号API",d:"完全無料"},{id:"google",l:"Google検索",d:"100回/日無料"},{id:"both",l:"両方",d:"併用"}].map(m=>(
+                  <button key={m.id} onClick={()=>setFreeMethod(m.id)} style={{...chipStyle(freeMethod===m.id),flex:1,textAlign:"center"}}>
+                    <div style={{fontSize:10}}>{m.l}</div>
+                    <div style={{fontSize:8,color:C.dim}}>{m.d}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{marginBottom:12}}>
+              <label style={labelStyle}>キーワード</label>
+              <input value={freeKeyword} onChange={e=>setFreeKeyword(e.target.value)} placeholder="例: IT、コンサルティング、製造" style={inputStyle}/>
+            </div>
+            <div style={{marginBottom:12}}>
+              <label style={labelStyle}>業種（任意）</label>
+              <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                {INDUSTRIES.map(ind=>(
+                  <button key={ind} onClick={()=>toggleArrayItem(freeIndustries,setFreeIndustries,ind)} style={chipStyle(freeIndustries.includes(ind))}>{ind}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{marginBottom:12}}>
+              <label style={labelStyle}>地域（任意）</label>
+              <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                {REGIONS.map(reg=>(
+                  <button key={reg} onClick={()=>toggleArrayItem(freeRegions,setFreeRegions,reg)} style={chipStyle(freeRegions.includes(reg))}>{reg}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{padding:8,borderRadius:4,background:C.gB,border:`1px solid ${C.g}33`,marginBottom:12}}>
+              <div style={{fontSize:9,color:C.g,fontWeight:600}}>無料</div>
+              <div style={{fontSize:9,color:C.sub}}>法人番号API: 完全無料・無制限 / Google CSE: 100回/日無料</div>
+            </div>
+            <button onClick={runFreeSearch} style={{width:"100%",padding:"10px",borderRadius:5,border:"none",background:C.b,color:C.bg,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+              検索開始
+            </button>
+          </div>
+        )}
+
+        {/* ===== ④ スクレイピング ===== */}
+        {tab==="scrape"&&!running&&!result?.summary&&(
+          <div>
+            <div style={{marginBottom:12}}>
+              <label style={labelStyle}>スクレイピング方法</label>
+              <div style={{display:"flex",gap:6}}>
+                {[{id:"google",l:"Google検索",d:"自動検索"},{id:"directory",l:"ディレクトリ",d:"業種ページ"},{id:"both",l:"両方",d:"併用"}].map(m=>(
+                  <button key={m.id} onClick={()=>setScrapeMode(m.id)} style={{...chipStyle(scrapeMode===m.id),flex:1,textAlign:"center"}}>
+                    <div style={{fontSize:10}}>{m.l}</div>
+                    <div style={{fontSize:8,color:C.dim}}>{m.d}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{marginBottom:12}}>
+              <label style={labelStyle}>検索キーワード</label>
+              <input value={scrapeKeyword} onChange={e=>setScrapeKeyword(e.target.value)} placeholder="例: Web制作会社、税理士事務所" style={inputStyle}/>
+            </div>
+            <div style={{marginBottom:12}}>
+              <label style={labelStyle}>業種（任意）</label>
+              <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                {INDUSTRIES.map(ind=>(
+                  <button key={ind} onClick={()=>toggleArrayItem(scrapeIndustries,setScrapeIndustries,ind)} style={chipStyle(scrapeIndustries.includes(ind))}>{ind}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{marginBottom:12}}>
+              <label style={labelStyle}>地域（任意）</label>
+              <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                {REGIONS.map(reg=>(
+                  <button key={reg} onClick={()=>toggleArrayItem(scrapeRegions,setScrapeRegions,reg)} style={chipStyle(scrapeRegions.includes(reg))}>{reg}</button>
+                ))}
+              </div>
+            </div>
+            {(scrapeMode==="directory"||scrapeMode==="both")&&(
+              <div style={{marginBottom:12}}>
+                <label style={labelStyle}>カスタムディレクトリURL（任意、1行1URL）</label>
+                <textarea value={scrapeDirectoryUrls} onChange={e=>setScrapeDirectoryUrls(e.target.value)} rows={3}
+                  placeholder="https://example.com/company-list"
+                  style={{width:"100%",padding:8,borderRadius:5,border:`1px solid ${C.bdr}`,background:C.sf,color:C.tx,fontSize:11,fontFamily:"'Geist Mono',monospace",resize:"vertical",boxSizing:"border-box"}}
+                />
+              </div>
+            )}
+            <div style={{padding:8,borderRadius:4,background:C.pB,border:`1px solid ${C.p}33`,marginBottom:12}}>
+              <div style={{fontSize:9,color:C.p,fontWeight:600}}>API不要・完全無料</div>
+              <div style={{fontSize:9,color:C.sub}}>Webページを直接解析してURLを抽出します</div>
+            </div>
+            <button onClick={runScrape} style={{width:"100%",padding:"10px",borderRadius:5,border:"none",background:C.p,color:C.bg,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+              スクレイピング開始
+            </button>
+          </div>
+        )}
+
+        {/* ===== 共通: 結果表示 ===== */}
+        {result?.summary&&(
+          <div>
+            {/* サマリーKPI */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:16}}>
+              <div style={{background:C.sf,borderRadius:6,padding:"10px 8px",textAlign:"center",border:`1px solid ${C.bdr}`}}>
+                <div style={{fontSize:18,fontWeight:800,color:C.b,fontFamily:"'Geist Mono',monospace"}}>{result.summary.totalFound??result.summary.total??0}</div>
+                <div style={{fontSize:8,color:C.sub,fontWeight:700,marginTop:2}}>発見</div>
+              </div>
+              <div style={{background:C.sf,borderRadius:6,padding:"10px 8px",textAlign:"center",border:`1px solid ${C.bdr}`}}>
+                <div style={{fontSize:18,fontWeight:800,color:C.g,fontFamily:"'Geist Mono',monospace"}}>{result.summary.inserted??0}</div>
+                <div style={{fontSize:8,color:C.sub,fontWeight:700,marginTop:2}}>追加</div>
+              </div>
+              <div style={{background:C.sf,borderRadius:6,padding:"10px 8px",textAlign:"center",border:`1px solid ${C.bdr}`}}>
+                <div style={{fontSize:18,fontWeight:800,color:C.sub,fontFamily:"'Geist Mono',monospace"}}>{result.summary.duplicateSkipped??result.summary.duplicateSkipped??0}</div>
+                <div style={{fontSize:8,color:C.sub,fontWeight:700,marginTop:2}}>重複スキップ</div>
+              </div>
+            </div>
+
+            {/* 結果リスト */}
+            {result.results?.length>0&&(
+              <div style={{maxHeight:250,overflow:"auto",marginBottom:14}}>
+                {result.results.map((r,i)=>(
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderBottom:`1px solid ${C.bdr}`,fontSize:11}}>
+                    <div style={{width:7,height:7,borderRadius:"50%",background:r.isNew!==false?C.g:C.sub,flexShrink:0}}/>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:600,color:C.tx,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.company}</div>
+                      <div style={{fontSize:9,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.url||"URL未取得"}</div>
+                    </div>
+                    {r.source&&<div style={{fontSize:8,color:C.sub,flexShrink:0}}>{r.source}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* アクションボタン */}
+            <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
+              <button onClick={()=>{setResult(null);setError("");}} style={{padding:"8px 16px",borderRadius:5,border:`1px solid ${C.bdr}`,background:"transparent",color:C.tx,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+                新しい調査
+              </button>
+              <button onClick={onClose} style={{padding:"8px 16px",borderRadius:5,border:"none",background:C.cy,color:C.bg,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                 閉じる
               </button>
             </div>
