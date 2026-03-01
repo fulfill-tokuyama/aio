@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 // ============================================================
 // AIO INSIGHT - Service Landing Page
@@ -120,9 +121,9 @@ const EVIDENCE = [
 // Components
 // ============================================================
 
-const Section = ({ children, id, style = {} }) => (
-  <section id={id} style={{ padding: "80px 0", ...style }}>
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 24px" }}>
+const Section = ({ children, id, style = {}, mob: isMob }) => (
+  <section id={id} style={{ padding: isMob ? "48px 0" : "80px 0", ...style }}>
+    <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMob ? "0 16px" : "0 24px" }}>
       {children}
     </div>
   </section>
@@ -181,6 +182,8 @@ export default function AIOServiceLP() {
   const [formSending, setFormSending] = useState(false);
   const [expandedEvidence, setExpandedEvidence] = useState({});
   const [activeEvidenceTab, setActiveEvidenceTab] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const mob = useIsMobile();
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -254,7 +257,7 @@ export default function AIOServiceLP() {
 
       {/* ===== NAV ===== */}
       <nav style={{
-        position: "sticky", top: 0, zIndex: 50, padding: "12px 28px",
+        position: "sticky", top: 0, zIndex: 50, padding: mob ? "10px 16px" : "12px 28px",
         background: `${C.bg}E8`, backdropFilter: "blur(16px)",
         borderBottom: `1px solid ${C.border}`,
         display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -268,30 +271,60 @@ export default function AIOServiceLP() {
           }}>AI</div>
           <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: -0.3 }}>AIO Insight</span>
         </div>
-        <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
+        {mob ? (
+          <button onClick={() => setMenuOpen(o => !o)} style={{
+            background: "none", border: "none", color: C.text, fontSize: 22, cursor: "pointer", padding: 4,
+          }}>{menuOpen ? "✕" : "☰"}</button>
+        ) : (
+          <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
+            {[
+              { label: "機能", id: "features" },
+              { label: "エビデンス", id: "evidence" },
+              { label: "料金", id: "pricing" },
+            ].map(n => (
+              <button key={n.id} onClick={() => scrollTo(n.id)} style={{
+                background: "none", border: "none", color: C.textSub, fontSize: 13,
+                fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
+                transition: "color 0.2s",
+              }}
+              onMouseEnter={e => e.target.style.color = C.text}
+              onMouseLeave={e => e.target.style.color = C.textSub}
+              >{n.label}</button>
+            ))}
+            <button className="btn-primary" onClick={() => scrollTo("contact")}
+              style={{ padding: "8px 20px", fontSize: 13 }}>
+              お問い合わせ
+            </button>
+          </div>
+        )}
+      </nav>
+      {/* Mobile dropdown menu */}
+      {mob && menuOpen && (
+        <div style={{
+          position: "sticky", top: 53, zIndex: 49,
+          background: C.bg, borderBottom: `1px solid ${C.border}`,
+          display: "flex", flexDirection: "column", padding: "8px 16px",
+        }}>
           {[
             { label: "機能", id: "features" },
             { label: "エビデンス", id: "evidence" },
             { label: "料金", id: "pricing" },
           ].map(n => (
-            <button key={n.id} onClick={() => scrollTo(n.id)} style={{
-              background: "none", border: "none", color: C.textSub, fontSize: 13,
-              fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
-              transition: "color 0.2s",
-            }}
-            onMouseEnter={e => e.target.style.color = C.text}
-            onMouseLeave={e => e.target.style.color = C.textSub}
-            >{n.label}</button>
+            <button key={n.id} onClick={() => { scrollTo(n.id); setMenuOpen(false); }} style={{
+              background: "none", border: "none", color: C.textSub, fontSize: 14,
+              fontWeight: 500, cursor: "pointer", fontFamily: "inherit", padding: "10px 0",
+              textAlign: "left", borderBottom: `1px solid ${C.border}`,
+            }}>{n.label}</button>
           ))}
-          <button className="btn-primary" onClick={() => scrollTo("contact")}
-            style={{ padding: "8px 20px", fontSize: 13 }}>
+          <button className="btn-primary" onClick={() => { scrollTo("contact"); setMenuOpen(false); }}
+            style={{ padding: "10px 20px", fontSize: 14, marginTop: 8, marginBottom: 4 }}>
             お問い合わせ
           </button>
         </div>
-      </nav>
+      )}
 
       {/* ===== HERO ===== */}
-      <Section style={{ padding: "100px 0 80px", position: "relative", overflow: "hidden" }}>
+      <Section mob={mob} style={{ padding: mob ? "60px 0 48px" : "100px 0 80px", position: "relative", overflow: "hidden" }}>
         <div style={{
           position: "absolute", top: -200, right: -200, width: 600, height: 600,
           background: `radial-gradient(circle, ${C.accent}08, transparent 70%)`,
@@ -331,19 +364,26 @@ export default function AIOServiceLP() {
 
           <div className="fade-up" style={{
             display: "flex", gap: 16, justifyContent: "center",
+            flexDirection: mob ? "column" : "row",
+            alignItems: "center",
             animationDelay: "300ms",
           }}>
-            <button className="btn-primary" onClick={() => scrollTo("pricing")}>
+            <button className="btn-primary" onClick={() => scrollTo("pricing")} style={mob ? { width: "100%" } : undefined}>
               月額¥10,000で始める →
             </button>
-            <button className="btn-outline" onClick={() => scrollTo("evidence")}>
+            <button className="btn-outline" onClick={() => scrollTo("evidence")} style={mob ? { width: "100%" } : undefined}>
               エビデンスを確認
             </button>
           </div>
 
           {/* Trust badges */}
           <div className="fade-up" style={{
-            display: "flex", gap: 32, justifyContent: "center", marginTop: 48,
+            display: "grid",
+            gridTemplateColumns: mob ? "1fr 1fr" : "repeat(4, auto)",
+            gap: mob ? 12 : 32,
+            justifyContent: mob ? undefined : "center",
+            justifyItems: mob ? "center" : undefined,
+            marginTop: mob ? 32 : 48,
             animationDelay: "400ms",
           }}>
             {[
@@ -362,13 +402,13 @@ export default function AIOServiceLP() {
       </Section>
 
       {/* ===== FEATURES ===== */}
-      <Section id="features" style={{ background: C.bgAlt }}>
+      <Section mob={mob} id="features" style={{ background: C.bgAlt }}>
         <SectionTitle
           tag="Features"
           title="AIOダッシュボードでできること"
           sub="Ahrefs Web Analytics APIの無料エンドポイント（stats/chart）とBrand Radar APIを統合し、AI時代のマーケティングインテリジェンスを提供します"
         />
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18 }}>
+        <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "repeat(3, 1fr)", gap: 18 }}>
           <FeatureCard delay={0} icon="🤖" title="AIトラフィック計測"
             desc="ChatGPT、Perplexity、Copilotからの流入を自動識別。従来のGA4では分離できないAI検索トラフィックを正確に把握。Web Analytics API (chart) で時系列推移も可視化。" />
           <FeatureCard delay={80} icon="📡" title="AI Share of Voice"
@@ -385,7 +425,7 @@ export default function AIOServiceLP() {
       </Section>
 
       {/* ===== EVIDENCE ===== */}
-      <Section id="evidence">
+      <Section mob={mob} id="evidence">
         <SectionTitle
           tag="Evidence & Transparency"
           title="データソースと信頼性について"
@@ -500,7 +540,7 @@ export default function AIOServiceLP() {
       </Section>
 
       {/* ===== PRICING ===== */}
-      <Section id="pricing" style={{ background: C.bgAlt }}>
+      <Section mob={mob} id="pricing" style={{ background: C.bgAlt }}>
         <SectionTitle
           tag="Pricing"
           title="シンプルな料金プラン"
@@ -517,7 +557,7 @@ export default function AIOServiceLP() {
             background: `linear-gradient(90deg, ${C.accent}, #8B5CF6, ${C.accentLight})`,
           }} />
 
-          <div style={{ padding: "36px 36px 0" }}>
+          <div style={{ padding: mob ? "20px 20px 0" : "36px 36px 0" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
                 <div style={{ fontSize: 12, color: C.textDim, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>
@@ -551,7 +591,7 @@ export default function AIOServiceLP() {
             </div>
           </div>
 
-          <div style={{ padding: "0 36px 32px" }}>
+          <div style={{ padding: mob ? "0 20px 24px" : "0 36px 32px" }}>
             <button className="btn-primary" onClick={() => window.open(STRIPE_PAYMENT_LINK, "_blank")}
               style={{
                 width: "100%", padding: "16px", fontSize: 16, borderRadius: 12,
@@ -591,7 +631,7 @@ export default function AIOServiceLP() {
       </Section>
 
       {/* ===== CONTACT FORM ===== */}
-      <Section id="contact">
+      <Section mob={mob} id="contact">
         <SectionTitle
           tag="Contact"
           title="無料AI可視性診断"
@@ -618,7 +658,7 @@ export default function AIOServiceLP() {
               background: C.card, borderRadius: 16, padding: "36px 32px",
               border: `1px solid ${C.border}`,
             }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
                 <div>
                   <label style={{ fontSize: 12, color: C.textSub, fontWeight: 600, display: "block", marginBottom: 6 }}>
                     会社名 <span style={{ color: C.red }}>*</span>
@@ -707,15 +747,16 @@ export default function AIOServiceLP() {
 
       {/* ===== FOOTER ===== */}
       <footer style={{
-        padding: "32px 28px", borderTop: `1px solid ${C.border}`,
+        padding: mob ? "24px 16px" : "32px 28px", borderTop: `1px solid ${C.border}`,
         background: C.bgAlt,
       }}>
         <div style={{
           maxWidth: 1100, margin: "0 auto",
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-          flexWrap: "wrap", gap: 16,
+          display: "flex", flexDirection: mob ? "column" : "row",
+          justifyContent: "space-between", alignItems: mob ? "flex-start" : "center",
+          gap: 12,
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <div style={{
               width: 28, height: 28, borderRadius: 6,
               background: `linear-gradient(135deg, ${C.accent}, #8B5CF6)`,

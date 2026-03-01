@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import { createBrowserClient } from "@supabase/ssr";
 
 const supabase = createBrowserClient(
@@ -25,6 +26,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const mob = useIsMobile();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +66,7 @@ export default function LoginPage() {
           background: C.card,
           borderRadius: 16,
           border: `1px solid ${C.border}`,
-          padding: "48px 36px",
+          padding: mob ? "36px 24px" : "48px 36px",
         }}
       >
         {/* Logo */}

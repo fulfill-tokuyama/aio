@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 // ============================================================
 // FormPilot AUTONOMOUS v2 — 超効率営業自動化
@@ -154,6 +155,8 @@ const TEMPLATES = [
 export default function FormPilotAutoV2(){
   const[mt,setMt]=useState(false);
   const[view,setView]=useState("pipeline");
+  const[sidebarOpen,setSidebarOpen]=useState(false);
+  const mob=useIsMobile();
   const[leads,setLeads]=useState(()=>{
     const arr=Array.from({length:120},genLead);
     arr.sort((a,b)=>b.aiScore-a.aiScore);
@@ -322,18 +325,25 @@ export default function FormPilotAutoV2(){
         input,select,textarea{font-family:inherit}
       `}</style>
 
+      {/* Mobile sidebar overlay */}
+      {mob&&sidebarOpen&&<div onClick={()=>setSidebarOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:60}}/>}
+
       {/* SIDEBAR */}
-      <aside style={{width:200,flexShrink:0,background:C.sf,borderRight:`1px solid ${C.bdr}`,display:"flex",flexDirection:"column"}}>
+      <aside style={{
+        width:200,flexShrink:0,background:C.sf,borderRight:`1px solid ${C.bdr}`,display:"flex",flexDirection:"column",
+        ...(mob?{position:"fixed",left:sidebarOpen?0:-220,top:0,bottom:0,zIndex:61,transition:"left .25s ease"}:{}),
+      }}>
         <div style={{padding:"13px 11px",borderBottom:`1px solid ${C.bdr}`,display:"flex",alignItems:"center",gap:7}}>
           <div style={{width:28,height:28,borderRadius:5,background:`linear-gradient(135deg,${C.acc},${C.accDk})`,display:"flex",alignItems:"center",justifyContent:"center"}}><I d={ic.zap} s={13} c={C.bg}/></div>
           <div>
             <div style={{fontSize:12,fontWeight:800,color:C.acc,letterSpacing:-.3}}>FormPilot</div>
             <div style={{fontSize:7,color:C.dim,letterSpacing:1.2,fontWeight:700}}>AUTONOMOUS FULL AUTO</div>
           </div>
+          {mob&&<button onClick={()=>setSidebarOpen(false)} style={{marginLeft:"auto",background:"none",border:"none",color:C.sub,fontSize:18,cursor:"pointer"}}>✕</button>}
         </div>
         <nav style={{flex:1,padding:"6px 4px",overflow:"auto"}}>
           {nav.map(n=>(
-            <button key={n.id} onClick={()=>{setView(n.id);setPage(0);setSelectedLead(null);}} style={{
+            <button key={n.id} onClick={()=>{setView(n.id);setPage(0);setSelectedLead(null);if(mob)setSidebarOpen(false);}} style={{
               width:"100%",padding:"7px 9px",borderRadius:4,border:"none",
               background:view===n.id?C.accGl:"transparent",color:view===n.id?C.acc:C.sub,
               fontSize:10.5,fontWeight:view===n.id?700:400,fontFamily:"inherit",cursor:"pointer",
@@ -356,8 +366,11 @@ export default function FormPilotAutoV2(){
 
       {/* MAIN CONTENT */}
       <main style={{flex:1,overflow:"auto",display:"flex",flexDirection:"column"}}>
-        <header style={{padding:"9px 18px",borderBottom:`1px solid ${C.bdr}`,background:C.bg2,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
-          <h1 style={{fontSize:13,fontWeight:700,margin:0}}>{nav.find(n=>n.id===view)?.label}</h1>
+        <header style={{padding:mob?"9px 12px":"9px 18px",borderBottom:`1px solid ${C.bdr}`,background:C.bg2,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0,gap:8}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            {mob&&<button onClick={()=>setSidebarOpen(true)} style={{background:"none",border:"none",color:C.tx,fontSize:18,cursor:"pointer",padding:2}}>☰</button>}
+            <h1 style={{fontSize:13,fontWeight:700,margin:0}}>{nav.find(n=>n.id===view)?.label}</h1>
+          </div>
           <div style={{display:"flex",gap:6,alignItems:"center"}}>
             {view==="leads"&&<>
               <button onClick={runScan} disabled={scanRunning} style={{padding:"5px 11px",borderRadius:4,border:"none",background:C.acc,color:C.bg,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4,opacity:scanRunning?.5:1}}>
@@ -371,13 +384,13 @@ export default function FormPilotAutoV2(){
           </div>
         </header>
 
-        <div style={{flex:1,overflow:"auto",padding:16}}>
+        <div style={{flex:1,overflow:"auto",padding:mob?10:16}}>
 
           {/* ===== PIPELINE ===== */}
           {view==="pipeline"&&(
             <div className="fi">
               <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>自動営業パイプライン</div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:5,marginBottom:20}}>
+              <div style={{display:"grid",gridTemplateColumns:mob?"repeat(3,1fr)":"repeat(6,1fr)",gap:5,marginBottom:20}}>
                 {[
                   {label:"LLMO未対策企業発見",count:leads.filter(l=>l.phase==="discovered").length,color:C.cy,icon:ic.radar},
                   {label:"フォーム自動発見",count:leads.filter(l=>l.phase==="form_found").length,color:C.b,icon:ic.link},
@@ -396,7 +409,7 @@ export default function FormPilotAutoV2(){
                 ))}
               </div>
 
-              <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8,marginBottom:20}}>
+              <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(5,1fr)",gap:8,marginBottom:20}}>
                 <KPI icon={ic.radar} ic={C.b} label="総リード数" val={kpi.t.toString()} sub={`累計${autoConfig.totalScans}回スキャン`} trend={18} good/>
                 <KPI icon={ic.send} ic={C.p} label="送信完了" val={kpi.sent.toString()} sub={`フォーム発見率 ${kpi.formRate}%`}/>
                 <KPI icon={ic.check} ic={C.g} label="返信率" val={`${kpi.replyRate}%`} sub={`${kpi.replied}件返信`} trend={5} good/>
@@ -404,7 +417,7 @@ export default function FormPilotAutoV2(){
                 <KPI icon={ic.dollar} ic={C.g} label="MRR" val={`¥${kpi.mrr.toLocaleString()}`} sub={`${kpi.cust}社 × ¥10,000`} trend={22} good/>
               </div>
 
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+              <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12,marginBottom:16}}>
                 <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
                   <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>アクティビティログ</div>
                   <div style={{maxHeight:220,overflow:"auto"}}>
@@ -463,12 +476,12 @@ export default function FormPilotAutoV2(){
                 <div style={{flex:1}}/><span style={{fontSize:9,color:C.dim}}>{filtered.length}件</span>
               </div>
 
-              <div style={{background:C.card,borderRadius:6,border:`1px solid ${C.bdr}`,overflow:"hidden"}}>
-                <div style={{display:"grid",gridTemplateColumns:"35px 1.2fr 1.4fr 50px 40px 45px 40px 40px 75px",padding:"6px 10px",fontSize:8,color:C.dim,fontWeight:700,textTransform:"uppercase",letterSpacing:.4,borderBottom:`1px solid ${C.bdr}`,background:C.ca}}>
+              <div style={{background:C.card,borderRadius:6,border:`1px solid ${C.bdr}`,overflow:mob?"auto":"hidden",WebkitOverflowScrolling:"touch"}}>
+                <div style={{display:"grid",gridTemplateColumns:"35px 1.2fr 1.4fr 50px 40px 45px 40px 40px 75px",padding:"6px 10px",fontSize:8,color:C.dim,fontWeight:700,textTransform:"uppercase",letterSpacing:.4,borderBottom:`1px solid ${C.bdr}`,background:C.ca,minWidth:mob?600:undefined}}>
                   <span>AI</span><span>会社名</span><span>URL</span><span>業種</span><span>規模</span><span>フェーズ</span><span>開封</span><span>FU</span><span>操作</span>
                 </div>
                 {paged.map(l=>(
-                  <div key={l.id} className="rh" onClick={()=>setSelectedLead(l)} style={{display:"grid",gridTemplateColumns:"35px 1.2fr 1.4fr 50px 40px 45px 40px 40px 75px",padding:"7px 10px",borderBottom:`1px solid ${C.bdr}`,alignItems:"center",fontSize:10,cursor:"pointer"}}>
+                  <div key={l.id} className="rh" onClick={()=>setSelectedLead(l)} style={{display:"grid",gridTemplateColumns:"35px 1.2fr 1.4fr 50px 40px 45px 40px 40px 75px",padding:"7px 10px",borderBottom:`1px solid ${C.bdr}`,alignItems:"center",fontSize:10,cursor:"pointer",minWidth:mob?600:undefined}}>
                     <ScoreBadge score={l.aiScore}/>
                     <span style={{fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.company}</span>
                     <span style={{fontFamily:"'Geist Mono',monospace",fontSize:8,color:C.sub,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.url}</span>
@@ -497,8 +510,8 @@ export default function FormPilotAutoV2(){
           {view==="leads"&&selectedLead&&(
             <div className="fi">
               <button onClick={()=>setSelectedLead(null)} style={{padding:"5px 10px",borderRadius:4,border:`1px solid ${C.bdr}`,background:"transparent",color:C.sub,fontSize:10,cursor:"pointer",fontFamily:"inherit",marginBottom:12}}>← 一覧に戻る</button>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                <div style={{background:C.card,borderRadius:8,padding:18,border:`1px solid ${C.bdr}`}}>
+              <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+                <div style={{background:C.card,borderRadius:8,padding:mob?14:18,border:`1px solid ${C.bdr}`}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
                     <div>
                       <div style={{fontSize:16,fontWeight:800}}>{selectedLead.company}</div>
@@ -543,7 +556,7 @@ export default function FormPilotAutoV2(){
           {view==="abtest"&&(
             <div className="fi">
               <div style={{fontSize:10,fontWeight:700,color:C.sub,marginBottom:8}}>📧 テンプレート別パフォーマンス</div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:18}}>
+              <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:10,marginBottom:18}}>
                 {templates.map((t,i)=>{
                   const bt=winLoss.byTemplate[t.id];
                   const isTop=templates.every(x=>winLoss.byTemplate[x.id]?parseFloat(winLoss.byTemplate[x.id].convRate)<=parseFloat(bt.convRate):true);
@@ -590,13 +603,13 @@ export default function FormPilotAutoV2(){
           {/* ===== FOLLOW-UP ===== */}
           {view==="followup"&&(
             <div className="fi">
-              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}}>
+              <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(4,1fr)",gap:10,marginBottom:16}}>
                 <KPI icon={ic.repeat} ic={C.pk} label="フォローアップ済" val={kpi.followedUp.toString()} sub="自動追客"/>
                 <KPI icon={ic.send} ic={C.p} label="未返信（送信済）" val={leads.filter(l=>l.phase==="sent").length.toString()} sub="フォロー対象"/>
                 <KPI icon={ic.check} ic={C.g} label="FU後返信" val={leads.filter(l=>l.followUpCount>0&&l.phase==="replied").length.toString()} sub="追客効果"/>
                 <KPI icon={ic.clock} ic={C.o} label="次回FU予定" val={leads.filter(l=>l.followUpScheduled).length.toString()}/>
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
                 <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
                     <div style={{fontSize:12,fontWeight:700}}>🔁 自動フォローアップ設定</div>
@@ -652,7 +665,7 @@ export default function FormPilotAutoV2(){
           {view==="analysis"&&(
             <div className="fi">
               <div style={{fontSize:10,fontWeight:700,color:C.sub,marginBottom:8}}>📊 Win/Loss 分析 — どの条件で契約が取れるか</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+              <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12,marginBottom:14}}>
                 {/* By Industry */}
                 <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
                   <div style={{fontSize:11,fontWeight:700,marginBottom:10}}>業種別 成約率</div>
@@ -685,7 +698,7 @@ export default function FormPilotAutoV2(){
               {/* Template performance */}
               <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
                 <div style={{fontSize:11,fontWeight:700,marginBottom:10}}>📧 テンプレート別ファネル分析</div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+                <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:10}}>
                   {templates.map((t,i)=>{
                     const bt=winLoss.byTemplate[t.id];
                     return(
@@ -717,7 +730,7 @@ export default function FormPilotAutoV2(){
           {/* ===== AUTOMATION CONFIG ===== */}
           {view==="automation"&&(
             <div className="fi">
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
                 <div style={{background:C.card,borderRadius:8,padding:18,border:`1px solid ${C.bdr}`}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
                     <h3 style={{fontSize:13,fontWeight:700,margin:0}}>🔬 LLMO調査</h3>
@@ -791,18 +804,18 @@ export default function FormPilotAutoV2(){
           {/* ===== CUSTOMERS ===== */}
           {view==="customers"&&(
             <div className="fi">
-              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}}>
+              <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(4,1fr)",gap:10,marginBottom:16}}>
                 <KPI icon={ic.dollar} ic={C.g} label="MRR" val={`¥${kpi.mrr.toLocaleString()}`} sub={`${kpi.cust}社`} trend={22} good/>
                 <KPI icon={ic.users} ic={C.acc} label="ARR" val={`¥${(kpi.mrr*12).toLocaleString()}`}/>
                 <KPI icon={ic.trending} ic={C.b} label="成約率" val={`${kpi.convRate}%`} sub="パイプライン全体"/>
                 <KPI icon={ic.eye} ic={C.p} label="開封率" val={`${kpi.openRate}%`} sub="メール開封" trend={8} good/>
               </div>
-              <div style={{background:C.card,borderRadius:7,border:`1px solid ${C.bdr}`,overflow:"hidden"}}>
-                <div style={{display:"grid",gridTemplateColumns:"1.4fr 1.8fr 65px 60px 70px 70px",padding:"6px 10px",fontSize:8,color:C.dim,fontWeight:700,textTransform:"uppercase",letterSpacing:.4,borderBottom:`1px solid ${C.bdr}`,background:C.ca}}>
+              <div style={{background:C.card,borderRadius:7,border:`1px solid ${C.bdr}`,overflow:mob?"auto":"hidden",WebkitOverflowScrolling:"touch"}}>
+                <div style={{display:"grid",gridTemplateColumns:"1.4fr 1.8fr 65px 60px 70px 70px",padding:"6px 10px",fontSize:8,color:C.dim,fontWeight:700,textTransform:"uppercase",letterSpacing:.4,borderBottom:`1px solid ${C.bdr}`,background:C.ca,minWidth:mob?500:undefined}}>
                   <span>会社名</span><span>URL</span><span>Stripe</span><span>月額</span><span>業種</span><span>テンプレ</span>
                 </div>
                 {leads.filter(l=>l.stripeStatus).sort((a,b)=>({"active":0,"trialing":1,"past_due":2,"canceled":3}[a.stripeStatus]||9)-({"active":0,"trialing":1,"past_due":2,"canceled":3}[b.stripeStatus]||9)).map(l=>(
-                  <div key={l.id} className="rh" style={{display:"grid",gridTemplateColumns:"1.4fr 1.8fr 65px 60px 70px 70px",padding:"8px 10px",borderBottom:`1px solid ${C.bdr}`,alignItems:"center",fontSize:10}}>
+                  <div key={l.id} className="rh" style={{display:"grid",gridTemplateColumns:"1.4fr 1.8fr 65px 60px 70px 70px",padding:"8px 10px",borderBottom:`1px solid ${C.bdr}`,alignItems:"center",fontSize:10,minWidth:mob?500:undefined}}>
                     <span style={{fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.company}</span>
                     <span style={{fontFamily:"'Geist Mono',monospace",fontSize:8,color:C.sub,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.url}</span>
                     <StBadge s={l.stripeStatus}/>

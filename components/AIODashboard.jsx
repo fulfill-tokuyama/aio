@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 // ============================================================
 // AIO DASHBOARD - AI Optimization Intelligence Dashboard
@@ -262,6 +263,7 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
   const [hoveredPlatform, setHoveredPlatform] = useState(null);
   const [dateRange, setDateRange] = useState("30d");
   const [mounted, setMounted] = useState(false);
+  const mob = useIsMobile();
 
   useEffect(() => {
     setMounted(true);
@@ -344,12 +346,13 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
 
       {/* HEADER */}
       <header style={{
-        padding: "16px 28px", borderBottom: `1px solid ${COLORS.border}`,
+        padding: mob ? "12px 16px" : "16px 28px", borderBottom: `1px solid ${COLORS.border}`,
         display: "flex", justifyContent: "space-between", alignItems: "center",
+        flexWrap: "wrap", gap: mob ? 10 : 0,
         background: `linear-gradient(180deg, ${COLORS.surface} 0%, ${COLORS.bg} 100%)`,
         position: "sticky", top: 0, zIndex: 10,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{
             width: 34, height: 34, borderRadius: 8,
             background: `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.purple})`,
@@ -357,24 +360,24 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
             fontSize: 16, fontWeight: 700, color: "#fff",
           }}>AI</div>
           <div>
-            <h1 style={{ fontSize: 17, fontWeight: 700, margin: 0, letterSpacing: -0.3 }}>
+            <h1 style={{ fontSize: mob ? 15 : 17, fontWeight: 700, margin: 0, letterSpacing: -0.3 }}>
               AIO Dashboard
             </h1>
-            <p style={{ fontSize: 10, color: COLORS.textDim, margin: 0 }}>
+            {!mob && <p style={{ fontSize: 10, color: COLORS.textDim, margin: 0 }}>
               AI Optimization Intelligence × Ahrefs Web Analytics
-            </p>
+            </p>}
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {["7d", "30d", "90d"].map(r => (
             <TabButton key={r} active={dateRange === r} onClick={() => setDateRange(r)}>
               {r === "7d" ? "7日" : r === "30d" ? "30日" : "90日"}
             </TabButton>
           ))}
-          <div style={{
+          {!mob && <div style={{
             width: 1, height: 20, background: COLORS.border, margin: "0 4px"
-          }} />
+          }} />}
           <div style={{
             padding: "6px 12px", borderRadius: 6, fontSize: 11,
             background: COLORS.greenBg, color: COLORS.green, fontWeight: 600,
@@ -398,8 +401,9 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
 
       {/* TABS */}
       <div style={{
-        padding: "12px 28px", borderBottom: `1px solid ${COLORS.border}`,
+        padding: mob ? "10px 16px" : "12px 28px", borderBottom: `1px solid ${COLORS.border}`,
         display: "flex", gap: 4, background: COLORS.bg,
+        overflowX: mob ? "auto" : undefined, WebkitOverflowScrolling: "touch",
       }}>
         {[
           { id: "overview", label: "📊 概要", },
@@ -414,7 +418,7 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
       </div>
 
       {/* CONTENT */}
-      <main style={{ padding: "24px 28px", maxWidth: 1400, margin: "0 auto" }}>
+      <main style={{ padding: mob ? "16px 12px" : "24px 28px", maxWidth: 1400, margin: "0 auto" }}>
 
         {/* ===== OVERVIEW TAB ===== */}
         {activeTab === "overview" && (
@@ -430,7 +434,7 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
                   title="AI可視性診断結果"
                   subtitle={`${diagnosisData.url} — ${new Date(diagnosisData.createdAt).toLocaleDateString("ja-JP")}に診断`}
                 />
-                <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: 32 }}>
+                <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "200px 1fr", gap: mob ? 20 : 32 }}>
                   {/* Score */}
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                     <div style={{
@@ -476,7 +480,7 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
             )}
 
             {/* KPI Row — Real diagnosis data */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
+            <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: mob ? 10 : 16, marginBottom: 24 }}>
               <StatCard
                 label="AI可視性スコア"
                 value={latestScore !== null ? latestScore : "—"}
@@ -591,14 +595,14 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
                 Ahrefs Web Analytics連携後にリアルデータを表示します。現在はサンプルデータです。
               </span>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+            <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "repeat(3, 1fr)", gap: mob ? 10 : 16, marginBottom: 24 }}>
               <StatCard label="AI検索トラフィック" value={totalAITraffic.toLocaleString()} change={32.4} icon="🤖" color={COLORS.green} sub="ChatGPT + Perplexity + Copilot" />
               <StatCard label="AI流入バウンス率" value="34.2%" change={-5.1} icon="📉" color={COLORS.cyan} sub="通常トラフィックより12%低い" />
               <StatCard label="AI滞在時間" value="4:32" change={15.3} icon="⏱️" color={COLORS.purple} sub="通常の1.8倍" />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 24 }}>
-              <div style={{ background: COLORS.card, borderRadius: 12, padding: 24, border: `1px solid ${COLORS.border}` }}>
+            <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "2fr 1fr", gap: 16, marginBottom: 24 }}>
+              <div style={{ background: COLORS.card, borderRadius: 12, padding: mob ? 16 : 24, border: `1px solid ${COLORS.border}` }}>
                 <SectionHeader title="AI検索トラフィック推移" subtitle="chart エンドポイントからの時系列データ" />
                 <AreaChart
                   data={trafficData}
@@ -635,11 +639,11 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
             </div>
 
             {/* AI Traffic by page */}
-            <div style={{ background: COLORS.card, borderRadius: 12, padding: 24, border: `1px solid ${COLORS.border}` }}>
+            <div style={{ background: COLORS.card, borderRadius: 12, padding: mob ? 16 : 24, border: `1px solid ${COLORS.border}` }}>
               <SectionHeader title="ページ別AIトラフィック詳細" subtitle="AI検索からの流入が多いページTOP 5" />
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 2, overflowX: mob ? "auto" : undefined, WebkitOverflowScrolling: "touch" }}>
                 <div style={{
-                  display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1fr 100px",
+                  display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1fr 100px", minWidth: mob ? 600 : undefined,
                   padding: "8px 12px", fontSize: 10, color: COLORS.textDim, textTransform: "uppercase", letterSpacing: 0.5,
                   borderBottom: `1px solid ${COLORS.border}`,
                 }}>
@@ -652,6 +656,7 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
                     display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1fr 100px",
                     padding: "10px 12px", borderRadius: 6, fontSize: 12, alignItems: "center",
                     background: i % 2 === 0 ? "transparent" : COLORS.surfaceHover + "30",
+                    minWidth: mob ? 600 : undefined,
                   }}>
                     <span style={{ color: COLORS.accent, fontFamily: "JetBrains Mono", fontSize: 11 }}>{p.url}</span>
                     <span style={{ textAlign: "right", fontWeight: 600, fontFamily: "JetBrains Mono", color: COLORS.green }}>
@@ -688,14 +693,14 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
                 Ahrefs Web Analytics連携後にリアルデータを表示します。現在はサンプルデータです。
               </span>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
+            <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: mob ? 10 : 16, marginBottom: 24 }}>
               <StatCard label="AI言及数" value="2,481" change={18.7} icon="💬" color={COLORS.accent} sub="6プラットフォーム合計" />
               <StatCard label="AI引用数" value="933" change={22.1} icon="🔗" color={COLORS.green} sub="被リンクページ数" />
               <StatCard label="推定インプレッション" value="1.2M" change={45.3} icon="👁️" color={COLORS.purple} sub="検索ボリューム加重" />
               <StatCard label="AI SoV" value="34.2%" change={12.5} icon="📊" color={COLORS.cyan} sub="業界内1位" />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+            <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 24 }}>
               {/* SoV by platform */}
               <div style={{ background: COLORS.card, borderRadius: 12, padding: 24, border: `1px solid ${COLORS.border}` }}>
                 <SectionHeader title="プラットフォーム別 Share of Voice" subtitle="Brand Radar APIデータ" />
@@ -793,7 +798,7 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
                 Ahrefs Web Analytics連携後にリアルデータを表示します。現在はサンプルデータです。
               </span>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
+            <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: mob ? 10 : 16, marginBottom: 24 }}>
               {COMPETITOR_DATA.map((c, i) => (
                 <div key={i} style={{
                   background: COLORS.card, borderRadius: 12, padding: "18px 20px",
@@ -879,7 +884,9 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
         {/* Footer */}
         <div style={{
           marginTop: 32, padding: "16px 0", borderTop: `1px solid ${COLORS.border}`,
-          display: "flex", justifyContent: "space-between", alignItems: "center",
+          display: "flex", flexDirection: mob ? "column" : "row",
+          justifyContent: "space-between", alignItems: mob ? "flex-start" : "center",
+          gap: mob ? 8 : 0,
         }}>
           <div style={{ fontSize: 11, color: COLORS.textDim }}>
             Powered by Ahrefs Web Analytics API (stats/chart) + Brand Radar API

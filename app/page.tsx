@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 const links = [
   { href: "/lp", label: "無料AI可視性診断", desc: "AIの検索結果で貴社がどう見えているか無料で診断", color: "#F0B429", primary: true },
@@ -10,12 +11,13 @@ const links = [
 
 export default function Home() {
   const [mt, setMt] = useState(false);
+  const mob = useIsMobile();
   useEffect(() => setMt(true), []);
 
   return (
     <div style={{
       minHeight: "100vh", display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center", padding: 40,
+      alignItems: "center", justifyContent: "center", padding: mob ? 20 : 40,
       fontFamily: "'Noto Sans JP', system-ui, sans-serif",
       background: "#04060B", color: "#D2DAE8",
       opacity: mt ? 1 : 0, transition: "opacity 0.5s",
@@ -33,7 +35,7 @@ export default function Home() {
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center" }}>
         {links.map(l => (
           <a key={l.href} href={l.href} style={{
-            display: "block", width: 280, padding: "24px 20px",
+            display: "block", width: mob ? "100%" : 280, padding: "24px 20px",
             background: l.primary ? "#161C2B" : "#111622", borderRadius: 10,
             border: `1px solid ${l.primary ? l.color + "40" : "#1B2235"}`, textDecoration: "none",
             color: "#D2DAE8", transition: "border-color 0.2s, transform 0.2s",
