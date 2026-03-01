@@ -66,7 +66,7 @@ export default async function DashboardPage({
   if (isAdminPreview) {
     const { data: latestCustomer } = await supabaseAdmin
       .from("customers")
-      .select("email")
+      .select("id, email")
       .eq("status", "active")
       .order("created_at", { ascending: false })
       .limit(1)
@@ -76,6 +76,7 @@ export default async function DashboardPage({
       const { diagnosisData, diagnosisHistory } = await fetchDiagnosisForEmail(latestCustomer.email);
       return (
         <DashboardClient
+          customerId={latestCustomer.id}
           diagnosisData={diagnosisData}
           diagnosisHistory={diagnosisHistory}
           userEmail={`admin-preview (${latestCustomer.email})`}
@@ -86,6 +87,7 @@ export default async function DashboardPage({
     // 顧客がいない場合は空のダッシュボードを表示
     return (
       <DashboardClient
+        customerId=""
         diagnosisData={null}
         diagnosisHistory={[]}
         userEmail="admin-preview"
@@ -119,6 +121,7 @@ export default async function DashboardPage({
 
   return (
     <DashboardClient
+      customerId={customer?.id || ""}
       diagnosisData={diagnosisData}
       diagnosisHistory={diagnosisHistory}
       userEmail={user.email || ""}

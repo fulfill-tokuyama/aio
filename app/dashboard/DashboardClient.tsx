@@ -22,16 +22,18 @@ interface DiagnosisHistoryEntry {
 }
 
 interface Props {
+  customerId: string;
   diagnosisData: DiagnosisData | null;
   diagnosisHistory: DiagnosisHistoryEntry[];
   userEmail: string;
 }
 
-export default function DashboardClient({ diagnosisData, diagnosisHistory, userEmail }: Props) {
+export default function DashboardClient({ customerId, diagnosisData, diagnosisHistory, userEmail }: Props) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const Dashboard = AIODashboard as any;
   return (
     <Dashboard
+      customerId={customerId}
       diagnosisData={diagnosisData}
       diagnosisHistory={diagnosisHistory}
       userEmail={userEmail}

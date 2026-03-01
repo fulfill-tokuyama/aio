@@ -173,13 +173,14 @@ export async function POST(req: NextRequest) {
 // ============================================================
 export async function GET(req: NextRequest) {
   try {
-    // CRON_SECRET による認証
+    // CRON_SECRET 認証（必須）
     const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret) {
-      const authHeader = req.headers.get("authorization");
-      if (authHeader !== `Bearer ${cronSecret}`) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
+    if (!cronSecret) {
+      return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
+    }
+    const authHeader = req.headers.get("authorization");
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // 対象リード抽出: フォローアップ予定日が過ぎたリード（顧客・休眠を除外）

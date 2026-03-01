@@ -241,7 +241,7 @@ const TabButton = ({ active, children, onClick }) => (
 // MAIN APP
 // ============================================================
 
-export default function AIODashboard({ diagnosisData = null, diagnosisHistory = [], userEmail = "" }) {
+export default function AIODashboard({ customerId = "", diagnosisData = null, diagnosisHistory = [], userEmail = "" }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [hoveredPlatform, setHoveredPlatform] = useState(null);
   const [dateRange, setDateRange] = useState("30d");
@@ -263,7 +263,8 @@ export default function AIODashboard({ diagnosisData = null, diagnosisHistory = 
     // Fetch all Ahrefs data in parallel
     const fetchAhrefsData = async () => {
       try {
-        const params = new URLSearchParams({ customer_id: "default", site_url: userEmail || "default", target: userEmail || "default" });
+        const cid = customerId || "default";
+        const params = new URLSearchParams({ customer_id: cid, site_url: userEmail || "default", target: userEmail || "default" });
         const [trafficRes, brandRes, compRes, pagesRes] = await Promise.all([
           fetch(`/api/ahrefs/traffic?${params}`).then(r => r.json()).catch(() => ({ connected: false })),
           fetch(`/api/ahrefs/brand-radar?${params}`).then(r => r.json()).catch(() => ({ connected: false })),
