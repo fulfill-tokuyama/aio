@@ -121,6 +121,7 @@ export default function FormPilotAutoV2(){
   const[showAddModal,setShowAddModal]=useState(false);
   const[showScanModal,setShowScanModal]=useState(false);
   const[scanResults,setScanResults]=useState(null);
+  const[showAutoDiscover,setShowAutoDiscover]=useState(false);
 
   // DB からリード読み込み
   const fetchLeads=useCallback(async()=>{
@@ -382,6 +383,9 @@ export default function FormPilotAutoV2(){
             {view==="leads"&&<>
               <button onClick={()=>setShowAddModal(true)} style={{padding:"5px 11px",borderRadius:4,border:"none",background:C.g,color:C.bg,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
                 + リード追加
+              </button>
+              <button onClick={()=>setShowAutoDiscover(true)} style={{padding:"5px 11px",borderRadius:4,border:"none",background:`linear-gradient(135deg,${C.cy},${C.b})`,color:C.bg,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
+                <I d={ic.globe} s={11} c={C.bg}/>自動発見
               </button>
               <button onClick={runScan} disabled={scanRunning} style={{padding:"5px 11px",borderRadius:4,border:"none",background:C.acc,color:C.bg,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4,opacity:scanRunning?.5:1}}>
                 {scanRunning?"⟳ スキャン中...":<><I d={ic.radar} s={11} c={C.bg}/>一括LLMO調査</>}
@@ -872,6 +876,21 @@ export default function FormPilotAutoV2(){
           onComplete={()=>{fetchLeads();setAutoConfig(p=>({...p,lastScanAt:new Date().toISOString(),nextScanAt:new Date(Date.now()+p.scanInterval*36e5).toISOString(),totalScans:p.totalScans+1}));setLog(p=>[{t:new Date().toISOString(),msg:`🔬 一括LLMOスキャン完了`,type:"scan"},...p]);}}
         />
       )}
+
+      {showAutoDiscover&&(
+        <AutoDiscoverModal
+          onClose={()=>setShowAutoDiscover(false)}
+          llmoScoreMax={autoConfig.llmoScoreMax}
+          onComplete={(summary)=>{
+            fetchLeads();
+            setAutoConfig(p=>({...p,lastScanAt:new Date().toISOString(),nextScanAt:new Date(Date.now()+p.scanInterval*36e5).toISOString(),totalScans:p.totalScans+1}));
+            setLog(p=>[
+              {t:new Date().toISOString(),msg:`自動発見パイプライン完了: ${summary.savedAsLeads}件リード追加, ${summary.formsFound}件フォーム発見, ${summary.emailsSent}件メール送信`,type:"scan"},
+              ...p,
+            ]);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1084,6 +1103,295 @@ function BulkScanModal({onClose,scanResults,setScanResults,onComplete}){
             <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:16}}>
               <button onClick={resetScan} style={{padding:"8px 16px",borderRadius:5,border:`1px solid ${C.bdr}`,background:"transparent",color:C.tx,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
                 新しいスキャン
+              </button>
+              <button onClick={onClose} style={{padding:"8px 16px",borderRadius:5,border:"none",background:C.acc,color:C.bg,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                閉じる
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// 自動発見パイプラインモーダル
+// ============================================================
+function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
+  const[tab,setTab]=useState("search"); // "search" | "csv"
+  const[industry,setIndustry]=useState("");
+  const[region,setRegion]=useState("");
+  const[keyword,setKeyword]=useState("");
+  const[csvText,setCsvText]=useState("");
+  const[scoreMax,setScoreMax]=useState(defaultLlmoMax||40);
+  const[autoSend,setAutoSend]=useState(true);
+
+  // Pipeline state
+  const[phase,setPhase]=useState(0); // 0=idle, 1=discovering, 2=llmo, 3=forms, 4=email, 5=done
+  const[discoveredUrls,setDiscoveredUrls]=useState([]);
+  const[pipelineResult,setPipelineResult]=useState(null);
+  const[error,setError]=useState("");
+
+  const phases=[
+    {label:"発見",icon:ic.globe,color:C.cy},
+    {label:"LLMO調査",icon:ic.radar,color:C.b},
+    {label:"フォーム探索",icon:ic.link,color:C.p},
+    {label:"メール送信",icon:ic.send,color:C.g},
+  ];
+
+  const canStart=tab==="search"?(industry&&region):csvText.trim().length>0;
+
+  const runPipeline=async()=>{
+    setError("");
+    setPipelineResult(null);
+
+    // Phase 1: URL発見
+    setPhase(1);
+    try{
+      const discoverBody=tab==="search"
+        ?{mode:"search",industry,region,keyword:keyword||undefined}
+        :{mode:"csv",csvText};
+
+      const discRes=await fetch("/api/lead-discover",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(discoverBody)});
+      if(!discRes.ok){
+        const err=await discRes.json();
+        throw new Error(err.error||"発見APIエラー");
+      }
+      const discData=await discRes.json();
+      const urls=discData.urls||[];
+      setDiscoveredUrls(urls);
+
+      if(urls.length===0){
+        setError("URLが見つかりませんでした。検索条件を変更してください。");
+        setPhase(0);
+        return;
+      }
+
+      // Phase 2-4: パイプライン実行
+      setPhase(2);
+      const pipeRes=await fetch("/api/auto-pipeline",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+        urls:urls.map(u=>u.url),
+        llmoScoreMax:scoreMax,
+        industry:tab==="search"?industry:undefined,
+        region:tab==="search"?region:undefined,
+        skipAutoSend:!autoSend,
+      })});
+
+      if(!pipeRes.ok){
+        const err=await pipeRes.json();
+        throw new Error(err.error||"パイプラインエラー");
+      }
+
+      const pipeData=await pipeRes.json();
+      setPipelineResult(pipeData);
+      setPhase(5);
+      if(onComplete&&pipeData.summary)onComplete(pipeData.summary);
+    }catch(e){
+      setError(e.message||"エラーが発生しました");
+      if(phase<5)setPhase(0);
+    }
+  };
+
+  const inputStyle={width:"100%",padding:"8px 10px",borderRadius:5,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:11,outline:"none",boxSizing:"border-box",fontFamily:"inherit"};
+  const labelStyle={fontSize:10,color:C.sub,fontWeight:600,display:"block",marginBottom:4};
+  const running=phase>=1&&phase<5;
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={running?undefined:onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.card,borderRadius:10,border:`1px solid ${C.bdr}`,width:"100%",maxWidth:560,maxHeight:"90vh",overflow:"auto",padding:24}}>
+        {/* Header */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <h2 style={{fontSize:15,fontWeight:800,margin:0,display:"flex",alignItems:"center",gap:8}}>
+            <span style={{width:28,height:28,borderRadius:5,background:`linear-gradient(135deg,${C.cy},${C.b})`,display:"inline-flex",alignItems:"center",justifyContent:"center"}}><I d={ic.globe} s={14} c={C.bg}/></span>
+            自動リード発見パイプライン
+          </h2>
+          {!running&&<button onClick={onClose} style={{background:"none",border:"none",color:C.sub,fontSize:18,cursor:"pointer"}}>✕</button>}
+        </div>
+
+        {/* Progress bar (visible during execution) */}
+        {running&&(
+          <div style={{display:"flex",gap:4,marginBottom:18}}>
+            {phases.map((p,i)=>{
+              const step=i+1;
+              const active=phase===step||(phase===2&&step<=3)||(phase>=2&&step<=phase);
+              const done=phase>step||(phase===5);
+              const isCurrent=(phase===1&&step===1)||(phase>=2&&phase<5&&step>=2&&step<=4);
+              return(
+                <div key={i} style={{flex:1,position:"relative"}}>
+                  <div style={{height:4,borderRadius:2,background:done?p.color:active?`${p.color}40`:C.bdr,transition:"background .5s"}}/>
+                  <div style={{display:"flex",alignItems:"center",gap:4,marginTop:6}}>
+                    <div style={{width:20,height:20,borderRadius:4,background:done?`${p.color}20`:isCurrent?`${p.color}15`:C.bg,display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${done||isCurrent?p.color+"40":"transparent"}`}}>
+                      {done?<I d={ic.check} s={10} c={p.color}/>:isCurrent?<div style={{width:8,height:8,borderRadius:"50%",border:`2px solid ${p.color}`,borderTopColor:"transparent",animation:"spin 1s linear infinite"}}/>:<I d={p.icon} s={10} c={C.dim}/>}
+                    </div>
+                    <span style={{fontSize:8,fontWeight:700,color:done?p.color:isCurrent?C.tx:C.dim}}>{p.label}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Running status */}
+        {running&&phase<5&&(
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"30px 0",gap:12}}>
+            <div style={{width:36,height:36,border:`3px solid ${C.bdr}`,borderTop:`3px solid ${phases[Math.min(phase-1,3)].color}`,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
+            <div style={{fontSize:12,color:C.sub}}>
+              {phase===1&&"URLを発見中..."}
+              {phase>=2&&phase<5&&`パイプライン実行中... (${discoveredUrls.length}件)`}
+            </div>
+            {phase>=2&&<div style={{fontSize:10,color:C.dim}}>LLMO診断 → フォーム探索 → メール送信を一括実行</div>}
+          </div>
+        )}
+
+        {/* Idle: Tab selector + input form */}
+        {phase===0&&(
+          <>
+            {/* Tabs */}
+            <div style={{display:"flex",gap:2,marginBottom:16,background:C.bg,borderRadius:6,padding:3}}>
+              {[{id:"search",label:"検索発見"},{id:"csv",label:"CSV取込"}].map(t=>(
+                <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:"7px 0",borderRadius:4,border:"none",background:tab===t.id?C.ca:"transparent",color:tab===t.id?C.tx:C.dim,fontSize:11,fontWeight:tab===t.id?700:400,cursor:"pointer",fontFamily:"inherit"}}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Search tab */}
+            {tab==="search"&&(
+              <div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+                  <div>
+                    <label style={labelStyle}>業種 <span style={{color:C.r}}>*</span></label>
+                    <select value={industry} onChange={e=>setIndustry(e.target.value)} style={inputStyle}>
+                      <option value="">選択してください</option>
+                      {INDUSTRIES.map(i=><option key={i} value={i}>{i}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>地域 <span style={{color:C.r}}>*</span></label>
+                    <select value={region} onChange={e=>setRegion(e.target.value)} style={inputStyle}>
+                      <option value="">選択してください</option>
+                      {REGIONS.map(r=><option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div style={{marginBottom:12}}>
+                  <label style={labelStyle}>キーワード（任意）</label>
+                  <input value={keyword} onChange={e=>setKeyword(e.target.value)} placeholder="例: クラウド, DX, 中小企業" style={inputStyle}/>
+                </div>
+              </div>
+            )}
+
+            {/* CSV tab */}
+            {tab==="csv"&&(
+              <div style={{marginBottom:12}}>
+                <label style={labelStyle}>URL一覧</label>
+                <textarea
+                  value={csvText}
+                  onChange={e=>setCsvText(e.target.value)}
+                  rows={8}
+                  placeholder={"https://example.com\nhttps://example2.co.jp\nhttps://example3.jp\n\nまたはCSV形式:\nurl,company,industry,region\nhttps://example.com,テスト会社,IT・SaaS,東京"}
+                  style={{...inputStyle,fontFamily:"'Geist Mono',monospace",resize:"vertical"}}
+                />
+                <div style={{fontSize:9,color:C.dim,marginTop:4}}>1行1URL、またはCSV形式（最大100件）</div>
+              </div>
+            )}
+
+            {/* Settings */}
+            <div style={{background:C.bg,borderRadius:6,padding:14,marginBottom:16}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.sub,marginBottom:10}}>設定</div>
+              <div style={{marginBottom:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                  <label style={{fontSize:10,color:C.sub,fontWeight:600}}>LLMOスコア上限</label>
+                  <span style={{fontSize:13,fontWeight:800,fontFamily:"'Geist Mono',monospace",color:C.acc}}>{scoreMax}</span>
+                </div>
+                <input type="range" min="10" max="60" value={scoreMax} onChange={e=>setScoreMax(+e.target.value)} style={{width:"100%"}}/>
+                <div style={{fontSize:8,color:C.dim}}>このスコア以下のサイトのみリードとして保存</div>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontSize:10,fontWeight:600,color:C.tx}}>自動メール送信</div>
+                  <div style={{fontSize:8,color:C.dim}}>フォーム発見後に初回ステップメールを自動送信</div>
+                </div>
+                <button onClick={()=>setAutoSend(!autoSend)} style={{padding:"4px 12px",borderRadius:4,border:"none",background:autoSend?C.gB:C.rB,color:autoSend?C.g:C.r,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoSend?"ON":"OFF"}</button>
+              </div>
+            </div>
+
+            {/* Error */}
+            {error&&<div style={{padding:10,borderRadius:6,background:C.rB,border:`1px solid ${C.r}`,color:C.r,fontSize:11,marginBottom:12}}>{error}</div>}
+
+            {/* Start button */}
+            <button onClick={runPipeline} disabled={!canStart} style={{width:"100%",padding:"12px",borderRadius:6,border:"none",background:canStart?`linear-gradient(135deg,${C.cy},${C.b})`:`${C.bdr}`,color:canStart?C.bg:C.dim,fontSize:13,fontWeight:800,cursor:canStart?"pointer":"default",fontFamily:"inherit",opacity:canStart?1:.6}}>
+              パイプライン実行
+            </button>
+          </>
+        )}
+
+        {/* Results (phase 5) */}
+        {phase===5&&pipelineResult&&(
+          <div>
+            {/* Summary KPIs */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:16}}>
+              {[
+                {label:"発見",value:discoveredUrls.length,color:C.cy},
+                {label:"LLMO済",value:pipelineResult.summary?.diagnosed||0,color:C.b},
+                {label:"フォーム発見",value:pipelineResult.summary?.formsFound||0,color:C.p},
+                {label:"メール送信",value:pipelineResult.summary?.emailsSent||0,color:C.g},
+              ].map(k=>(
+                <div key={k.label} style={{background:C.sf,borderRadius:6,padding:"10px 8px",textAlign:"center",border:`1px solid ${C.bdr}`}}>
+                  <div style={{fontSize:20,fontWeight:800,color:k.color,fontFamily:"'Geist Mono',monospace"}}>{k.value}</div>
+                  <div style={{fontSize:8,color:C.sub,fontWeight:700,marginTop:2}}>{k.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Detail summary */}
+            <div style={{background:C.bg,borderRadius:6,padding:12,marginBottom:14}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.sub,marginBottom:8}}>詳細サマリー</div>
+              {[
+                {l:"入力URL数",v:pipelineResult.summary?.totalInput||0},
+                {l:"重複スキップ",v:pipelineResult.summary?.duplicateSkipped||0},
+                {l:"スコア除外",v:pipelineResult.summary?.filteredByScore||0},
+                {l:"リード追加",v:pipelineResult.summary?.savedAsLeads||0},
+                {l:"診断失敗",v:pipelineResult.summary?.diagnosisFailed||0},
+              ].map(s=>(
+                <div key={s.l} style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:10}}>
+                  <span style={{color:C.sub}}>{s.l}</span>
+                  <span style={{fontWeight:700,fontFamily:"'Geist Mono',monospace",color:C.tx}}>{s.v}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Result list */}
+            {pipelineResult.results&&pipelineResult.results.length>0&&(
+              <div style={{maxHeight:250,overflow:"auto",marginBottom:14}}>
+                {pipelineResult.results.map((r,i)=>(
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderBottom:`1px solid ${C.bdr}`,fontSize:10}}>
+                    <div style={{width:8,height:8,borderRadius:"50%",background:r.status==="success"?C.g:r.status==="skipped"?C.o:r.status==="filtered"?C.sub:C.r,flexShrink:0}}/>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.company}</div>
+                      <div style={{fontSize:8,color:C.dim,display:"flex",gap:8}}>
+                        <span>{r.url?.replace(/^https?:\/\//,"").slice(0,30)}</span>
+                        {r.contactEmail&&<span style={{color:C.g}}>mail</span>}
+                        {r.formUrl&&<span style={{color:C.b}}>form</span>}
+                        {r.emailSent&&<span style={{color:C.p}}>sent</span>}
+                      </div>
+                    </div>
+                    <div style={{textAlign:"right",flexShrink:0}}>
+                      {r.status==="success"&&<div style={{fontWeight:700,color:r.llmoScore<=40?C.r:r.llmoScore<=70?C.o:C.g,fontFamily:"'Geist Mono',monospace"}}>{r.llmoScore}</div>}
+                      {r.status==="skipped"&&<div style={{fontSize:9,color:C.o}}>重複</div>}
+                      {r.status==="filtered"&&<div style={{fontSize:9,color:C.sub}}>対象外</div>}
+                      {r.status==="error"&&<div style={{fontSize:9,color:C.r}}>エラー</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
+              <button onClick={()=>{setPhase(0);setPipelineResult(null);setDiscoveredUrls([]);setError("");}} style={{padding:"8px 16px",borderRadius:5,border:`1px solid ${C.bdr}`,background:"transparent",color:C.tx,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+                新しい発見
               </button>
               <button onClick={onClose} style={{padding:"8px 16px",borderRadius:5,border:"none",background:C.acc,color:C.bg,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                 閉じる
