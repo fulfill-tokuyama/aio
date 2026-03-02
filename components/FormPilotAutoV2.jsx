@@ -441,21 +441,30 @@ export default function FormPilotAutoV2(){
           {!loading&&view==="pipeline"&&(
             <div className="fi">
               <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>自動営業パイプライン</div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginBottom:12,padding:"6px 10px",background:C.card,borderRadius:6,border:`1px solid ${C.bdr}`,flexWrap:"wrap"}}>
+                {["リード発見","フォーム探索","キュー","メール送信","返信・商談","受注"].map((t,i,a)=>(
+                  <span key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontSize:9,color:C.sub,fontWeight:600}}>{t}</span>
+                    {i<a.length-1&&<span style={{fontSize:9,color:C.dim}}>→</span>}
+                  </span>
+                ))}
+              </div>
               <div style={{display:"grid",gridTemplateColumns:mob?"repeat(3,1fr)":"repeat(6,1fr)",gap:5,marginBottom:20}}>
                 {[
-                  {label:"LLMO未対策企業発見",count:leads.filter(l=>l.phase==="discovered").length,color:C.cy,icon:ic.radar},
-                  {label:"フォーム自動発見",count:leads.filter(l=>l.phase==="form_found").length,color:C.b,icon:ic.link},
-                  {label:"送信待機中",count:leads.filter(l=>l.phase==="queued").length,color:C.o,icon:ic.clock},
-                  {label:"営業メール送信済",count:leads.filter(l=>["sent"].includes(l.phase)).length,color:C.p,icon:ic.send},
-                  {label:"返信受信",count:leads.filter(l=>l.phase==="replied").length,color:C.acc,icon:ic.check},
-                  {label:"有料顧客",count:leads.filter(l=>l.phase==="customer").length,color:C.g,icon:ic.dollar},
+                  {label:"LLMO未対策企業発見",count:leads.filter(l=>l.phase==="discovered").length,color:C.cy,icon:ic.radar,desc:"AIがLLMO未対策の企業を自動スキャン・発見",next:"フォーム探索 →"},
+                  {label:"フォーム自動発見",count:leads.filter(l=>l.phase==="form_found").length,color:C.b,icon:ic.link,desc:"問合せフォーム・メールアドレスを自動検出",next:"キュー投入 →"},
+                  {label:"送信待機中",count:leads.filter(l=>l.phase==="queued").length,color:C.o,icon:ic.clock,desc:"AIスコア順に送信キューで待機",next:"自動送信 →"},
+                  {label:"営業メール送信済",count:leads.filter(l=>["sent"].includes(l.phase)).length,color:C.p,icon:ic.send,desc:"パーソナライズ営業メールを自動送信完了",next:"返信待ち →"},
+                  {label:"返信受信",count:leads.filter(l=>l.phase==="replied").length,color:C.acc,icon:ic.check,desc:"見込み客から返信あり・商談開始",next:"成約 →"},
+                  {label:"有料顧客",count:leads.filter(l=>l.phase==="customer").length,color:C.g,icon:ic.dollar,desc:"Stripe決済確認済み・MRR計上",next:""},
                 ].map((s,i)=>(
-                  <div key={i} style={{background:C.card,borderRadius:7,padding:"12px 10px",border:`1px solid ${C.bdr}`,textAlign:"center",position:"relative"}}>
+                  <div key={i} style={{background:C.card,borderRadius:7,padding:"14px 10px 10px",border:`1px solid ${C.bdr}`,textAlign:"center",position:"relative"}}>
                     <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:s.color,opacity:.5}}/>
                     <div style={{width:26,height:26,borderRadius:5,background:`${s.color}10`,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 6px"}}><I d={s.icon} s={12} c={s.color}/></div>
                     <div style={{fontSize:20,fontWeight:800,color:s.color,fontFamily:"'Geist Mono',monospace"}}>{s.count}</div>
                     <div style={{fontSize:8,color:C.dim,marginTop:3,lineHeight:1.3}}>{s.label}</div>
-                    {i<5&&<div style={{position:"absolute",right:-7,top:"50%",transform:"translateY(-50%)",color:C.dim,fontSize:10,zIndex:1}}>→</div>}
+                    <div style={{fontSize:8,color:C.dim,marginTop:4,lineHeight:1.3,minHeight:22}}>{s.desc}</div>
+                    {i<5&&<div style={{position:"absolute",right:-7,top:"50%",transform:"translateY(-50%)",color:C.dim,fontSize:10,zIndex:1,display:"flex",flexDirection:"column",alignItems:"center"}}><span style={{fontSize:7,color:C.dim,whiteSpace:"nowrap"}}>{s.next}</span></div>}
                   </div>
                 ))}
               </div>
