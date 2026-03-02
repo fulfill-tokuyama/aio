@@ -55,8 +55,11 @@ export async function checkChatGPT(
   if (!apiKey) return { platform: "ChatGPT", mentioned: false, context: "", sources: [] };
 
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
+      signal: controller.signal,
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
@@ -67,26 +70,30 @@ export async function checkChatGPT(
           { role: "system", content: "あなたは正確な情報を提供するアシスタントです。質問に対して事実に基づいて回答してください。" },
           { role: "user", content: prompt },
         ],
-        functions: [
+        tools: [
           {
-            name: "report_brand_mention",
-            description: "Report whether the brand was mentioned in the response",
-            parameters: {
-              type: "object",
-              properties: {
-                mentioned: { type: "boolean", description: "Whether the brand was mentioned" },
-                context: { type: "string", description: "The context in which the brand was mentioned" },
-                sources: { type: "array", items: { type: "string" }, description: "Any URLs or sources referenced" },
+            type: "function",
+            function: {
+              name: "report_brand_mention",
+              description: "Report whether the brand was mentioned in the response",
+              parameters: {
+                type: "object",
+                properties: {
+                  mentioned: { type: "boolean", description: "Whether the brand was mentioned" },
+                  context: { type: "string", description: "The context in which the brand was mentioned" },
+                  sources: { type: "array", items: { type: "string" }, description: "Any URLs or sources referenced" },
+                },
+                required: ["mentioned", "context", "sources"],
               },
-              required: ["mentioned", "context", "sources"],
             },
           },
         ],
-        function_call: { name: "report_brand_mention" },
+        tool_choice: { type: "function", function: { name: "report_brand_mention" } },
         temperature: 0.3,
         max_tokens: 1024,
       }),
     });
+    clearTimeout(timeout);
 
     if (!res.ok) {
       console.error(`ChatGPT API error: ${res.status}`);
@@ -94,7 +101,9 @@ export async function checkChatGPT(
     }
 
     const data = await res.json();
-    const fnCall = data.choices?.[0]?.message?.function_call;
+    // tools APIレスポンス: tool_calls[0].function から取得
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    const fnCall = toolCall?.function;
     if (!fnCall?.arguments) {
       // Fallback: parse content directly
       const content = data.choices?.[0]?.message?.content || "";
@@ -132,8 +141,11 @@ export async function checkPerplexity(
   if (!apiKey) return { platform: "Perplexity", mentioned: false, context: "", sources: [] };
 
   try {
+    const perplexityController = new AbortController();
+    const perplexityTimeout = setTimeout(() => perplexityController.abort(), 30000);
     const res = await fetch("https://api.perplexity.ai/chat/completions", {
       method: "POST",
+      signal: perplexityController.signal,
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
@@ -148,6 +160,7 @@ export async function checkPerplexity(
         max_tokens: 1024,
       }),
     });
+    clearTimeout(perplexityTimeout);
 
     if (!res.ok) {
       console.error(`Perplexity API error: ${res.status}`);
@@ -190,10 +203,13 @@ export async function checkGemini(
   if (!apiKey) return { platform: "Gemini", mentioned: false, context: "", sources: [] };
 
   try {
+    const geminiController = new AbortController();
+    const geminiTimeout = setTimeout(() => geminiController.abort(), 30000);
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`,
       {
         method: "POST",
+        signal: geminiController.signal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
@@ -202,6 +218,7 @@ export async function checkGemini(
         }),
       }
     );
+    clearTimeout(geminiTimeout);
 
     if (!res.ok) {
       console.error(`Gemini API error: ${res.status}`);

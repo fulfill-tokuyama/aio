@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 
 const supabase = createBrowserClient(
@@ -30,11 +30,11 @@ export default function ResetPasswordPage() {
 
   // Check if this is a password update callback (from Supabase email link)
   // Supabase redirects to this page with a session after clicking the reset link
-  useState(() => {
+  useEffect(() => {
     if (typeof window !== "undefined" && window.location.hash.includes("type=recovery")) {
       setMode("update");
     }
-  });
+  }, []);
 
   const handleRequestReset = async (e: React.FormEvent) => {
     e.preventDefault();

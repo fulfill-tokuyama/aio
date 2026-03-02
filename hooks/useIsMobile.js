@@ -1,7 +1,13 @@
 import { useState, useEffect } from "react";
 
 export function useIsMobile(breakpoint = 768) {
-  const [isMobile, setIsMobile] = useState(false);
+  // SSR安全: 初期値はwindowが存在する場合のみ判定（ハイドレーション不一致を防止）
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.matchMedia(`(max-width: ${breakpoint}px)`).matches;
+    }
+    return false;
+  });
 
   useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);

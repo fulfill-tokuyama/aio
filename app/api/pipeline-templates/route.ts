@@ -35,6 +35,12 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "templateId and templateName required" }, { status: 400 });
     }
 
+    // fieldの許可リストチェック
+    const ALLOWED_FIELDS = ["sent", "opened", "replied", "converted"];
+    if (field && !ALLOWED_FIELDS.includes(field)) {
+      return NextResponse.json({ error: `field must be one of: ${ALLOWED_FIELDS.join(", ")}` }, { status: 400 });
+    }
+
     // Upsert the template row first (ensure it exists)
     const { data: existing } = await supabaseAdmin
       .from("pipeline_template_stats")
@@ -52,7 +58,7 @@ export async function PUT(req: NextRequest) {
         replied: 0,
         converted: 0,
       };
-      if (field && increment) {
+      if (field && typeof increment === "number") {
         newRow[field] = increment;
       }
 

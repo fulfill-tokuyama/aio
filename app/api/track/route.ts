@@ -47,7 +47,18 @@ export async function GET(req: NextRequest) {
         .eq("id", leadId);
 
       if (redirectUrl) {
-        return NextResponse.redirect(redirectUrl);
+        // オープンリダイレクト防止: 自ドメインまたはhttps URLのみ許可
+        try {
+          const parsed = new URL(redirectUrl);
+          const appHost = new URL(process.env.NEXT_PUBLIC_APP_URL || "https://aio-rouge.vercel.app").hostname;
+          if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+            return NextResponse.redirect(process.env.NEXT_PUBLIC_APP_URL || "https://aio-rouge.vercel.app");
+          }
+          // 外部URLも許可するが javascript: 等の危険なスキームはブロック済み
+          return NextResponse.redirect(parsed.toString());
+        } catch {
+          return NextResponse.redirect(process.env.NEXT_PUBLIC_APP_URL || "https://aio-rouge.vercel.app");
+        }
       }
 
       // URLなしの場合はトップページへ

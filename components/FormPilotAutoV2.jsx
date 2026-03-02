@@ -344,6 +344,9 @@ export default function FormPilotAutoV2(){
     {id:"pipeline",icon:ic.activity,label:"パイプライン"},
     {id:"leads",icon:ic.radar,label:"リード一覧"},
     {id:"automation",icon:ic.zap,label:"自動化設定"},
+    {id:"abtest",icon:ic.chart,label:"A/Bテスト"},
+    {id:"followup",icon:ic.mail,label:"フォローアップ"},
+    {id:"analysis",icon:ic.globe,label:"分析"},
     {id:"customers",icon:ic.dollar,label:"顧客・収益"},
   ];
   return(
@@ -390,7 +393,7 @@ export default function FormPilotAutoV2(){
             <span style={{width:5,height:5,borderRadius:"50%",background:autoConfig.scanEnabled?C.g:C.r,animation:autoConfig.scanEnabled?"p5 2s infinite":"none"}}/>
             <span style={{fontWeight:700,color:autoConfig.scanEnabled?C.g:C.r,fontSize:10}}>{autoConfig.scanEnabled?"自動運転中":"停止中"}</span>
           </div>
-          <div style={{fontSize:9,color:C.dim,marginBottom:8}}>次回スキャン: {new Date(autoConfig.nextScanAt).toLocaleString("ja-JP",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
+          <div style={{fontSize:9,color:C.dim,marginBottom:8}}>次回スキャン: {autoConfig.nextScanAt ? new Date(autoConfig.nextScanAt).toLocaleString("ja-JP",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}) : "未設定"}</div>
           <div style={{padding:"7px 9px",borderRadius:4,background:C.accGl,marginTop:6}}>
             <div style={{fontSize:8,color:C.acc,fontWeight:700}}>MRR</div>
             <div style={{fontSize:16,fontWeight:800,color:C.g,fontFamily:"'Geist Mono',monospace"}}>¥{kpi.mrr.toLocaleString()}</div>

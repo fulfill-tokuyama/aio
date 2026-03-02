@@ -77,20 +77,23 @@ const LoadingState = () => (
 // ============================================================
 
 const Sparkline = ({ data, color, height = 32, width = 80 }) => {
+  if (!data || data.length === 0) return null;
   const max = Math.max(...data);
   const min = Math.min(...data);
   const range = max - min || 1;
-  const points = data.map((v, i) => `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * height}`).join(" ");
+  const divisor = data.length > 1 ? data.length - 1 : 1;
+  const points = data.map((v, i) => `${(i / divisor) * width},${height - ((v - min) / range) * height}`).join(" ");
   return (
     <svg width={width} height={height} style={{ overflow: "visible" }}>
       <polyline points={points} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx={width} cy={height - ((data[data.length - 1] - min) / range) * height} r="3" fill={color} />
+      <circle cx={(data.length - 1) / divisor * width} cy={height - ((data[data.length - 1] - min) / range) * height} r="3" fill={color} />
     </svg>
   );
 };
 
 const MiniBarChart = ({ data, colors, height = 120, labels }) => {
-  const max = Math.max(...data.flat());
+  if (!data || data.length === 0 || !data[0] || data[0].length === 0) return null;
+  const max = Math.max(...data.flat()) || 1;
   const barWidth = 100 / data[0].length;
   return (
     <div style={{ position: "relative", height, width: "100%" }}>
@@ -116,16 +119,18 @@ const MiniBarChart = ({ data, colors, height = 120, labels }) => {
 };
 
 const AreaChart = ({ data, keys, colors, height = 200 }) => {
+  if (!data || data.length === 0) return null;
   const allValues = keys.flatMap(k => data.map(d => d[k]));
-  const max = Math.max(...allValues) * 1.1;
+  const max = Math.max(...allValues) * 1.1 || 1;
   const w = 100;
+  const divisor = data.length > 1 ? data.length - 1 : 1;
 
   return (
     <div style={{ position: "relative", width: "100%", height }}>
       <svg width="100%" height={height} viewBox={`0 0 ${w} ${height}`} preserveAspectRatio="none">
         {keys.map((key, ki) => {
           const pts = data.map((d, i) => ({
-            x: (i / (data.length - 1)) * w,
+            x: (i / divisor) * w,
             y: height - (d[key] / max) * (height - 20),
           }));
           const path = pts.map((p, i) => (i === 0 ? `M${p.x},${p.y}` : `L${p.x},${p.y}`)).join(" ");
@@ -153,6 +158,16 @@ const DonutChart = ({ segments, size = 120 }) => {
   const cx = size / 2;
   const cy = size / 2;
   let cumAngle = -90;
+
+  if (total === 0) {
+    return (
+      <svg width={size} height={size}>
+        <circle cx={cx} cy={cy} r={r} fill={COLORS.border} opacity={0.3} />
+        <circle cx={cx} cy={cy} r={r * 0.6} fill={COLORS.card} />
+        <text x={cx} y={cy + 4} textAnchor="middle" fill={COLORS.textDim} fontSize="12">No data</text>
+      </svg>
+    );
+  }
 
   return (
     <svg width={size} height={size}>
@@ -303,7 +318,7 @@ export default function AIODashboard({ customerId = "", diagnosisData = null, di
     };
 
     fetchAhrefsData();
-  }, [userEmail]);
+  }, [userEmail, customerId]);
 
   const totalAITraffic = trafficData.reduce((a, d) => a + (d.ai || 0), 0);
   const totalOrganic = trafficData.reduce((a, d) => a + (d.organic || 0), 0);

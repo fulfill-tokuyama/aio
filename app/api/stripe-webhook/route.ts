@@ -91,9 +91,28 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   let supabaseUserId: string | null = null;
 
-  // Check if user already exists
-  const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-  const existingUser = existingUsers?.users?.find(u => u.email === email);
+  // Check if user already exists (paginated listUsers → filter by email)
+  let existingUser: { id: string; email?: string } | null = null;
+  try {
+    const { data } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1 });
+    // Iterate pages to find user by email (safer than unpaginated listUsers)
+    let page = 1;
+    const perPage = 100;
+    let found = false;
+    while (!found) {
+      const { data: pageData } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+      if (!pageData?.users || pageData.users.length === 0) break;
+      const match = pageData.users.find(u => u.email === email);
+      if (match) {
+        existingUser = match;
+        found = true;
+      }
+      if (pageData.users.length < perPage) break;
+      page++;
+    }
+  } catch {
+    // If listUsers fails, proceed with user creation attempt
+  }
 
   if (existingUser) {
     supabaseUserId = existingUser.id;
@@ -148,7 +167,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         .update({
           phase: "customer",
           stripe_status: "active",
-          mrr: 10000,
+          mrr: session.amount_total ? Math.round(session.amount_total) : 10000,
           follow_up_scheduled: null,
         })
         .eq("id", pipelineLead.id);
@@ -159,7 +178,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         .update({
           phase: "customer",
           stripe_status: "active",
-          mrr: 10000,
+          mrr: session.amount_total ? Math.round(session.amount_total) : 10000,
           follow_up_scheduled: null,
         })
         .eq("url", lead.url)
@@ -242,9 +261,11 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 // ============================================================
 function generateTempPassword(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+  const crypto = require("crypto");
+  const bytes = crypto.randomBytes(12);
   let pw = "";
   for (let i = 0; i < 12; i++) {
-    pw += chars.charAt(Math.floor(Math.random() * chars.length));
+    pw += chars.charAt(bytes[i] % chars.length);
   }
   return pw;
 }

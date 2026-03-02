@@ -20,19 +20,30 @@ export async function ahrefsRequest(
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   }
 
-  const res = await fetch(url.toString(), {
-    headers: {
-      Authorization: `Bearer ${process.env.AHREFS_API_KEY}`,
-      Accept: "application/json",
-    },
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-  if (!res.ok) {
-    console.error(`Ahrefs API error: ${res.status} ${res.statusText}`);
+  try {
+    const res = await fetch(url.toString(), {
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${process.env.AHREFS_API_KEY}`,
+        Accept: "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      console.error(`Ahrefs API error: ${res.status} ${res.statusText}`);
+      return null;
+    }
+
+    return await res.json();
+  } catch (e) {
+    console.error("Ahrefs API request failed:", e);
     return null;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  return res.json();
 }
 
 /** Fetch Web Analytics chart data (traffic over time) */

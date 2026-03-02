@@ -121,11 +121,11 @@ function parseCsvText(csvText: string): { url: string; company?: string; industr
   // 最大100行
   const trimmed = lines.slice(0, 101); // +1 for possible header
 
-  // ヘッダー行検出
+  // ヘッダー行検出（演算子優先順位を明示）
   const firstLine = trimmed[0].toLowerCase();
-  const hasHeader = firstLine.includes("url") || firstLine.includes("http") === false && (
+  const hasHeader = firstLine.includes("url") || (!firstLine.includes("http") && (
     firstLine.includes("company") || firstLine.includes("会社") || firstLine.includes("業種") || firstLine.includes("industry")
-  );
+  ));
 
   const dataLines = hasHeader ? trimmed.slice(1) : trimmed;
   const results: { url: string; company?: string; industry?: string; region?: string }[] = [];
@@ -206,7 +206,7 @@ export async function POST(req: NextRequest) {
               seenDomains.add(domain);
               allUrls.push({
                 url: item.url,
-                title: item.title || undefined as unknown as string,
+                title: item.title || "",
                 source: `search:${query}`,
               });
             }
@@ -226,7 +226,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         urls: allUrls,
         summary: {
-          totalFound: allUrls.length + seenDomains.size, // approximate total before dedup
+          totalFound: allUrls.length,
           afterFilter: allUrls.length,
           queries: queries.length,
         },

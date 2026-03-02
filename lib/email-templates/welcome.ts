@@ -1,5 +1,15 @@
 // ウェルカムメール HTMLテンプレート（決済後）
 
+// HTMLエスケープ（XSS防止）
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 interface WelcomeEmailData {
   name: string;
   email: string;
@@ -40,7 +50,7 @@ export function buildWelcomeEmailHtml(data: WelcomeEmailData): string {
       </h2>
 
       <p style="color:#8896AB;font-size:13px;line-height:1.8;margin:0 0 24px;">
-        ${data.name}様<br><br>
+        ${escapeHtml(data.name)}様<br><br>
         AIO Insight月額プランへのお申し込み、誠にありがとうございます。<br>
         ダッシュボードへのアクセス情報をお送りいたします。
       </p>
@@ -51,11 +61,11 @@ export function buildWelcomeEmailHtml(data: WelcomeEmailData): string {
         <table style="width:100%;">
           <tr>
             <td style="color:#8896AB;font-size:13px;padding:6px 0;">メールアドレス</td>
-            <td style="color:#E2E8F0;font-size:13px;padding:6px 0;font-weight:600;">${data.email}</td>
+            <td style="color:#E2E8F0;font-size:13px;padding:6px 0;font-weight:600;">${escapeHtml(data.email)}</td>
           </tr>
           <tr>
             <td style="color:#8896AB;font-size:13px;padding:6px 0;">初期パスワード</td>
-            <td style="color:#F0B429;font-size:13px;padding:6px 0;font-weight:600;font-family:monospace;">${data.tempPassword}</td>
+            <td style="color:#F0B429;font-size:13px;padding:6px 0;font-weight:600;font-family:monospace;">${escapeHtml(data.tempPassword)}</td>
           </tr>
         </table>
       </div>

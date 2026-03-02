@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     const diagnosis = await runDiagnosis(url.trim());
 
     // 5. diagnosis_reports に保存
-    await supabaseAdmin.from("diagnosis_reports").insert({
+    const { error: reportError } = await supabaseAdmin.from("diagnosis_reports").insert({
       lead_id: lead.id,
       score: diagnosis.score,
       pagespeed_data: diagnosis.pagespeedData,
@@ -78,11 +78,19 @@ export async function POST(req: NextRequest) {
       suggestions: diagnosis.suggestions,
     });
 
+    if (reportError) {
+      console.error("Diagnosis report insert error:", reportError);
+    }
+
     // 6. leads のステータスとスコアを更新
-    await supabaseAdmin
+    const { error: updateError } = await supabaseAdmin
       .from("leads")
       .update({ status: "diagnosed", llmo_score: diagnosis.score })
       .eq("id", lead.id);
+
+    if (updateError) {
+      console.error("Lead status update error:", updateError);
+    }
 
     // 7. 診断結果メールを送信
     try {

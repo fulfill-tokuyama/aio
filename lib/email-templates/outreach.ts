@@ -14,6 +14,16 @@ export interface OutreachEmailData {
 
 type OutreachStep = 1 | 2 | 3 | 4;
 
+// HTMLエスケープ（XSS防止）
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function getScoreColor(score: number): string {
   if (score >= 70) return "#10B981";
   if (score >= 40) return "#F59E0B";
@@ -72,7 +82,7 @@ function trackLink(url: string, leadId?: string): string {
 function buildStep1Html(data: OutreachEmailData): string {
   const scoreColor = getScoreColor(data.llmoScore);
   const weaknessItems = data.weaknesses.slice(0, 3)
-    .map(w => `<li style="color:#8896AB;font-size:13px;line-height:1.8;">${w}</li>`)
+    .map(w => `<li style="color:#8896AB;font-size:13px;line-height:1.8;">${escapeHtml(w)}</li>`)
     .join("");
   const diagLink = trackLink(data.diagnosisLink, data.leadId);
 
@@ -80,11 +90,11 @@ function buildStep1Html(data: OutreachEmailData): string {
     <!-- Main Card -->
     <div style="background:#111827;border-radius:16px;border:1px solid #1E293B;padding:32px;margin-bottom:24px;">
       <p style="color:#E2E8F0;font-size:15px;margin:0 0 20px;">
-        ${data.company} ご担当者様
+        ${escapeHtml(data.company)} ご担当者様
       </p>
       <p style="color:#8896AB;font-size:13px;line-height:1.7;margin:0 0 20px;">
         突然のご連絡失礼いたします。<br>
-        ${data.senderName}と申します。<br><br>
+        ${escapeHtml(data.senderName)}と申します。<br><br>
         貴社サイトのAI検索可視性を分析したところ、<strong style="color:#E2E8F0;">改善の余地が見つかりました</strong>ので、無料診断レポートをお送りできればと思いご連絡いたしました。
       </p>
 

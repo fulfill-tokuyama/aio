@@ -93,8 +93,12 @@ async function sendEmail(
   let error: string | undefined;
 
   try {
+    const apiKey = process.env.SENDGRID_API_KEY;
+    if (!apiKey) {
+      throw new Error("SENDGRID_API_KEY is not configured");
+    }
     const sgMail = (await import("@sendgrid/mail")).default;
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY || "");
+    sgMail.setApiKey(apiKey);
     await sgMail.send({
       to,
       from: { email: FROM_EMAIL, name: FROM_NAME },

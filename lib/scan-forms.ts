@@ -14,9 +14,10 @@ export const FORM_PATHS = [
 ];
 
 // 日本語電話番号パターン (03-xxxx-xxxx, 0120-xxx-xxx, 090-xxxx-xxxx, etc.)
-export const PHONE_REGEX = /(?:0\d{1,4}[-\s]?\d{1,4}[-\s]?\d{2,4})/g;
-// メールアドレスパターン
+export const PHONE_REGEX = /\b0\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4}\b/g;
+// メールアドレスパターン (/g for .match(), use EMAIL_REGEX_TEST for .test())
 export const EMAIL_REGEX = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+const EMAIL_REGEX_TEST = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 
 const BATCH_SIZE = 5;
 const FETCH_TIMEOUT = 8000;
@@ -86,7 +87,7 @@ export function extractEmails($: cheerio.CheerioAPI, html: string): string[] {
   $('a[href^="mailto:"]').each((_, el) => {
     const href = $(el).attr("href") || "";
     const email = href.replace("mailto:", "").split("?")[0].trim();
-    if (email && EMAIL_REGEX.test(email)) {
+    if (email && EMAIL_REGEX_TEST.test(email)) {
       emails.add(email);
     }
   });

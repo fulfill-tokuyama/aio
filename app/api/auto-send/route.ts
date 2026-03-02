@@ -83,24 +83,20 @@ async function sendStepEmail(lead: LeadRow, step: 1 | 2 | 3 | 4): Promise<{ succ
 
     const newCount = (lead.follow_up_count || 0) + 1;
 
+    // 全4通送信済み（follow_up_count=4）で直接 dormant に遷移（二重更新を回避）
+    const finalPhase = newCount >= 4 ? "dormant" : getPhaseForStep(step);
+    const finalScheduled = newCount >= 4 ? null : nextScheduled;
+
     await supabaseAdmin
       .from("pipeline_leads")
       .update({
-        phase: getPhaseForStep(step),
+        phase: finalPhase,
         sent_at: new Date().toISOString(),
         template_used: `outreach_step${step}`,
         follow_up_count: newCount,
-        follow_up_scheduled: nextScheduled,
+        follow_up_scheduled: finalScheduled,
       })
       .eq("id", lead.id);
-
-    // 全4通送信済み（follow_up_count=4）で dormant に遷移
-    if (newCount >= 4) {
-      await supabaseAdmin
-        .from("pipeline_leads")
-        .update({ phase: "dormant", follow_up_scheduled: null })
-        .eq("id", lead.id);
-    }
 
     return { success: true };
   } catch (err: unknown) {
@@ -149,7 +145,9 @@ export async function POST(req: NextRequest) {
       }
 
       // step指定あればそれを使う、なければfollow_up_countから判定
-      const targetStep = (step as 1 | 2 | 3 | 4) || getStepFromCount(lead.follow_up_count || 0);
+      // step値をバリデーション（1-4のみ許可）
+      const validStep = typeof step === "number" && [1, 2, 3, 4].includes(step) ? step as 1 | 2 | 3 | 4 : null;
+      const targetStep = validStep || getStepFromCount(lead.follow_up_count || 0);
       const result = await sendStepEmail(lead, targetStep);
       results.push({ leadId: lead.id, company: lead.company, success: result.success, step: targetStep, error: result.error });
     }
@@ -188,7 +186,6 @@ export async function GET(req: NextRequest) {
       .from("pipeline_leads")
       .select("id, company, url, contact_email, llmo_score, weaknesses, phase, follow_up_count, follow_up_scheduled")
       .in("phase", ["sent", "step2", "step3"])
-      .not("phase", "in", '("customer","dormant")')
       .lte("follow_up_scheduled", new Date().toISOString())
       .lt("follow_up_count", 4)
       .order("follow_up_scheduled", { ascending: true })

@@ -384,13 +384,20 @@ async function checkCrawlability(url: string): Promise<CrawlabilityResult> {
       const lower = robotsText.toLowerCase();
       // Check for common AI bot user agents being disallowed
       const aiAgents = ["gptbot", "chatgpt", "claudebot", "claude-web", "anthropic", "google-extended", "ccbot", "bingbot"];
-      for (const agent of aiAgents) {
-        // Look for "User-agent: <agent>" followed by "Disallow: /"
-        const agentRegex = new RegExp(`user-agent:\\s*${agent}[\\s\\S]*?disallow:\\s*/`, "i");
-        if (agentRegex.test(lower)) {
-          aiBotsBlocked = true;
-          break;
+
+      // robots.txtをブロック単位で解析（User-agentごとに区切る）
+      const blocks = robotsText.split(/(?=user-agent\s*:)/i);
+      for (const block of blocks) {
+        const blockLower = block.toLowerCase();
+        for (const agent of aiAgents) {
+          if (blockLower.includes(`user-agent:`) &&
+              blockLower.match(new RegExp(`user-agent:\\s*${agent}`, "i")) &&
+              /disallow:\s*\/\s*$/m.test(blockLower)) {
+            aiBotsBlocked = true;
+            break;
+          }
         }
+        if (aiBotsBlocked) break;
       }
     } catch {
       // ignore read errors
@@ -714,9 +721,6 @@ function generateWeaknessDetails(
       message: "BreadcrumbListスキーマがありません",
       suggestion: "パンくずリストの構造化データを追加して、サイト階層をAIに理解させましょう",
     });
-  }
-  if (html.contentLength >= 200 && html.contentLength < 200) {
-    // This case won't hit; actual JS-dependent check below
   }
   if (html.contentLength < 200) {
     weaknesses.push({

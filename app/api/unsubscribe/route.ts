@@ -13,16 +13,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "leadId is required" }, { status: 400 });
     }
 
+    // 既存のnotesを1回だけ取得
+    const { data: current } = await supabaseAdmin
+      .from("pipeline_leads")
+      .select("notes")
+      .eq("id", leadId)
+      .single();
+
+    const timestamp = new Date().toISOString();
+    const existingNotes = current?.notes || "";
+    const newNotes = existingNotes
+      ? `${existingNotes}\n[配信停止: ${timestamp}]`
+      : `[配信停止: ${timestamp}]`;
+
     // pipeline_leads を dormant に更新し、フォローアップを停止
     const { error } = await supabaseAdmin
       .from("pipeline_leads")
       .update({
         phase: "dormant",
         follow_up_scheduled: null,
-        notes: (await supabaseAdmin.from("pipeline_leads").select("notes").eq("id", leadId).single())
-          .data?.notes
-          ? `${(await supabaseAdmin.from("pipeline_leads").select("notes").eq("id", leadId).single()).data?.notes}\n[配信停止: ${new Date().toISOString()}]`
-          : `[配信停止: ${new Date().toISOString()}]`,
+        notes: newNotes,
       })
       .eq("id", leadId);
 
