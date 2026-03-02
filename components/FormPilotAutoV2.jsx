@@ -348,6 +348,7 @@ export default function FormPilotAutoV2(){
     {id:"followup",icon:ic.mail,label:"フォローアップ"},
     {id:"analysis",icon:ic.globe,label:"分析"},
     {id:"customers",icon:ic.dollar,label:"顧客・収益"},
+    {id:"activitylog",icon:ic.bell,label:"アクティビティ"},
   ];
   return(
     <div style={{height:"100vh",display:"flex",background:C.bg,color:C.tx,fontFamily:"'Geist','Noto Sans JP',system-ui,sans-serif",opacity:mt?1:0,transition:"opacity .4s",overflow:"hidden"}}>
@@ -477,18 +478,7 @@ export default function FormPilotAutoV2(){
                 <KPI icon={ic.dollar} ic={C.g} label="MRR" val={`¥${kpi.mrr.toLocaleString()}`} sub={`${kpi.cust}社 × ¥10,000`} trend={22} good/>
               </div>
 
-              <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12,marginBottom:16}}>
-                <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
-                  <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>アクティビティログ</div>
-                  <div style={{maxHeight:220,overflow:"auto"}}>
-                    {log.map((l,i)=>(
-                      <div key={i} style={{padding:"8px 0",borderBottom:i<log.length-1?`1px solid ${C.bdr}`:"none",display:"flex",gap:10,alignItems:"flex-start"}}>
-                        <span style={{fontSize:9,color:C.dim,fontFamily:"'Geist Mono',monospace",flexShrink:0}}>{new Date(l.t).toLocaleString("ja-JP",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</span>
-                        <span style={{fontSize:10,color:l.type==="customer"?C.g:l.type==="reply"?C.acc:l.type==="send"?C.p:l.type==="form"?C.b:C.sub,lineHeight:1.5}}>{l.msg}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              <div style={{marginBottom:16}}>
                 <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
                   <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>自動化ステータス</div>
                   {[
@@ -513,6 +503,24 @@ export default function FormPilotAutoV2(){
                   <span style={{fontSize:10,color:C.sub}}>契約中</span>
                   <span style={{fontSize:18,fontWeight:800,fontFamily:"'Geist Mono',monospace",color:C.g}}>{kpi.cust}社 ¥{kpi.mrr.toLocaleString()}</span>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===== ACTIVITY LOG ===== */}
+          {!loading&&view==="activitylog"&&(
+            <div className="fi">
+              <div style={{fontSize:14,fontWeight:800,marginBottom:16,display:"flex",alignItems:"center",gap:8}}>
+                <I d={ic.bell} s={16} c={C.acc}/> アクティビティログ
+              </div>
+              <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
+                {log.length===0&&<div style={{fontSize:11,color:C.dim,textAlign:"center",padding:20}}>ログはまだありません</div>}
+                {log.map((l,i)=>(
+                  <div key={i} style={{padding:"10px 0",borderBottom:i<log.length-1?`1px solid ${C.bdr}`:"none",display:"flex",gap:10,alignItems:"flex-start"}}>
+                    <span style={{fontSize:10,color:C.dim,fontFamily:"'Geist Mono',monospace",flexShrink:0}}>{new Date(l.t).toLocaleString("ja-JP",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</span>
+                    <span style={{fontSize:11,color:l.type==="customer"?C.g:l.type==="reply"?C.acc:l.type==="send"?C.p:l.type==="form"?C.b:C.sub,lineHeight:1.5}}>{l.msg}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
