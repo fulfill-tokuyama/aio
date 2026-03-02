@@ -5,8 +5,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { scanUrl } from "@/lib/scan-forms";
+import { requireAuth } from "@/lib/api-auth";
 
 export async function POST(req: NextRequest) {
+  const authError = await requireAuth(req);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const { leadId, url } = body;
@@ -50,10 +53,13 @@ export async function POST(req: NextRequest) {
       }
 
       if (Object.keys(updates).length > 0) {
-        await supabaseAdmin
+        const { error: updateError } = await supabaseAdmin
           .from("pipeline_leads")
           .update(updates)
           .eq("id", leadId);
+        if (updateError) {
+          console.error("scan-forms update error:", updateError.message);
+        }
       }
     }
 

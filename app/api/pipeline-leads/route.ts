@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { requireAuth } from "@/lib/api-auth";
 
 // snake_case (DB) → camelCase (client) 変換
 function dbRowToClientLead(row: Record<string, unknown>) {
@@ -61,11 +62,18 @@ const FIELD_MAP: Record<string, string> = {
   contactPageUrl: "contact_page_url",
 };
 
+// 許可されたフィールドのみDB更新に含める
+const ALLOWED_DB_FIELDS = new Set([
+  "company", "url", "industry", "region", "notes", "phase", "weaknesses",
+  ...Object.values(FIELD_MAP),
+]);
+
 function clientToDbFields(obj: Record<string, unknown>) {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {
     if (key === "id") continue;
     const dbKey = FIELD_MAP[key] || key;
+    if (!ALLOWED_DB_FIELDS.has(dbKey)) continue;
     result[dbKey] = value;
   }
   return result;
@@ -73,6 +81,8 @@ function clientToDbFields(obj: Record<string, unknown>) {
 
 // GET: リード一覧取得（フィルタ対応）
 export async function GET(req: NextRequest) {
+  const authError = await requireAuth(req);
+  if (authError) return authError;
   try {
     const { searchParams } = new URL(req.url);
     const phase = searchParams.get("phase");
@@ -91,7 +101,11 @@ export async function GET(req: NextRequest) {
       query = query.eq("industry", industry);
     }
     if (q) {
-      query = query.or(`company.ilike.%${q}%,url.ilike.%${q}%`);
+      // PostgREST特殊文字をサニタイズ
+      const sanitized = q.replace(/[.,%()]/g, "");
+      if (sanitized) {
+        query = query.or(`company.ilike.%${sanitized}%,url.ilike.%${sanitized}%`);
+      }
     }
 
     const { data, error } = await query;
@@ -110,6 +124,8 @@ export async function GET(req: NextRequest) {
 
 // POST: リード新規作成
 export async function POST(req: NextRequest) {
+  const authError = await requireAuth(req);
+  if (authError) return authError;
   try {
     const body = await req.json();
 
@@ -141,6 +157,8 @@ export async function POST(req: NextRequest) {
 
 // PUT: リード更新
 export async function PUT(req: NextRequest) {
+  const authError = await requireAuth(req);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const { id, ...updates } = body;
@@ -171,6 +189,8 @@ export async function PUT(req: NextRequest) {
 
 // DELETE: リード削除
 export async function DELETE(req: NextRequest) {
+  const authError = await requireAuth(req);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const { id } = body;

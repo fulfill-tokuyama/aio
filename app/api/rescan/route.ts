@@ -9,6 +9,7 @@ import { runDiagnosis } from "@/lib/diagnosis";
 export const maxDuration = 300;
 
 export async function GET(req: NextRequest) {
+  try {
   // Vercel Cron認証: CRON_SECRET必須
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
@@ -88,4 +89,8 @@ export async function GET(req: NextRequest) {
     scanned: results.length,
     results,
   });
+  } catch (e) {
+    console.error("Rescan error:", e);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }

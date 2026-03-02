@@ -21,7 +21,11 @@ export const supabaseAdmin: SupabaseClient = (() => {
     console.error("supabaseAdmin must not be used in the browser");
   }
   if (!supabaseServiceKey) {
-    console.error("Missing SUPABASE_SERVICE_ROLE_KEY — admin operations will fail");
+    const msg = "Missing SUPABASE_SERVICE_ROLE_KEY — admin operations will fail";
+    console.error(msg);
+    if (typeof window === "undefined" && process.env.NODE_ENV === "production") {
+      throw new Error(msg);
+    }
   }
   return createClient(
     supabaseUrl || "https://placeholder.supabase.co",

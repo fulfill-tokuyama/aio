@@ -119,6 +119,17 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("Contact API error:", error);
+    // 診断失敗時にleadが作成済みなら "failed" に更新
+    try {
+      const body = await req.clone().json().catch(() => null);
+      if (body?.email) {
+        await supabaseAdmin
+          .from("leads")
+          .update({ status: "failed" })
+          .eq("email", body.email.trim())
+          .eq("status", "diagnosing");
+      }
+    } catch { /* cleanup失敗は無視 */ }
     return NextResponse.json(
       { error: "診断の実行に失敗しました。しばらくしてから再度お試しください。" },
       { status: 500 }

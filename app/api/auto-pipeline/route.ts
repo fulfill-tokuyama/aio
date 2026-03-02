@@ -7,6 +7,8 @@ import { runDiagnosis, Weakness } from "@/lib/diagnosis";
 import { scanUrl } from "@/lib/scan-forms";
 import { sendOutreachEmail } from "@/lib/email";
 import { normalizeUrl, domainToCompany, calculateAiScore, getExistingUrls } from "@/lib/pipeline-utils";
+import { requireAuth } from "@/lib/api-auth";
+import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
 
 export const maxDuration = 300;
 
@@ -31,6 +33,8 @@ interface PipelineLeadResult {
 }
 
 export async function POST(req: NextRequest) {
+  const authError = await requireAuth(req);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const {
@@ -259,7 +263,7 @@ export async function POST(req: NextRequest) {
           const diagnosisLink = `${appUrl}/diagnosis?url=${encodeURIComponent(lead.url)}`;
           const paymentLink = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK || "#";
           const senderName = process.env.NEXT_PUBLIC_SENDER_NAME || "AIO Insight";
-          const unsubscribeLink = `${appUrl}/unsubscribe?lid=${lead.id}`;
+          const unsubscribeLink = buildUnsubscribeUrl(lead.id, appUrl);
 
           await sendOutreachEmail({
             to: lead.contactEmail!,
@@ -291,8 +295,8 @@ export async function POST(req: NextRequest) {
 
           emailsSent++;
           sentLeadIds.add(lead.id);
-        } catch {
-          // メール送信エラーは継続
+        } catch (emailErr) {
+          console.error(`Email send error for ${lead.company}:`, emailErr);
         }
       }
     }

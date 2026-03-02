@@ -4,17 +4,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { supabaseAdmin } from "@/lib/supabase";
+import { randomBytes } from "crypto";
 
 export const dynamic = "force-dynamic";
 
 function getStripe() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY || "");
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error("STRIPE_SECRET_KEY is not configured");
+  return new Stripe(key);
 }
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
-
 export async function POST(req: NextRequest) {
-  const body = await req.text();
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
+  }
+
+  let body: string;
+  try {
+    body = await req.text();
+  } catch {
+    return NextResponse.json({ error: "Failed to read request body" }, { status: 400 });
+  }
+
   const sig = req.headers.get("stripe-signature");
 
   if (!sig) {
@@ -91,43 +103,34 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   let supabaseUserId: string | null = null;
 
-  // Check if user already exists (paginated listUsers → filter by email)
+  // Check if user already exists — createUser で重複エラーをキャッチする方式
   let existingUser: { id: string; email?: string } | null = null;
-  try {
-    const { data } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1 });
-    // Iterate pages to find user by email (safer than unpaginated listUsers)
-    let page = 1;
-    const perPage = 100;
-    let found = false;
-    while (!found) {
-      const { data: pageData } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
-      if (!pageData?.users || pageData.users.length === 0) break;
-      const match = pageData.users.find(u => u.email === email);
-      if (match) {
-        existingUser = match;
-        found = true;
+
+  // まず createUser を試み、既存ユーザーの場合はエラーから取得
+  const { data: newUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    password: tempPassword,
+    email_confirm: true,
+  });
+
+  if (authError) {
+    if (authError.message?.includes("already") || authError.status === 422) {
+      // ユーザー既存 — listUsers で1ページ目から検索（メールフィルタ付き）
+      try {
+        const { data: pageData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 100 });
+        const match = pageData?.users?.find(u => u.email === email);
+        if (match) {
+          existingUser = match;
+          supabaseUserId = match.id;
+        }
+      } catch {
+        console.error("Failed to find existing user by email");
       }
-      if (pageData.users.length < perPage) break;
-      page++;
-    }
-  } catch {
-    // If listUsers fails, proceed with user creation attempt
-  }
-
-  if (existingUser) {
-    supabaseUserId = existingUser.id;
-  } else {
-    const { data: newUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password: tempPassword,
-      email_confirm: true,
-    });
-
-    if (authError) {
-      console.error("Auth user creation error:", authError);
     } else {
-      supabaseUserId = newUser.user.id;
+      console.error("Auth user creation error:", authError);
     }
+  } else {
+    supabaseUserId = newUser.user.id;
   }
 
   // 3. customers テーブルに保存（upsert）
@@ -261,8 +264,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 // ============================================================
 function generateTempPassword(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-  const crypto = require("crypto");
-  const bytes = crypto.randomBytes(12);
+  const bytes = randomBytes(12);
   let pw = "";
   for (let i = 0; i < 12; i++) {
     pw += chars.charAt(bytes[i] % chars.length);

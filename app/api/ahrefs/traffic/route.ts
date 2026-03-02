@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isAhrefsConnected, fetchWebAnalyticsChart } from "@/lib/ahrefs";
+import { requireAuth } from "@/lib/api-auth";
 
 export async function GET(req: NextRequest) {
+  const authError = await requireAuth(req);
+  if (authError) return authError;
   try {
     if (!isAhrefsConnected()) {
       return NextResponse.json({ connected: false, data: null });

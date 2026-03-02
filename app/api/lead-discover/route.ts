@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import * as cheerio from "cheerio";
+import { requireAuth } from "@/lib/api-auth";
 
 export const maxDuration = 60;
 
@@ -170,6 +171,8 @@ function parseCsvText(csvText: string): { url: string; company?: string; industr
 }
 
 export async function POST(req: NextRequest) {
+  const authError = await requireAuth(req);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const { mode } = body;

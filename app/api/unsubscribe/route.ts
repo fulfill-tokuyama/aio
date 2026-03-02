@@ -3,14 +3,20 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { verifyUnsubscribeToken } from "@/lib/unsubscribe-token";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { leadId } = body;
+    const { leadId, sig } = body;
 
     if (!leadId) {
       return NextResponse.json({ error: "leadId is required" }, { status: 400 });
+    }
+
+    // 署名トークン検証
+    if (!sig || !verifyUnsubscribeToken(leadId, sig)) {
+      return NextResponse.json({ error: "Invalid or missing signature" }, { status: 403 });
     }
 
     // 既存のnotesを1回だけ取得

@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { requireAuth } from "@/lib/api-auth";
 
 const DEFAULT_KEY = "default";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const authError = await requireAuth(req);
+  if (authError) return authError;
   try {
     const { data, error } = await supabaseAdmin
       .from("pipeline_automation_config")
@@ -23,6 +26,8 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  const authError = await requireAuth(req);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const { config } = body;

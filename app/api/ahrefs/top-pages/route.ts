@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isAhrefsConnected } from "@/lib/ahrefs";
+import { requireAuth } from "@/lib/api-auth";
 
 export async function GET(req: NextRequest) {
+  const authError = await requireAuth(req);
+  if (authError) return authError;
   try {
     if (!isAhrefsConnected()) {
       return NextResponse.json({ connected: false, data: null });
@@ -41,8 +44,8 @@ export async function GET(req: NextRequest) {
         url: p.page_url,
         aiTraffic: p.ai_traffic,
         totalTraffic: p.total_traffic,
-        aiRatio: parseFloat(p.ai_ratio),
-        trend: parseFloat(p.trend),
+        aiRatio: parseFloat(p.ai_ratio) || 0,
+        trend: parseFloat(p.trend) || 0,
       })),
     });
   } catch (e) {

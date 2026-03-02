@@ -47,14 +47,18 @@ export async function GET(req: NextRequest) {
         .eq("id", leadId);
 
       if (redirectUrl) {
-        // オープンリダイレクト防止: 自ドメインまたはhttps URLのみ許可
+        // オープンリダイレクト防止: 自ドメインのみ許可
         try {
           const parsed = new URL(redirectUrl);
-          const appHost = new URL(process.env.NEXT_PUBLIC_APP_URL || "https://aio-rouge.vercel.app").hostname;
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aio-rouge.vercel.app";
+          const appHost = new URL(appUrl).hostname;
           if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-            return NextResponse.redirect(process.env.NEXT_PUBLIC_APP_URL || "https://aio-rouge.vercel.app");
+            return NextResponse.redirect(appUrl);
           }
-          // 外部URLも許可するが javascript: 等の危険なスキームはブロック済み
+          // 自ドメインのみリダイレクト許可
+          if (parsed.hostname !== appHost) {
+            return NextResponse.redirect(appUrl);
+          }
           return NextResponse.redirect(parsed.toString());
         } catch {
           return NextResponse.redirect(process.env.NEXT_PUBLIC_APP_URL || "https://aio-rouge.vercel.app");

@@ -139,10 +139,10 @@ function buildStep2Html(data: OutreachEmailData): string {
     <!-- Main Card -->
     <div style="background:#111827;border-radius:16px;border:1px solid #1E293B;padding:32px;margin-bottom:24px;">
       <p style="color:#E2E8F0;font-size:15px;margin:0 0 20px;">
-        ${data.company} ご担当者様
+        ${escapeHtml(data.company)} ご担当者様
       </p>
       <p style="color:#8896AB;font-size:13px;line-height:1.7;margin:0 0 20px;">
-        先日はご案内差し上げた${data.senderName}です。<br>
+        先日はご案内差し上げた${escapeHtml(data.senderName)}です。<br>
         本日は、<strong style="color:#E2E8F0;">貴社と同業界のAI検索対策状況</strong>をお伝えします。
       </p>
 
@@ -195,10 +195,10 @@ function buildStep3Html(data: OutreachEmailData): string {
     <!-- Main Card -->
     <div style="background:#111827;border-radius:16px;border:1px solid #1E293B;padding:32px;margin-bottom:24px;">
       <p style="color:#E2E8F0;font-size:15px;margin:0 0 20px;">
-        ${data.company} ご担当者様
+        ${escapeHtml(data.company)} ご担当者様
       </p>
       <p style="color:#8896AB;font-size:13px;line-height:1.7;margin:0 0 20px;">
-        ${data.senderName}です。<br>
+        ${escapeHtml(data.senderName)}です。<br>
         本日は、<strong style="color:#E2E8F0;">AIO Insightをご導入いただいた企業様の成果事例</strong>をご紹介いたします。
       </p>
 
@@ -270,10 +270,10 @@ function buildStep4Html(data: OutreachEmailData): string {
     <!-- Main Card -->
     <div style="background:#111827;border-radius:16px;border:1px solid #1E293B;padding:32px;margin-bottom:24px;">
       <p style="color:#E2E8F0;font-size:15px;margin:0 0 20px;">
-        ${data.company} ご担当者様
+        ${escapeHtml(data.company)} ご担当者様
       </p>
       <p style="color:#8896AB;font-size:13px;line-height:1.7;margin:0 0 20px;">
-        ${data.senderName}です。最後のご案内となります。<br><br>
+        ${escapeHtml(data.senderName)}です。最後のご案内となります。<br><br>
         AI検索市場は急速に拡大しており、<strong style="color:#E2E8F0;">早期に対策を講じた企業ほど大きな成果</strong>を上げています。
       </p>
 

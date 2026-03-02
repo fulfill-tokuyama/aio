@@ -4,6 +4,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { sendOutreachEmail } from "@/lib/email";
+import { requireAuth } from "@/lib/api-auth";
+import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
+
+export const maxDuration = 60;
 
 const MAX_BATCH = 20;
 
@@ -57,7 +61,7 @@ async function sendStepEmail(lead: LeadRow, step: 1 | 2 | 3 | 4): Promise<{ succ
   const diagnosisLink = `${appUrl}/diagnosis?url=${encodeURIComponent(lead.url)}`;
   const paymentLink = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK || "#";
   const senderName = process.env.NEXT_PUBLIC_SENDER_NAME || "AIO Insight";
-  const unsubscribeLink = `${appUrl}/unsubscribe?lid=${lead.id}`;
+  const unsubscribeLink = buildUnsubscribeUrl(lead.id, appUrl);
 
   try {
     await sendOutreachEmail({
@@ -106,9 +110,11 @@ async function sendStepEmail(lead: LeadRow, step: 1 | 2 | 3 | 4): Promise<{ succ
 }
 
 // ============================================================
-// POST: 手動一括送信
+// POST: 手動一括送信（認証必須）
 // ============================================================
 export async function POST(req: NextRequest) {
+  const authError = await requireAuth(req);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const { leadIds, step } = body as { leadIds: string[]; step?: number };

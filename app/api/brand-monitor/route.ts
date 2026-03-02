@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { requireAuth } from "@/lib/api-auth";
 
 // GET: 顧客のブランドモニター設定を取得
 export async function GET(req: NextRequest) {
+  const authError = await requireAuth(req);
+  if (authError) return authError;
   try {
     const { searchParams } = new URL(req.url);
     const customerId = searchParams.get("customer_id");
@@ -37,6 +40,8 @@ export async function GET(req: NextRequest) {
 
 // POST: ブランドモニター設定の追加・更新・削除
 export async function POST(req: NextRequest) {
+  const authError = await requireAuth(req);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const { action, customerId, brandName, targetDomain, industry, customPrompts, configId, isActive } = body;

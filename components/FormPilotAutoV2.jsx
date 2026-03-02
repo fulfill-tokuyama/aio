@@ -344,7 +344,7 @@ export default function FormPilotAutoV2(){
     {id:"pipeline",icon:ic.activity,label:"パイプライン"},
     {id:"leads",icon:ic.radar,label:"リード一覧"},
     {id:"automation",icon:ic.zap,label:"自動化設定"},
-    {id:"abtest",icon:ic.chart,label:"A/Bテスト"},
+    {id:"abtest",icon:ic.bar,label:"A/Bテスト"},
     {id:"followup",icon:ic.mail,label:"フォローアップ"},
     {id:"analysis",icon:ic.globe,label:"分析"},
     {id:"customers",icon:ic.dollar,label:"顧客・収益"},

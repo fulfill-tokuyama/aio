@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { requireAuth } from "@/lib/api-auth";
 
 export async function GET(req: NextRequest) {
+  const authError = await requireAuth(req);
+  if (authError) return authError;
   try {
     const { searchParams } = new URL(req.url);
     const customerId = searchParams.get("customer_id");
@@ -66,9 +69,9 @@ export async function GET(req: NextRequest) {
           platform: r.platform,
           mentions: r.mentions,
           citations: r.citations,
-          sov: parseFloat(r.sov),
+          sov: parseFloat(r.sov) || 0,
           impressions: r.impressions,
-          trend: parseFloat(r.trend),
+          trend: parseFloat(r.trend) || 0,
         })),
       });
     }

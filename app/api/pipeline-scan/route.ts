@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { runDiagnosis } from "@/lib/diagnosis";
 import { normalizeUrl, domainToCompany, calculateAiScore, getExistingUrls } from "@/lib/pipeline-utils";
+import { requireAuth } from "@/lib/api-auth";
 
 export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
+  const authError = await requireAuth(req);
+  if (authError) return authError;
   try {
     const body = await req.json();
     const rawUrls: string[] = body.urls;

@@ -11,6 +11,7 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 export async function GET(req: NextRequest) {
+  try {
   // CRON_SECRET 認証（必須）
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
@@ -144,4 +145,8 @@ export async function GET(req: NextRequest) {
     skipPerplexity,
     results,
   });
+  } catch (e) {
+    console.error("Brand check cron error:", e);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }

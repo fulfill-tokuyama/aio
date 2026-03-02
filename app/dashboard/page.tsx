@@ -44,7 +44,7 @@ async function fetchDiagnosisForEmail(email: string) {
         createdAt: r.created_at,
         weaknesses: r.weaknesses || [],
         suggestions: r.suggestions || [],
-        breakdown: r.html_analysis?.breakdown || null,
+        breakdown: r.breakdown || null,
       }));
     }
   }

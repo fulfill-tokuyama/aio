@@ -1,5 +1,14 @@
 // 診断結果メール HTMLテンプレート
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 interface DiagnosisEmailData {
   company: string;
   name: string;
@@ -67,11 +76,11 @@ export function buildDiagnosisEmailHtml(data: DiagnosisEmailData): string {
     <div style="background:#111827;border-radius:16px;border:1px solid #1E293B;padding:32px;margin-bottom:24px;">
 
       <p style="color:#E2E8F0;font-size:15px;margin:0 0 24px;">
-        ${data.name}様（${data.company}）
+        ${escapeHtml(data.name)}様（${escapeHtml(data.company)}）
       </p>
       <p style="color:#8896AB;font-size:13px;line-height:1.7;margin:0 0 24px;">
         この度はAI可視性診断をご利用いただき、ありがとうございます。<br>
-        <strong style="color:#E2E8F0;">${data.url}</strong> の診断結果をお届けします。
+        <strong style="color:#E2E8F0;">${escapeHtml(data.url)}</strong> の診断結果をお届けします。
       </p>
 
       <!-- Score Circle -->
@@ -100,7 +109,7 @@ export function buildDiagnosisEmailHtml(data: DiagnosisEmailData): string {
       ${data.weaknesses.length > 0 ? `
       <h3 style="color:#EF4444;font-size:14px;margin:0 0 12px;">⚠ 検出された弱点（${data.weaknesses.length}件）</h3>
       <ul style="margin:0 0 24px;padding:0 0 0 20px;">
-        ${data.weaknesses.map(w => `<li style="color:#8896AB;font-size:13px;line-height:1.8;">${w}</li>`).join("")}
+        ${data.weaknesses.map(w => `<li style="color:#8896AB;font-size:13px;line-height:1.8;">${escapeHtml(w)}</li>`).join("")}
       </ul>
       ` : ""}
 
@@ -108,7 +117,7 @@ export function buildDiagnosisEmailHtml(data: DiagnosisEmailData): string {
       ${data.suggestions.length > 0 ? `
       <h3 style="color:#10B981;font-size:14px;margin:0 0 12px;">💡 改善提案</h3>
       <ul style="margin:0 0 24px;padding:0 0 0 20px;">
-        ${data.suggestions.slice(0, 5).map(s => `<li style="color:#8896AB;font-size:13px;line-height:1.8;">${s}</li>`).join("")}
+        ${data.suggestions.slice(0, 5).map(s => `<li style="color:#8896AB;font-size:13px;line-height:1.8;">${escapeHtml(s)}</li>`).join("")}
       </ul>
       ${data.suggestions.length > 5 ? `<p style="color:#5A6A80;font-size:12px;margin:0 0 24px;">他${data.suggestions.length - 5}件の改善提案があります</p>` : ""}
       ` : ""}

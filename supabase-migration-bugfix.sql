@@ -52,6 +52,7 @@ CREATE POLICY "service_role_pipeline_leads" ON pipeline_leads
 -- brand_monitor_config テーブル
 DROP POLICY IF EXISTS "service_role_brand_monitor_config" ON brand_monitor_config;
 DROP POLICY IF EXISTS "Allow all operations" ON brand_monitor_config;
+DROP POLICY IF EXISTS "brand_monitor_config_service_role" ON brand_monitor_config;
 CREATE POLICY "service_role_brand_monitor_config" ON brand_monitor_config
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 

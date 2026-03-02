@@ -18,18 +18,19 @@ const C = {
 function UnsubscribeContent() {
   const searchParams = useSearchParams();
   const leadId = searchParams.get("lid");
+  const sig = searchParams.get("sig");
 
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
 
   const handleUnsubscribe = async () => {
-    if (!leadId) return;
+    if (!leadId || !sig) return;
     setStatus("loading");
 
     try {
       const res = await fetch("/api/unsubscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadId }),
+        body: JSON.stringify({ leadId, sig }),
       });
       if (!res.ok) throw new Error("Failed");
       setStatus("done");
@@ -92,7 +93,7 @@ function UnsubscribeContent() {
           </>
         )}
 
-        {status === "idle" && !leadId && (
+        {status === "idle" && (!leadId || !sig) && (
           <>
             <h1 style={{ color: C.text, fontSize: 20, fontWeight: 800, marginBottom: 8 }}>配信停止</h1>
             <p style={{ color: C.sub, fontSize: 14, lineHeight: 1.7 }}>
