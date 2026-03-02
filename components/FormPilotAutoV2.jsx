@@ -97,13 +97,13 @@ const KPI=({icon,ic:icC,label,val,sub,trend,good})=>(
 // A/B Templates
 // ============================================================
 const TEMPLATES = [
-  { id:"t1", name:"LLMO診断レポート訴求", subject:"【無料】貴社のAI検索対策 診断レポートをお送りします",
+  { id:"t1", name:"Step1: 初回アウトリーチ", subject:"【無料】貴社のAI検索対策 診断レポートをお送りします",
     body:"{{company}}様\n\n突然のご連絡失礼いたします。\nBeginAI の {{sender}} と申します。\n\n貴社サイトを拝見し、AI検索（ChatGPT / Perplexity等）からの集客について改善余地がある可能性を発見いたしました。\n\n【貴社の課題（自動検出）】\n{{weaknesses}}\n\n現在、無料のAIO診断レポートを提供しております。\n貴社のAI検索可視性を数値で可視化し、具体的な改善アクションまでご提案します。\n\n▶ 診断レポートを受け取る: {{diagnosis_link}}\n\nお忙しいところ恐れ入りますが、ご検討いただけますと幸いです。",
     sent:0, opened:0, replied:0, converted:0 },
-  { id:"t2", name:"競合比較データ訴求", subject:"貴社の競合はAI検索で先行しています — 無料データ共有",
+  { id:"t2", name:"Step2: 競合比較データ", subject:"貴社の競合はAI検索で先行しています — 無料データ共有",
     body:"{{company}}様\n\nBeginAI の {{sender}} です。\n\n{{industry}}業界のAI検索動向を分析したところ、貴社の競合他社がChatGPT / Perplexity 等のAI検索で既に言及されている一方、貴社はまだ十分な露出を確保できていない状況です。\n\n【現状スコア】\nLLMO対策スコア: {{llmo_score}} / 100（業界平均: 45）\n\n競合との差分データを無料でお送りできます。\nお手数ですが、下記よりお申込みください。\n\n▶ 無料レポート: {{diagnosis_link}}\n\n何卒よろしくお願いいたします。",
     sent:0, opened:0, replied:0, converted:0 },
-  { id:"t3", name:"緊急性訴求（AI検索シフト）", subject:"AI検索利用者が527%増 — 貴社サイトは対応済みですか？",
+  { id:"t3", name:"Step3: 成功事例", subject:"AI検索利用者が527%増 — 貴社サイトは対応済みですか？",
     body:"{{company}}様\n\nBeginAI の {{sender}} です。\n\n2025年、AI検索（ChatGPT、Perplexity、Gemini）からのWebサイト流入が前年比527%増加しています。\n\nしかし、現時点で貴社サイトには以下の課題が見受けられます：\n{{weaknesses}}\n\n月額1万円から始められるAIO対策サービスで、AI検索からの集客を開始しませんか？\n\n▶ 30秒で無料診断: {{diagnosis_link}}\n\nご質問等ございましたらお気軽にご連絡ください。",
     sent:0, opened:0, replied:0, converted:0 },
 ];
@@ -705,7 +705,7 @@ export default function FormPilotAutoV2(){
                         <div style={{fontSize:10,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.company}</div>
                         <div style={{fontSize:8,color:C.dim}}>FU {l.followUpCount}/{autoConfig.followUpMaxCount}回 · {l.openedEmail?"開封済":"未開封"}</div>
                       </div>
-                      <button onClick={()=>updateLead(l.id,{followUpCount:l.followUpCount+1})} style={{padding:"3px 7px",borderRadius:3,border:`1px solid ${C.pk}40`,background:C.pkB,color:C.pk,fontSize:8,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>FU送信</button>
+                      <button onClick={async()=>{try{const res=await fetch("/api/auto-send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({leadIds:[l.id]})});if(res.ok)fetchLeads();}catch(e){console.error("FU send error:",e);}}} style={{padding:"3px 7px",borderRadius:3,border:`1px solid ${C.pk}40`,background:C.pkB,color:C.pk,fontSize:8,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>FU送信</button>
                     </div>
                   ))}
                 </div>
@@ -873,7 +873,7 @@ export default function FormPilotAutoV2(){
                     <StBadge s={l.stripeStatus}/>
                     <span style={{fontFamily:"'Geist Mono',monospace",fontWeight:700,color:l.mrr?C.g:C.dim}}>{l.mrr?`¥${l.mrr.toLocaleString()}`:"—"}</span>
                     <span style={{fontSize:9,color:C.sub}}>{l.industry}</span>
-                    <span style={{fontSize:8,color:C.dim}}>{l.templateUsed?`テンプレ${l.templateUsed==="t1"?"A":l.templateUsed==="t2"?"B":"C"}`:"—"}</span>
+                    <span style={{fontSize:8,color:C.dim}}>{l.templateUsed?l.templateUsed.replace("outreach_","").replace("step","S"):"—"}</span>
                   </div>
                 ))}
               </div>

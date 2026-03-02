@@ -1,6 +1,8 @@
 // ステップメール（アウトリーチ）HTMLテンプレート
 // 4通分: step1(初回), step2(3日後), step3(7日後), step4(14日後)
 
+import { generateTrackingSig } from "@/lib/unsubscribe-token";
+
 export interface OutreachEmailData {
   company: string;
   llmoScore: number;
@@ -33,7 +35,7 @@ function getScoreColor(score: number): string {
 function wrapLayout(content: string, options?: { leadId?: string; unsubscribeLink?: string }): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aio-rouge.vercel.app";
   const trackingPixel = options?.leadId
-    ? `<img src="${appUrl}/api/track?type=open&lid=${options.leadId}" width="1" height="1" alt="" style="display:none;" />`
+    ? `<img src="${appUrl}/api/track?type=open&lid=${options.leadId}&sig=${generateTrackingSig(options.leadId)}" width="1" height="1" alt="" style="display:none;" />`
     : "";
   const unsubscribeHtml = options?.unsubscribeLink
     ? `<a href="${options.unsubscribeLink}" style="color:#3E4A5C;font-size:10px;text-decoration:underline;">配信停止</a>`
@@ -76,7 +78,7 @@ ${content}
 function trackLink(url: string, leadId?: string): string {
   if (!leadId) return url;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aio-rouge.vercel.app";
-  return `${appUrl}/api/track?type=click&lid=${leadId}&url=${encodeURIComponent(url)}`;
+  return `${appUrl}/api/track?type=click&lid=${leadId}&sig=${generateTrackingSig(leadId)}&url=${encodeURIComponent(url)}`;
 }
 
 function buildStep1Html(data: OutreachEmailData): string {

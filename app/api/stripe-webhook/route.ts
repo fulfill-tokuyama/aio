@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { supabaseAdmin } from "@/lib/supabase";
+import { incrementTemplateStat } from "@/lib/pipeline-utils";
 import { randomBytes } from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -158,7 +159,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     // メールアドレスで照合
     const { data: pipelineLead } = await supabaseAdmin
       .from("pipeline_leads")
-      .select("id")
+      .select("id, template_used")
       .eq("contact_email", email)
       .neq("phase", "customer")
       .limit(1)
@@ -174,6 +175,15 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           follow_up_scheduled: null,
         })
         .eq("id", pipelineLead.id);
+
+      // コンバージョン統計更新
+      if (pipelineLead.template_used) {
+        const stepMatch = pipelineLead.template_used.match(/step(\d)/);
+        if (stepMatch) {
+          const step = parseInt(stepMatch[1], 10);
+          await incrementTemplateStat(step, "converted").catch(() => {});
+        }
+      }
     } else if (lead?.url) {
       // URLドメインで照合（フォールバック）
       await supabaseAdmin

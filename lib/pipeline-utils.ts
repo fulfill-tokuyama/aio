@@ -71,3 +71,46 @@ export async function getExistingUrls(): Promise<Set<string>> {
   }
   return urls;
 }
+
+// テンプレート統計: step → テンプレート名マッピング
+const STEP_TO_TEMPLATE: Record<number, string> = {
+  1: "Step1: 初回アウトリーチ",
+  2: "Step2: 競合比較データ",
+  3: "Step3: 成功事例",
+};
+
+/**
+ * テンプレート統計を更新
+ * @param step 1-3 のステップ番号（4は統計なし）
+ * @param field "sent" | "opened" | "converted"
+ */
+export async function incrementTemplateStat(
+  step: number,
+  field: "sent" | "opened" | "converted"
+): Promise<void> {
+  const templateName = STEP_TO_TEMPLATE[step];
+  if (!templateName) return; // step 4 等は統計対象外
+
+  // pipeline_template_stats テーブルの該当行を取得 or 作成して increment
+  const { data: existing } = await supabaseAdmin
+    .from("pipeline_template_stats")
+    .select("id, sent, opened, converted")
+    .eq("template_name", templateName)
+    .single();
+
+  if (existing) {
+    await supabaseAdmin
+      .from("pipeline_template_stats")
+      .update({ [field]: (existing[field] || 0) + 1 })
+      .eq("id", existing.id);
+  } else {
+    await supabaseAdmin
+      .from("pipeline_template_stats")
+      .insert({
+        template_name: templateName,
+        sent: field === "sent" ? 1 : 0,
+        opened: field === "opened" ? 1 : 0,
+        converted: field === "converted" ? 1 : 0,
+      });
+  }
+}

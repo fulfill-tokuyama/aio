@@ -3,6 +3,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { verifyTrackingSig } from "@/lib/unsubscribe-token";
+import { incrementTemplateStat } from "@/lib/pipeline-utils";
 
 // 1x1 transparent GIF pixel
 const PIXEL = Buffer.from(
@@ -10,31 +12,59 @@ const PIXEL = Buffer.from(
   "base64"
 );
 
-// GET /api/track?type=open&lid=<leadId>
-// GET /api/track?type=click&lid=<leadId>&url=<redirectUrl>
+function pixelResponse() {
+  return new NextResponse(PIXEL, {
+    headers: { "Content-Type": "image/gif", "Cache-Control": "no-store" },
+  });
+}
+
+// GET /api/track?type=open&lid=<leadId>&sig=<hmac>
+// GET /api/track?type=click&lid=<leadId>&sig=<hmac>&url=<redirectUrl>
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const type = searchParams.get("type");
   const leadId = searchParams.get("lid");
+  const sig = searchParams.get("sig");
 
   if (!leadId) {
-    // Invalid request, return pixel silently
-    return new NextResponse(PIXEL, {
-      headers: { "Content-Type": "image/gif", "Cache-Control": "no-store" },
-    });
+    return pixelResponse();
+  }
+
+  // 署名検証: 不正な場合はピクセル返却のみ（DB更新しない）
+  if (!sig || !verifyTrackingSig(leadId, sig)) {
+    if (type === "click") {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aio-rouge.vercel.app";
+      return NextResponse.redirect(appUrl);
+    }
+    return pixelResponse();
   }
 
   try {
     if (type === "open") {
-      // 開封トラッキング
-      await supabaseAdmin
+      // 初回開封チェック: 既にopenedならDB更新・統計スキップ
+      const { data: lead } = await supabaseAdmin
         .from("pipeline_leads")
-        .update({ opened_email: true })
-        .eq("id", leadId);
+        .select("opened_email, template_used")
+        .eq("id", leadId)
+        .single();
 
-      return new NextResponse(PIXEL, {
-        headers: { "Content-Type": "image/gif", "Cache-Control": "no-store" },
-      });
+      if (lead && !lead.opened_email) {
+        await supabaseAdmin
+          .from("pipeline_leads")
+          .update({ opened_email: true })
+          .eq("id", leadId);
+
+        // template_used からステップ番号を抽出して統計更新
+        if (lead.template_used) {
+          const stepMatch = lead.template_used.match(/step(\d)/);
+          if (stepMatch) {
+            const step = parseInt(stepMatch[1], 10);
+            await incrementTemplateStat(step, "opened");
+          }
+        }
+      }
+
+      return pixelResponse();
     }
 
     if (type === "click") {
@@ -74,7 +104,5 @@ export async function GET(req: NextRequest) {
   }
 
   // デフォルト: ピクセル返却
-  return new NextResponse(PIXEL, {
-    headers: { "Content-Type": "image/gif", "Cache-Control": "no-store" },
-  });
+  return pixelResponse();
 }

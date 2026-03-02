@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
         updates.phase = "form_found";
       }
 
+      let dbUpdateError: string | undefined;
       if (Object.keys(updates).length > 0) {
         const { error: updateError } = await supabaseAdmin
           .from("pipeline_leads")
@@ -59,8 +60,16 @@ export async function POST(req: NextRequest) {
           .eq("id", leadId);
         if (updateError) {
           console.error("scan-forms update error:", updateError.message);
+          dbUpdateError = updateError.message;
         }
       }
+
+      return NextResponse.json({
+        success: true,
+        url: targetUrl,
+        ...result,
+        ...(dbUpdateError ? { dbUpdateError } : {}),
+      });
     }
 
     return NextResponse.json({

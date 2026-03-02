@@ -6,7 +6,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { runDiagnosis, Weakness } from "@/lib/diagnosis";
 import { scanUrl } from "@/lib/scan-forms";
 import { sendOutreachEmail } from "@/lib/email";
-import { normalizeUrl, domainToCompany, calculateAiScore, getExistingUrls } from "@/lib/pipeline-utils";
+import { normalizeUrl, domainToCompany, calculateAiScore, getExistingUrls, incrementTemplateStat } from "@/lib/pipeline-utils";
 import { requireAuth } from "@/lib/api-auth";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
 
@@ -187,6 +187,16 @@ export async function POST(req: NextRequest) {
           aiScore: lead.aiScore,
           weaknesses: lead.weaknesses,
         });
+      } else if (error) {
+        results.push({
+          url: lead.url,
+          company: lead.company,
+          llmoScore: lead.llmoScore,
+          aiScore: lead.aiScore,
+          weaknesses: lead.weaknesses,
+          status: "error",
+          error: `DB insert failed: ${error.message}`,
+        });
       }
     }
 
@@ -295,6 +305,9 @@ export async function POST(req: NextRequest) {
 
           emailsSent++;
           sentLeadIds.add(lead.id);
+
+          // テンプレート統計更新
+          await incrementTemplateStat(1, "sent").catch(() => {});
         } catch (emailErr) {
           console.error(`Email send error for ${lead.company}:`, emailErr);
         }

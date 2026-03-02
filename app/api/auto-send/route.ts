@@ -6,6 +6,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { sendOutreachEmail } from "@/lib/email";
 import { requireAuth } from "@/lib/api-auth";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
+import { incrementTemplateStat } from "@/lib/pipeline-utils";
 
 export const maxDuration = 60;
 
@@ -78,6 +79,9 @@ async function sendStepEmail(lead: LeadRow, step: 1 | 2 | 3 | 4): Promise<{ succ
       },
       step,
     });
+
+    // テンプレート統計更新（step 1-3のみ）
+    await incrementTemplateStat(step, "sent").catch(() => {});
 
     // 送信成功 → DB更新
     const daysUntilNext = getDaysUntilNext(step);
@@ -209,16 +213,48 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // Cron冪等性: 即座に全対象の follow_up_scheduled を null でclaim
+    const typedLeads = leads as LeadRow[];
+    const leadScheduleMap = new Map<string, string | null>();
+    for (const lead of typedLeads) {
+      leadScheduleMap.set(lead.id, lead.follow_up_scheduled);
+    }
+    await supabaseAdmin
+      .from("pipeline_leads")
+      .update({ follow_up_scheduled: null })
+      .in("id", typedLeads.map(l => l.id));
+
     const results: { leadId: string; company: string; success: boolean; step: number; error?: string }[] = [];
 
-    for (const lead of leads as LeadRow[]) {
+    for (const lead of typedLeads) {
       if (!lead.contact_email) {
+        // メールなし: follow_up_scheduled を復元
+        const original = leadScheduleMap.get(lead.id);
+        if (original) {
+          await supabaseAdmin
+            .from("pipeline_leads")
+            .update({ follow_up_scheduled: original })
+            .eq("id", lead.id);
+        }
         results.push({ leadId: lead.id, company: lead.company, success: false, step: 0, error: "No contact email" });
         continue;
       }
 
       const targetStep = getStepFromCount(lead.follow_up_count || 0);
       const result = await sendStepEmail(lead, targetStep);
+
+      if (!result.success) {
+        // 送信失敗: follow_up_scheduled を元の値に復元
+        const original = leadScheduleMap.get(lead.id);
+        if (original) {
+          await supabaseAdmin
+            .from("pipeline_leads")
+            .update({ follow_up_scheduled: original })
+            .eq("id", lead.id);
+        }
+      }
+      // 成功時は sendStepEmail 内で次回スケジュールが設定される
+
       results.push({ leadId: lead.id, company: lead.company, success: result.success, step: targetStep, error: result.error });
     }
 
