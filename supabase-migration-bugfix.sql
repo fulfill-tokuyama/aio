@@ -37,6 +37,7 @@ DROP POLICY IF EXISTS "Customers can view own data" ON customers;
 CREATE POLICY "service_role_customers" ON customers
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "customers_read_own" ON customers;
 CREATE POLICY "customers_read_own" ON customers
   FOR SELECT TO authenticated
   USING (supabase_user_id = auth.uid());
@@ -101,15 +102,29 @@ CREATE POLICY "service_role_pipeline_templates" ON pipeline_template_stats
 -- ============================================================
 
 -- ahrefs_traffic_snapshots: customer_id + site_url + date
-ALTER TABLE ahrefs_traffic_snapshots
-  ADD CONSTRAINT uq_ahrefs_traffic_snapshot UNIQUE (customer_id, site_url, date);
+DO $$ BEGIN
+  ALTER TABLE ahrefs_traffic_snapshots
+    ADD CONSTRAINT uq_ahrefs_traffic_snapshot UNIQUE (customer_id, site_url, date);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ahrefs_brand_radar_snapshots: customer_id + target + platform + snapshot_date
-ALTER TABLE ahrefs_brand_radar_snapshots
-  ADD CONSTRAINT uq_ahrefs_brand_radar_snapshot UNIQUE (customer_id, target, platform, snapshot_date);
+DO $$ BEGIN
+  ALTER TABLE ahrefs_brand_radar_snapshots
+    ADD CONSTRAINT uq_ahrefs_brand_radar_snapshot UNIQUE (customer_id, target, platform, snapshot_date);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ============================================================
--- 3. インデックス追加（パフォーマンス改善）
+-- 3. pipeline_leads に連絡先カラム追加（未実行の場合のみ）
+-- ============================================================
+ALTER TABLE pipeline_leads
+  ADD COLUMN IF NOT EXISTS contact_email TEXT,
+  ADD COLUMN IF NOT EXISTS contact_phone TEXT,
+  ADD COLUMN IF NOT EXISTS contact_page_url TEXT;
+
+-- ============================================================
+-- 4. インデックス追加（パフォーマンス改善）
 -- ============================================================
 
 -- pipeline_leads.contact_email（Stripe webhook + auto-send で頻繁にクエリ）
