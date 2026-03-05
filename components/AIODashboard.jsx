@@ -536,7 +536,12 @@ export default function AIODashboard({ customerId = "", diagnosisData = null, di
 
                   {/* Weaknesses & Suggestions */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                    <div>
+                    <div style={{
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: 8,
+                      padding: 16,
+                      background: COLORS.surface,
+                    }}>
                       <h4 style={{ fontSize: 13, color: COLORS.red, margin: "0 0 10px", fontWeight: 700 }}>検出された弱点</h4>
                       {(diagnosisData.weaknesses || []).slice(0, 5).map((w, i) => (
                         <div key={i} style={{ fontSize: 14, color: COLORS.textMuted, lineHeight: 1.7, padding: "3px 0" }}>
@@ -547,7 +552,12 @@ export default function AIODashboard({ customerId = "", diagnosisData = null, di
                         <span style={{ fontSize: 13, color: COLORS.textDim }}>他{diagnosisData.weaknesses.length - 5}件</span>
                       )}
                     </div>
-                    <div>
+                    <div style={{
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: 8,
+                      padding: 16,
+                      background: COLORS.surface,
+                    }}>
                       <h4 style={{ fontSize: 13, color: COLORS.green, margin: "0 0 10px", fontWeight: 700 }}>改善提案</h4>
                       {(diagnosisData.suggestions || []).slice(0, 5).map((s, i) => (
                         <div key={i} style={{ fontSize: 14, color: COLORS.textMuted, lineHeight: 1.7, padding: "3px 0" }}>
