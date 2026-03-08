@@ -62,7 +62,7 @@ const ic={
 };
 
 const Phase=({p})=>{
-  const m={discovered:{c:C.cy,l:"発見"},form_found:{c:C.b,l:"フォーム済"},queued:{c:C.o,l:"送信待"},sent:{c:C.p,l:"送信済"},replied:{c:C.acc,l:"返信有"},customer:{c:C.g,l:"顧客"},followup:{c:C.pk,l:"追客中"}};
+  const m={discovered:{c:C.cy,l:"発見"},form_found:{c:C.b,l:"フォーム済"},queued:{c:C.o,l:"送信待"},sent:{c:C.p,l:"送信済"},replied:{c:C.acc,l:"無料登録"},customer:{c:C.g,l:"有料顧客"},followup:{c:C.pk,l:"追客中"}};
   const s=m[p]||m.discovered;
   return<span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:3,background:`${s.c}14`,color:s.c}}>{s.l}</span>;
 };
@@ -519,6 +519,7 @@ export default function FormPilotAutoV2(){
                     <ul style={{margin:0,paddingLeft:16,fontSize:10,color:C.sub,lineHeight:1.8}}>
                       <li><strong style={{color:C.tx}}>フォローアップメール</strong> — 平日 10:00 JST に Cron で自動送信</li>
                       {autoConfig.autoDiscoverEnabled&&<li><strong style={{color:C.tx}}>リード発見〜診断{autoConfig.autoInitialSendEnabled?"〜初回送信":""}</strong> — 平日 09:00 JST に Cron で自動実行</li>}
+                      <li><strong style={{color:C.tx}}>無料登録 → 有料課金</strong> — 診断レポート閲覧 → Stripe決済で自動</li>
                     </ul>
                   </div>
                   <div>
@@ -528,7 +529,8 @@ export default function FormPilotAutoV2(){
                     <ul style={{margin:0,paddingLeft:16,fontSize:10,color:C.sub,lineHeight:1.8}}>
                       {!autoConfig.autoDiscoverEnabled&&<><li><strong style={{color:C.tx}}>リード発見</strong> — 「自動発見」ボタンで実行</li><li><strong style={{color:C.tx}}>LLMO診断</strong> — 「一括LLMO調査」で実行</li><li><strong style={{color:C.tx}}>初回メール送信</strong> — 「AIスコア順送信」で実行</li></>}
                       {autoConfig.autoDiscoverEnabled&&!autoConfig.autoInitialSendEnabled&&<li><strong style={{color:C.tx}}>初回メール送信</strong> — 「AIスコア順送信」で手動実行（診断のみ自動）</li>}
-                      {autoConfig.autoDiscoverEnabled&&autoConfig.autoInitialSendEnabled&&<li>上記以外は手動不要</li>}
+                      <li><strong style={{color:C.tx}}>フォーム送信</strong> — リード一覧から手動実行（問い合わせフォームに自動入力・送信）</li>
+                      {autoConfig.autoDiscoverEnabled&&autoConfig.autoInitialSendEnabled&&<li>その他は手動不要</li>}
                     </ul>
                   </div>
                 </div>
@@ -540,7 +542,7 @@ export default function FormPilotAutoV2(){
                 const needFormScan=leads.filter(l=>l.phase==="discovered").length;
                 const noLeads=leads.length===0;
                 const actions=[];
-                if(readyToSend>0)actions.push({msg:`送信待ち ${readyToSend}件 がいます。今すぐ送信すると収益機会があります`,action:"send",cta:"AIスコア順送信",priority:1});
+                if(readyToSend>0)actions.push({msg:`送信待ち ${readyToSend}件 — メール送信またはフォーム送信で営業開始できます`,action:"send",cta:"AIスコア順送信",priority:1});
                 if(needFormScan>0)actions.push({msg:`フォーム未探索のリードが ${needFormScan}件 あります。自動発見パイプラインで一括処理できます`,action:"discover",cta:"自動発見",priority:2});
                 if(noLeads)actions.push({msg:"リードが0件です。自動発見またはリード追加で開始しましょう",action:"discover",cta:"自動発見",priority:3});
                 if(actions.length===0&&leads.length>0)actions.push({msg:"パイプラインは順調です。リード一覧で進捗を確認しましょう",action:null,cta:"リード一覧",priority:0});
@@ -565,21 +567,20 @@ export default function FormPilotAutoV2(){
               })()}
 
               <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginBottom:12,padding:"6px 10px",background:C.card,borderRadius:6,border:`1px solid ${C.bdr}`,flexWrap:"wrap"}}>
-                {["リード発見","フォーム探索","フォーム送信","メール送信","返信・商談","受注"].map((t,i,a)=>(
+                {["リード発見","フォーム探索","フォーム送信","メール送信","無料登録","有料顧客"].map((t,i,a)=>(
                   <span key={i} style={{display:"flex",alignItems:"center",gap:6}}>
                     <span style={{fontSize:10,color:C.sub,fontWeight:600}}>{t}</span>
                     {i<a.length-1&&<span style={{fontSize:10,color:C.dim}}>→</span>}
                   </span>
                 ))}
               </div>
-              <div style={{display:"grid",gridTemplateColumns:mob?"repeat(3,1fr)":"repeat(6,1fr)",gap:5,marginBottom:20}}>
+              <div style={{display:"grid",gridTemplateColumns:mob?"repeat(3,1fr)":"repeat(5,1fr)",gap:5,marginBottom:20}}>
                 {[
                   {label:"LLMO未対策企業発見",count:leads.filter(l=>l.phase==="discovered").length,color:C.cy,icon:ic.radar,desc:"AIがLLMO未対策の企業をスキャン・発見",next:"フォーム探索 →",auto:"手動"},
-                  {label:"フォーム発見",count:leads.filter(l=>l.phase==="form_found").length,color:C.b,icon:ic.link,desc:"問合せフォーム・メールアドレスを検出",next:"キュー投入 →",auto:"パイプライン内"},
-                  {label:"送信待機中",count:leads.filter(l=>l.phase==="queued").length,color:C.o,icon:ic.clock,desc:"AIスコア順に送信キューで待機",next:"送信 →",auto:"手動"},
-                  {label:"営業メール送信済",count:leads.filter(l=>["sent","step2","step3","step4"].includes(l.phase)).length,color:C.p,icon:ic.send,desc:"初回は手動、FUは平日10時自動",next:"返信待ち →",auto:"FU自動"},
-                  {label:"返信受信",count:leads.filter(l=>l.phase==="replied").length,color:C.acc,icon:ic.check,desc:"見込み客から返信あり・商談開始",next:"成約 →",auto:"手動"},
-                  {label:"有料顧客",count:leads.filter(l=>l.phase==="customer").length,color:C.g,icon:ic.dollar,desc:"Stripe決済確認済み・MRR計上",next:"",auto:"自動"},
+                  {label:"フォーム発見",count:leads.filter(l=>l.phase==="form_found").length,color:C.b,icon:ic.link,desc:"問合せフォーム・メールアドレスを検出",next:"送信 →",auto:"パイプライン内"},
+                  {label:"アウトリーチ送信済",count:leads.filter(l=>["sent","step2","step3","step4"].includes(l.phase)).length,color:C.p,icon:ic.send,desc:"フォーム送信・メール送信（FU自動）",next:"登録 →",auto:"FU自動"},
+                  {label:"無料登録",count:leads.filter(l=>l.phase==="replied").length,color:C.acc,icon:ic.check,desc:"無料診断レポートから会員登録",next:"課金 →",auto:"自動"},
+                  {label:"有料顧客",count:leads.filter(l=>l.phase==="customer").length,color:C.g,icon:ic.dollar,desc:"Stripe決済で有料プランに移行",next:"",auto:"自動"},
                 ].map((s,i)=>(
                   <div key={i} style={{background:C.card,borderRadius:7,padding:"14px 10px 10px",border:`1px solid ${C.bdr}`,textAlign:"center",position:"relative"}}>
                     <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:s.color,opacity:.5}}/>
@@ -590,7 +591,7 @@ export default function FormPilotAutoV2(){
                     <div style={{fontSize:22,fontWeight:800,color:s.color,fontFamily:"'Geist Mono',monospace"}}>{s.count}</div>
                     <div style={{fontSize:10,color:C.dim,marginTop:3,lineHeight:1.3}}>{s.label}</div>
                     <div style={{fontSize:9,color:C.dim,marginTop:4,lineHeight:1.3,minHeight:24}}>{s.desc}</div>
-                    {i<5&&<div style={{position:"absolute",right:-7,top:"50%",transform:"translateY(-50%)",color:C.dim,fontSize:10,zIndex:1,display:"flex",flexDirection:"column",alignItems:"center"}}><span style={{fontSize:8,color:C.dim,whiteSpace:"nowrap"}}>{s.next}</span></div>}
+                    {i<4&&<div style={{position:"absolute",right:-7,top:"50%",transform:"translateY(-50%)",color:C.dim,fontSize:10,zIndex:1,display:"flex",flexDirection:"column",alignItems:"center"}}><span style={{fontSize:8,color:C.dim,whiteSpace:"nowrap"}}>{s.next}</span></div>}
                   </div>
                 ))}
               </div>
@@ -600,8 +601,8 @@ export default function FormPilotAutoV2(){
               <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(5,1fr)",gap:8,marginBottom:20}}>
                 <KPI icon={ic.radar} ic={C.b} label="総リード数" val={kpi.t.toString()} sub={`累計${autoConfig.totalScans}回スキャン`} trend={18} good/>
                 <KPI icon={ic.send} ic={C.p} label="送信完了" val={kpi.sent.toString()} sub={`フォーム発見率 ${kpi.formRate}%`}/>
-                <KPI icon={ic.check} ic={C.g} label="返信率" val={`${kpi.replyRate}%`} sub={`${kpi.replied}件返信`} trend={5} good/>
-                <KPI icon={ic.dollar} ic={C.acc} label="成約率" val={`${kpi.convRate}%`} sub="送信→顧客"/>
+                <KPI icon={ic.check} ic={C.g} label="登録率" val={`${kpi.replyRate}%`} sub={`${kpi.replied}件登録`} trend={5} good/>
+                <KPI icon={ic.dollar} ic={C.acc} label="課金率" val={`${kpi.convRate}%`} sub="送信→有料顧客"/>
                 <KPI icon={ic.dollar} ic={C.g} label="MRR" val={`¥${kpi.mrr.toLocaleString()}`} sub={`${kpi.cust}社 × ¥10,000`} trend={22} good/>
               </div>
 
@@ -666,7 +667,7 @@ export default function FormPilotAutoV2(){
                 </div>
                 {["all","discovered","form_found","queued","sent","replied","customer"].map(f=>(
                   <button key={f} onClick={()=>{setFilterPhase(f);setPage(0);}} style={{padding:"4px 9px",borderRadius:3,border:`1px solid ${filterPhase===f?C.acc+"40":"transparent"}`,background:filterPhase===f?C.accGl:"transparent",color:filterPhase===f?C.acc:C.dim,fontSize:9,fontWeight:filterPhase===f?700:400,cursor:"pointer",fontFamily:"inherit"}}>
-                    {f==="all"?"全件":{discovered:"発見",form_found:"フォーム済",queued:"送信待",sent:"送信済",replied:"返信有",customer:"顧客"}[f]}
+                    {f==="all"?"全件":{discovered:"発見",form_found:"フォーム済",queued:"送信待",sent:"送信済",replied:"無料登録",customer:"有料顧客"}[f]}
                   </button>
                 ))}
                 <select value={filterIndustry} onChange={e=>{setFilterIndustry(e.target.value);setPage(0);}} style={{padding:"4px 7px",borderRadius:3,border:`1px solid ${C.bdr}`,background:C.card,color:C.tx,fontSize:9,outline:"none"}}>
@@ -1067,10 +1068,9 @@ export default function FormPilotAutoV2(){
                       {s:"1",l:"リード発見",d:"手動: 自動発見 or 一括LLMO調査",c:C.cy,auto:false},
                       {s:"2",l:"フォーム探索",d:"パイプライン実行時に自動",c:C.b,auto:true},
                       {s:"3",l:"フォーム自動送信",d:"手動: リード一覧から実行（Puppeteer）",c:C.p,auto:false},
-                      {s:"4",l:"初回メール送信",d:"手動: AIスコア順送信",c:C.pk,auto:false},
-                      {s:"5",l:"フォローアップ（Step2-4）",d:"Cron: 平日10:00 JST 自動",c:C.pk,auto:true},
-                      {s:"6",l:"返信・商談",d:"手動: 人間が対応",c:C.acc,auto:false},
-                      {s:"7",l:"決済・顧客化",d:"自動: Stripe Webhook",c:C.g,auto:true},
+                      {s:"4",l:"メール送信 + FU",d:"初回手動 / FU: 平日10:00 JST Cron自動",c:C.pk,auto:true},
+                      {s:"5",l:"無料登録",d:"自動: 診断レポートから会員登録",c:C.acc,auto:true},
+                      {s:"6",l:"有料課金",d:"自動: Stripe Webhook",c:C.g,auto:true},
                     ].map((s,i)=>(
                       <div key={i} style={{display:"flex",gap:8,alignItems:"center",padding:"5px 0",borderBottom:i<5?`1px solid ${C.bdr}`:"none"}}>
                         <div style={{width:18,height:18,borderRadius:3,background:`${s.c}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:800,color:s.c,flexShrink:0}}>{s.s}</div>
