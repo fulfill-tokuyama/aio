@@ -1023,9 +1023,9 @@ export default function AIOServiceLP() {
               <div style={{ fontSize: 12, fontWeight: 700, color: C.textSub, marginBottom: 12, textTransform: "uppercase", letterSpacing: 0.5 }}>法的情報</div>
               {[
                 { label: "無料診断", id: "diagnosis-form" },
-                { label: "プライバシーポリシー", href: "#" },
-                { label: "利用規約", href: "#" },
-                { label: "特定商取引法に基づく表記", href: "#" },
+                { label: "プライバシーポリシー", href: "/privacy" },
+                { label: "利用規約", href: "/terms" },
+                { label: "特定商取引法に基づく表記", href: "/tokusho" },
               ].map((l, i) => (
                 l.id ? (
                   <button key={i} onClick={() => scrollTo(l.id)} style={{

@@ -32,6 +32,17 @@ function getScoreColor(score: number): string {
   return "#EF4444";
 }
 
+function getSenderFooter(): string {
+  const company = process.env.NEXT_PUBLIC_SENDER_COMPANY || "フルフィル株式会社";
+  const name = process.env.NEXT_PUBLIC_SENDER_NAME || "AIO Insight";
+  const address = process.env.NEXT_PUBLIC_SENDER_ADDRESS || "";
+  const email = process.env.NEXT_PUBLIC_SENDER_EMAIL || "info@beginai.jp";
+  const parts = [`${company} ${name}`];
+  if (address) parts.push(address);
+  parts.push(`お問い合わせ: ${email}`);
+  return parts.join(" | ");
+}
+
 function wrapLayout(content: string, options?: { leadId?: string; unsubscribeLink?: string }): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aio-rouge.vercel.app";
   const trackingPixel = options?.leadId
@@ -40,6 +51,7 @@ function wrapLayout(content: string, options?: { leadId?: string; unsubscribeLin
   const unsubscribeHtml = options?.unsubscribeLink
     ? `<a href="${options.unsubscribeLink}" style="color:#3E4A5C;font-size:10px;text-decoration:underline;">配信停止</a>`
     : `<span style="color:#3E4A5C;font-size:10px;">配信停止をご希望の場合は本メールにご返信ください。</span>`;
+  const senderFooter = getSenderFooter();
 
   return `<!DOCTYPE html>
 <html lang="ja">
@@ -59,10 +71,10 @@ function wrapLayout(content: string, options?: { leadId?: string; unsubscribeLin
 
 ${content}
 
-    <!-- Footer -->
-    <div style="text-align:center;padding:24px 0;">
-      <p style="color:#5A6A80;font-size:11px;margin:0 0 4px;">
-        AIO Insight by BeginAI / 株式会社Fulfill
+    <!-- Footer（特定電子メール法：送信者情報・配信停止リンク必須） -->
+    <div style="text-align:center;padding:24px 0;border-top:1px solid #1E293B;">
+      <p style="color:#5A6A80;font-size:11px;margin:0 0 8px;line-height:1.5;">
+        ${senderFooter}
       </p>
       <p style="margin:0;">
         ${unsubscribeHtml}
@@ -337,7 +349,7 @@ function buildStep4Html(data: OutreachEmailData): string {
 export function buildOutreachSubject(company: string, step: OutreachStep): string {
   switch (step) {
     case 1:
-      return `【無料】${company}様のAI検索可視性 診断レポートをお届けします`;
+      return `御社のAI検索対応度を診断しました`;
     case 2:
       return `${company}様の競合はAI検索で先行しています — 無料データ共有`;
     case 3:

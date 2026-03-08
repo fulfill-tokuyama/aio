@@ -51,6 +51,7 @@ interface LeadRow {
   phase: string;
   follow_up_count: number;
   follow_up_scheduled: string | null;
+  diagnosis_report_id: string | null;
 }
 
 async function sendStepEmail(lead: LeadRow, step: 1 | 2 | 3 | 4): Promise<{ success: boolean; error?: string }> {
@@ -59,7 +60,9 @@ async function sendStepEmail(lead: LeadRow, step: 1 | 2 | 3 | 4): Promise<{ succ
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aio-rouge.vercel.app";
-  const diagnosisLink = `${appUrl}/diagnosis?url=${encodeURIComponent(lead.url)}`;
+  const diagnosisLink = lead.diagnosis_report_id
+    ? `${appUrl}/signup?diagnosis_id=${lead.diagnosis_report_id}`
+    : `${appUrl}/diagnosis?url=${encodeURIComponent(lead.url)}`;
   const paymentLink = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK || "#";
   const senderName = process.env.NEXT_PUBLIC_SENDER_NAME || "AIO Insight";
   const unsubscribeLink = buildUnsubscribeUrl(lead.id, appUrl);
@@ -132,7 +135,7 @@ export async function POST(req: NextRequest) {
 
     const { data: leads, error } = await supabaseAdmin
       .from("pipeline_leads")
-      .select("id, company, url, contact_email, llmo_score, weaknesses, phase, follow_up_count, follow_up_scheduled")
+      .select("id, company, url, contact_email, llmo_score, weaknesses, phase, follow_up_count, follow_up_scheduled, diagnosis_report_id")
       .in("id", targetIds);
 
     if (error) {
@@ -194,7 +197,7 @@ export async function GET(req: NextRequest) {
     // 対象リード抽出: フォローアップ予定日が過ぎたリード（顧客・休眠を除外）
     const { data: leads, error } = await supabaseAdmin
       .from("pipeline_leads")
-      .select("id, company, url, contact_email, llmo_score, weaknesses, phase, follow_up_count, follow_up_scheduled")
+      .select("id, company, url, contact_email, llmo_score, weaknesses, phase, follow_up_count, follow_up_scheduled, diagnosis_report_id")
       .in("phase", ["sent", "step2", "step3"])
       .lte("follow_up_scheduled", new Date().toISOString())
       .lt("follow_up_count", 4)

@@ -137,10 +137,10 @@ export function buildDiagnosisEmailHtml(data: DiagnosisEmailData): string {
       <p style="color:#5A6A80;font-size:11px;margin:12px 0 0;">初月からダッシュボードでAI可視性をモニタリング</p>
     </div>
 
-    <!-- Footer -->
-    <div style="text-align:center;padding:24px 0;">
-      <p style="color:#5A6A80;font-size:11px;margin:0 0 4px;">
-        AIO Insight by BeginAI / 株式会社Fulfill
+    <!-- Footer（特定電子メール法：送信者情報必須） -->
+    <div style="text-align:center;padding:24px 0;border-top:1px solid #1E293B;">
+      <p style="color:#5A6A80;font-size:11px;margin:0 0 4px;line-height:1.5;">
+        ${(process.env.NEXT_PUBLIC_SENDER_COMPANY || "フルフィル株式会社")} ${process.env.NEXT_PUBLIC_SENDER_NAME || "AIO Insight"} | お問い合わせ: ${process.env.NEXT_PUBLIC_SENDER_EMAIL || "info@beginai.jp"}${process.env.NEXT_PUBLIC_SENDER_ADDRESS ? ` | ${process.env.NEXT_PUBLIC_SENDER_ADDRESS}` : ""}
       </p>
       <p style="color:#3E4A5C;font-size:10px;margin:0;">
         このメールはAI可視性診断の結果通知です。

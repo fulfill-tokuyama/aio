@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { runDiagnosis, Weakness } from "@/lib/diagnosis";
+import { runDiagnosis, Weakness, type DiagnosisResult } from "@/lib/diagnosis";
 import { scanUrl } from "@/lib/scan-forms";
 import { sendOutreachEmail } from "@/lib/email";
 import { normalizeUrl, domainToCompany, calculateAiScore, getExistingUrls, incrementTemplateStat } from "@/lib/pipeline-utils";
@@ -98,6 +98,7 @@ export async function POST(req: NextRequest) {
       aiScore: number;
       weaknesses: string[];
       weaknessDetails: Weakness[];
+      diagnosis: DiagnosisResult;
     }[] = [];
 
     let diagFailed = 0;
@@ -127,6 +128,7 @@ export async function POST(req: NextRequest) {
               aiScore,
               weaknesses: diagnosis.weaknesses,
               weaknessDetails: diagnosis.weaknessDetails,
+              diagnosis,
             });
           } else {
             results.push({
@@ -155,11 +157,33 @@ export async function POST(req: NextRequest) {
     }
 
     // ============================================================
-    // Step 3: リード保存
+    // Step 3: リード保存（診断レポートも保存し、メールリンク用に紐付け）
     // ============================================================
-    const savedLeads: { id: string; url: string; company: string; llmoScore: number; aiScore: number; weaknesses: string[] }[] = [];
+    const savedLeads: { id: string; url: string; company: string; llmoScore: number; aiScore: number; weaknesses: string[]; diagnosisReportId: string | null }[] = [];
 
     for (const lead of diagnosedLeads) {
+      let diagnosisReportId: string | null = null;
+
+      // 事前診断済みレポートを diagnosis_reports に保存
+      const { data: reportData, error: reportError } = await supabaseAdmin
+        .from("diagnosis_reports")
+        .insert({
+          url: lead.url,
+          score: lead.diagnosis.score,
+          breakdown: lead.diagnosis.breakdown,
+          pagespeed_data: lead.diagnosis.pagespeedData,
+          html_analysis: lead.diagnosis.htmlAnalysis,
+          weaknesses: lead.diagnosis.weaknesses,
+          weakness_details: lead.diagnosis.weaknessDetails,
+          suggestions: lead.diagnosis.suggestions,
+        })
+        .select("id")
+        .single();
+
+      if (!reportError && reportData) {
+        diagnosisReportId = reportData.id;
+      }
+
       const insertData: Record<string, unknown> = {
         company: lead.company,
         url: lead.url,
@@ -171,6 +195,7 @@ export async function POST(req: NextRequest) {
       };
       if (industry) insertData.industry = industry;
       if (region) insertData.region = region;
+      if (diagnosisReportId) insertData.diagnosis_report_id = diagnosisReportId;
 
       const { data, error } = await supabaseAdmin
         .from("pipeline_leads")
@@ -186,6 +211,7 @@ export async function POST(req: NextRequest) {
           llmoScore: lead.llmoScore,
           aiScore: lead.aiScore,
           weaknesses: lead.weaknesses,
+          diagnosisReportId,
         });
       } else if (error) {
         results.push({
@@ -205,6 +231,7 @@ export async function POST(req: NextRequest) {
     // ============================================================
     const leadsWithContact: Array<{
       id: string; url: string; company: string; llmoScore: number; aiScore: number; weaknesses: string[];
+      diagnosisReportId?: string | null;
       contactEmail?: string | null;
       contactPhone?: string | null;
       formUrl?: string | null;
@@ -242,6 +269,7 @@ export async function POST(req: NextRequest) {
 
           leadsWithContact.push({
             ...lead,
+            diagnosisReportId: lead.diagnosisReportId,
             contactEmail: scanResult.contactEmail,
             contactPhone: scanResult.contactPhone,
             formUrl: scanResult.formUrl,
@@ -250,6 +278,7 @@ export async function POST(req: NextRequest) {
           // フォーム探索失敗はリード自体は残す
           leadsWithContact.push({
             ...batch[k],
+            diagnosisReportId: batch[k].diagnosisReportId,
             contactEmail: null,
             contactPhone: null,
             formUrl: null,
@@ -270,7 +299,9 @@ export async function POST(req: NextRequest) {
       for (const lead of sendTargets) {
         try {
           const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aio-rouge.vercel.app";
-          const diagnosisLink = `${appUrl}/diagnosis?url=${encodeURIComponent(lead.url)}`;
+          const diagnosisLink = lead.diagnosisReportId
+            ? `${appUrl}/signup?diagnosis_id=${lead.diagnosisReportId}`
+            : `${appUrl}/diagnosis?url=${encodeURIComponent(lead.url)}`;
           const paymentLink = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK || "#";
           const senderName = process.env.NEXT_PUBLIC_SENDER_NAME || "AIO Insight";
           const unsubscribeLink = buildUnsubscribeUrl(lead.id, appUrl);

@@ -37,28 +37,28 @@ function SignupContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password.trim()) return;
+    if (!email.trim()) return;
+    if (mode === "login" && !password.trim()) return;
 
     setLoading(true);
     setError("");
 
     const supabase = getSupabaseBrowserClient();
+    const redirectUrl = diagnosisId
+      ? `${window.location.origin}/auth/callback?diagnosis_id=${diagnosisId}`
+      : `${window.location.origin}/auth/callback`;
 
     if (mode === "signup") {
-      const redirectUrl = diagnosisId
-        ? `${window.location.origin}/auth/callback?diagnosis_id=${diagnosisId}`
-        : `${window.location.origin}/auth/callback`;
-
-      const { error: signUpError } = await supabase.auth.signUp({
+      // メールアドレスのみ：Magic Link で登録（設計書準拠）
+      const { error: otpError } = await supabase.auth.signInWithOtp({
         email: email.trim(),
-        password,
         options: { emailRedirectTo: redirectUrl },
       });
 
-      if (signUpError) {
-        setError(signUpError.message === "User already registered"
+      if (otpError) {
+        setError(otpError.message === "User already registered"
           ? "このメールアドレスは既に登録されています。ログインしてください。"
-          : signUpError.message);
+          : otpError.message);
         setLoading(false);
         return;
       }
@@ -75,7 +75,6 @@ function SignupContent() {
         return;
       }
 
-      // ログイン成功 → 詳細ページへリダイレクト
       if (diagnosisId) {
         router.push(`/diagnosis/${diagnosisId}/detail`);
       } else {
@@ -106,10 +105,10 @@ function SignupContent() {
         {success ? (
           <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 32, textAlign: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>✉️</div>
-            <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>確認メールを送信しました</h1>
+            <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>認証メールを送信しました</h1>
             <p style={{ color: C.sub, fontSize: 14, lineHeight: 1.7 }}>
-              <strong>{email}</strong> に確認メールを送信しました。<br />
-              メール内のリンクをクリックして、登録を完了してください。
+              <strong>{email}</strong> にログイン用のリンクを送信しました。<br />
+              メール内のリンクをクリックして、登録・ログインを完了してください。
             </p>
             <p style={{ color: C.dim, fontSize: 13, marginTop: 16 }}>
               メールが届かない場合は、迷惑メールフォルダをご確認ください。
@@ -127,7 +126,7 @@ function SignupContent() {
             </p>
 
             <form onSubmit={handleSubmit}>
-              <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: mode === "login" ? 16 : 24 }}>
                 <label style={{ display: "block", fontSize: 14, fontWeight: 600, marginBottom: 6, color: C.sub }}>
                   メールアドレス
                 </label>
@@ -146,25 +145,27 @@ function SignupContent() {
                 />
               </div>
 
-              <div style={{ marginBottom: 24 }}>
-                <label style={{ display: "block", fontSize: 14, fontWeight: 600, marginBottom: 6, color: C.sub }}>
-                  パスワード
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="6文字以上"
-                  required
-                  minLength={6}
-                  style={{
-                    width: "100%", padding: "12px 16px", borderRadius: 8,
-                    border: `1px solid ${C.border}`, background: "#F9FAFB",
-                    color: C.text, fontSize: 14, outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
+              {mode === "login" && (
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ display: "block", fontSize: 14, fontWeight: 600, marginBottom: 6, color: C.sub }}>
+                    パスワード
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="6文字以上"
+                    required
+                    minLength={6}
+                    style={{
+                      width: "100%", padding: "12px 16px", borderRadius: 8,
+                      border: `1px solid ${C.border}`, background: "#F9FAFB",
+                      color: C.text, fontSize: 14, outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+              )}
 
               {error && (
                 <p style={{ color: C.red, fontSize: 14, marginBottom: 16, textAlign: "center" }}>{error}</p>
@@ -172,7 +173,7 @@ function SignupContent() {
 
               <button
                 type="submit"
-                disabled={loading || !email.trim() || !password.trim()}
+                disabled={loading || !email.trim() || (mode === "login" && !password.trim())}
                 style={{
                   width: "100%", padding: "14px", borderRadius: 10, border: "none",
                   background: loading ? C.border : "linear-gradient(135deg, #2563EB, #1D4ED8)",

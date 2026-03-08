@@ -289,18 +289,41 @@ export default function DiagnosisDetailClient({ report }: { report: Report }) {
         </div>
 
         {/* 有料プラン CTA */}
-        <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.accent}20`, padding: 32, textAlign: "center", marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-          <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>AI検索対策を始めませんか？</h3>
-          <p style={{ color: C.sub, fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
-            月額¥10,000で、AI検索可視性の継続モニタリング・改善提案・構造化データ実装をサポートします。
+        <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.accent}20`, padding: 32, marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+          <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8, textAlign: "center" }}>AI検索対策を本格化しませんか？</h3>
+          <p style={{ color: C.sub, fontSize: 14, lineHeight: 1.7, marginBottom: 24, textAlign: "center" }}>
+            月額¥10,000で、構造化データ自動生成・meta改善・月次モニタリングをご利用いただけます。
           </p>
-          <a href={paymentLink} style={{
-            display: "inline-block", padding: "14px 48px", borderRadius: 10, textDecoration: "none",
-            background: "linear-gradient(135deg, #2563EB, #1D4ED8)", color: "#fff", fontSize: 15, fontWeight: 800,
-          }}>
-            有料プランに申し込む
-          </a>
-          <p style={{ color: C.dim, fontSize: 13, marginTop: 12 }}>初月セットアップ費用無料</p>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
+            <a href={paymentLink} style={{
+              display: "block", padding: "14px 24px", borderRadius: 10, textDecoration: "none",
+              background: "linear-gradient(135deg, #2563EB, #1D4ED8)", color: "#fff", fontSize: 14, fontWeight: 700,
+              textAlign: "center", border: "none",
+            }}>
+              この課題を解決するコードを取得する →
+            </a>
+            <a href={paymentLink} style={{
+              display: "block", padding: "14px 24px", borderRadius: 10, textDecoration: "none",
+              background: "transparent", color: C.accent, fontSize: 14, fontWeight: 700,
+              textAlign: "center", border: `2px solid ${C.accent}`,
+            }}>
+              毎月のスコア変動をモニタリングする →
+            </a>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+            <div style={{ padding: "10px 14px", borderRadius: 8, background: "#F0FDF4", border: "1px solid #86EFAC", fontSize: 13, color: "#166534", fontWeight: 600, textAlign: "center" }}>
+              💡 IT導入補助金で実質無料になる場合があります
+            </div>
+            <div style={{ padding: "10px 14px", borderRadius: 8, background: "#FEF3C7", border: "1px solid #FCD34D", fontSize: 13, color: "#92400E", fontWeight: 600, textAlign: "center" }}>
+              ⏰ 初月セットアップ費用無料・期間限定
+            </div>
+          </div>
+
+          <p style={{ color: C.dim, fontSize: 12, margin: 0, textAlign: "center" }}>
+            いつでも解約可能・クレジットカード登録で即時利用開始
+          </p>
         </div>
 
         {/* 新規診断リンク */}
