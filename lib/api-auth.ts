@@ -16,14 +16,21 @@ const UNAUTHORIZED = NextResponse.json({ error: "Unauthorized" }, { status: 401 
  * 認証成功時は null を返す。失敗時は 401 NextResponse を返す。
  */
 export async function requireAuth(req: NextRequest): Promise<NextResponse | null> {
+  const authHeader = req.headers.get("authorization");
+
   // 1. ADMIN_SECRET ヘッダーチェック
   const adminSecret = process.env.ADMIN_SECRET;
-  const authHeader = req.headers.get("authorization");
   if (adminSecret && authHeader === `Bearer ${adminSecret}`) {
     return null; // 認証OK
   }
 
-  // 2. Supabase セッション Cookie チェック
+  // 2. CRON_SECRET（Cron からの内部呼び出し用）
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+    return null; // 認証OK
+  }
+
+  // 3. Supabase セッション Cookie チェック
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

@@ -180,6 +180,9 @@ export default function FormPilotAutoV2(){
     autoDiagnosis:true,
     abTestEnabled:true,
     warmAlerts:true,
+    // リード発見〜初回送信の自動実行（Cron: 平日 09:00 JST）
+    autoDiscoverEnabled:false,
+    autoInitialSendEnabled:true,
   });
 
   const[log,setLog]=useState([]);
@@ -393,11 +396,15 @@ export default function FormPilotAutoV2(){
           ))}
         </nav>
         <div style={{padding:"9px 11px",borderTop:`1px solid ${C.bdr}`,fontSize:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:4}}>
+            <span style={{width:5,height:5,borderRadius:"50%",background:autoConfig.autoDiscoverEnabled?C.g:C.r,animation:autoConfig.autoDiscoverEnabled?"p5 2s infinite":"none"}}/>
+            <span style={{fontWeight:700,color:autoConfig.autoDiscoverEnabled?C.g:C.r,fontSize:9}}>{autoConfig.autoDiscoverEnabled?"発見〜初回":"発見停止"}</span>
+          </div>
           <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:5}}>
             <span style={{width:5,height:5,borderRadius:"50%",background:autoConfig.autoSendEnabled?C.g:C.r,animation:autoConfig.autoSendEnabled?"p5 2s infinite":"none"}}/>
-            <span style={{fontWeight:700,color:autoConfig.autoSendEnabled?C.g:C.r,fontSize:10}}>{autoConfig.autoSendEnabled?"フォローアップ自動":"停止中"}</span>
+            <span style={{fontWeight:700,color:autoConfig.autoSendEnabled?C.g:C.r,fontSize:9}}>{autoConfig.autoSendEnabled?"FU自動":"FU停止"}</span>
           </div>
-          <div style={{fontSize:9,color:C.dim,marginBottom:8}}>次回FU: 平日 10:00 JST</div>
+          <div style={{fontSize:8,color:C.dim}}>発見: 平日 09:00 / FU: 平日 10:00 JST</div>
           <div style={{padding:"7px 9px",borderRadius:4,background:C.accGl,marginTop:6}}>
             <div style={{fontSize:8,color:C.acc,fontWeight:700}}>MRR</div>
             <div style={{fontSize:16,fontWeight:800,color:C.g,fontFamily:"'Geist Mono',monospace"}}>¥{kpi.mrr.toLocaleString()}</div>
@@ -458,6 +465,7 @@ export default function FormPilotAutoV2(){
                     </div>
                     <ul style={{margin:0,paddingLeft:16,fontSize:10,color:C.sub,lineHeight:1.8}}>
                       <li><strong style={{color:C.tx}}>フォローアップメール</strong> — 平日 10:00 JST に Cron で自動送信</li>
+                      {autoConfig.autoDiscoverEnabled&&<li><strong style={{color:C.tx}}>リード発見〜診断{autoConfig.autoInitialSendEnabled?"〜初回送信":""}</strong> — 平日 09:00 JST に Cron で自動実行</li>}
                     </ul>
                   </div>
                   <div>
@@ -465,9 +473,9 @@ export default function FormPilotAutoV2(){
                       <span style={{width:6,height:6,borderRadius:"50%",background:C.o}}/> 手動実行が必要
                     </div>
                     <ul style={{margin:0,paddingLeft:16,fontSize:10,color:C.sub,lineHeight:1.8}}>
-                      <li><strong style={{color:C.tx}}>リード発見</strong> — 「自動発見」ボタンで実行</li>
-                      <li><strong style={{color:C.tx}}>LLMO診断</strong> — 「一括LLMO調査」で実行</li>
-                      <li><strong style={{color:C.tx}}>初回メール送信</strong> — 「AIスコア順送信」で実行</li>
+                      {!autoConfig.autoDiscoverEnabled&&<><li><strong style={{color:C.tx}}>リード発見</strong> — 「自動発見」ボタンで実行</li><li><strong style={{color:C.tx}}>LLMO診断</strong> — 「一括LLMO調査」で実行</li><li><strong style={{color:C.tx}}>初回メール送信</strong> — 「AIスコア順送信」で実行</li></>}
+                      {autoConfig.autoDiscoverEnabled&&!autoConfig.autoInitialSendEnabled&&<li><strong style={{color:C.tx}}>初回メール送信</strong> — 「AIスコア順送信」で手動実行（診断のみ自動）</li>}
+                      {autoConfig.autoDiscoverEnabled&&autoConfig.autoInitialSendEnabled&&<li>上記以外は手動不要</li>}
                     </ul>
                   </div>
                 </div>
@@ -547,12 +555,13 @@ export default function FormPilotAutoV2(){
               <div style={{marginBottom:16}}>
                 <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
                   <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>自動化ステータス</div>
-                  <div style={{fontSize:9,color:C.dim,marginBottom:12}}>Cron（定期実行）で動いているのはフォローアップメールのみです</div>
+                  <div style={{fontSize:9,color:C.dim,marginBottom:12}}>Cron（定期実行）の ON/OFF を設定できます</div>
                   {[
+                    {l:"リード発見〜初回送信",d:"平日 09:00 JST に Cron で自動実行（発見→診断→フォーム探索→初回送信）",on:autoConfig.autoDiscoverEnabled,key:"autoDiscoverEnabled",cron:true},
+                    {l:"初回メール自動送信",d:"リード発見 ON 時のみ有効。OFF の場合は診断・フォーム探索のみ自動",on:autoConfig.autoInitialSendEnabled,key:"autoInitialSendEnabled",cron:false},
                     {l:"フォローアップメール",d:"平日 10:00 JST に Cron で自動送信（Step2→3→4）",on:autoConfig.autoSendEnabled,key:"autoSendEnabled",cron:true},
-                    {l:"リード発見・診断・初回送信",d:"手動実行。「自動発見」または「一括LLMO調査」で実行",on:null,key:null,cron:false},
                   ].map((s,i)=>(
-                    <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:i<1?`1px solid ${C.bdr}`:"none"}}>
+                    <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:i<2?`1px solid ${C.bdr}`:"none"}}>
                       <div>
                         <div style={{fontSize:11,fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
                           {s.l}
