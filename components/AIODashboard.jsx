@@ -263,6 +263,15 @@ export default function AIODashboard({ customerId = "", diagnosisData = null, di
   const [mounted, setMounted] = useState(false);
   const mob = useIsMobile();
 
+  // 改善アクションタブ用 state
+  const [structuredDataResult, setStructuredDataResult] = useState(null);
+  const [metaTagResult, setMetaTagResult] = useState(null);
+  const [sdLoading, setSdLoading] = useState(false);
+  const [metaLoading, setMetaLoading] = useState(false);
+  const [sdError, setSdError] = useState("");
+  const [metaError, setMetaError] = useState("");
+  const [copiedField, setCopiedField] = useState("");
+
   // Ahrefs API states
   const [ahrefsConnected, setAhrefsConnected] = useState(null); // null=loading, true/false
   const [brandRadarConnected, setBrandRadarConnected] = useState(null); // null=loading, true/false
@@ -491,6 +500,7 @@ export default function AIODashboard({ customerId = "", diagnosisData = null, di
       }}>
         {[
           { id: "overview", label: "📊 概要", },
+          { id: "improvements", label: "🛠️ 改善アクション" },
           { id: "ai-traffic", label: "🤖 AIトラフィック" },
           { id: "brand-radar", label: "📡 Brand Radar" },
           { id: "competitors", label: "⚔️ 競合分析" },
@@ -671,6 +681,283 @@ export default function AIODashboard({ customerId = "", diagnosisData = null, di
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== IMPROVEMENTS TAB ===== */}
+        {activeTab === "improvements" && (
+          <div className="fade-up">
+
+            {/* 構造化データ生成 */}
+            <div style={{ background: COLORS.card, borderRadius: 12, border: `1px solid ${COLORS.border}`, padding: 24, marginBottom: 24 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: mob ? "flex-start" : "center", flexDirection: mob ? "column" : "row", gap: 12, marginBottom: 20 }}>
+                <div>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, margin: "0 0 4px" }}>構造化データ（JSON-LD）自動生成</h3>
+                  <p style={{ fontSize: 13, color: COLORS.textMuted, margin: 0 }}>
+                    AI検索エンジンに正しく認識されるための構造化データを自動生成します
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!diagnosisData) return;
+                    setSdLoading(true);
+                    setSdError("");
+                    try {
+                      const res = await fetch("/api/improvements/structured-data", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ diagnosis_id: customerId }),
+                      });
+                      if (!res.ok) {
+                        const err = await res.json();
+                        throw new Error(err.error || "生成に失敗しました");
+                      }
+                      setStructuredDataResult(await res.json());
+                    } catch (e) {
+                      setSdError(e.message || "エラーが発生しました");
+                    } finally {
+                      setSdLoading(false);
+                    }
+                  }}
+                  disabled={sdLoading || !diagnosisData}
+                  style={{
+                    padding: "10px 24px", borderRadius: 8, border: "none",
+                    background: sdLoading ? COLORS.border : `linear-gradient(135deg, ${COLORS.accent}, #1D4ED8)`,
+                    color: sdLoading ? COLORS.textDim : "#fff",
+                    fontSize: 13, fontWeight: 700, cursor: sdLoading ? "default" : "pointer",
+                    whiteSpace: "nowrap", flexShrink: 0,
+                  }}
+                >
+                  {sdLoading ? "生成中..." : structuredDataResult ? "再生成" : "JSON-LDを生成"}
+                </button>
+              </div>
+
+              {sdError && (
+                <div style={{ background: COLORS.redBg, border: `1px solid ${COLORS.red}20`, borderRadius: 8, padding: 12, marginBottom: 16 }}>
+                  <p style={{ fontSize: 13, color: COLORS.red, margin: 0 }}>{sdError}</p>
+                </div>
+              )}
+
+              {structuredDataResult && (
+                <>
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>生成されたJSON-LD</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(structuredDataResult.jsonLd);
+                          setCopiedField("jsonld");
+                          setTimeout(() => setCopiedField(""), 2000);
+                        }}
+                        style={{
+                          padding: "6px 14px", borderRadius: 6, border: `1px solid ${COLORS.border}`,
+                          background: copiedField === "jsonld" ? COLORS.greenBg : COLORS.bg,
+                          color: copiedField === "jsonld" ? COLORS.green : COLORS.textMuted,
+                          fontSize: 12, fontWeight: 600, cursor: "pointer",
+                        }}
+                      >
+                        {copiedField === "jsonld" ? "コピーしました" : "コードをコピー"}
+                      </button>
+                    </div>
+                    <pre style={{
+                      background: "#1E293B", color: "#E2E8F0", borderRadius: 8, padding: 16,
+                      fontSize: 12, lineHeight: 1.6, overflow: "auto", maxHeight: 400,
+                      whiteSpace: "pre-wrap", wordBreak: "break-all",
+                    }}>
+                      {structuredDataResult.jsonLd}
+                    </pre>
+                  </div>
+
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+                    {structuredDataResult.schemas.map((s) => (
+                      <span key={s} style={{
+                        fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 20,
+                        background: COLORS.accentGlow, color: COLORS.accent,
+                      }}>
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+
+                  <p style={{ fontSize: 13, color: COLORS.textMuted, margin: "0 0 16px", lineHeight: 1.7 }}>
+                    {structuredDataResult.explanation}
+                  </p>
+
+                  <div style={{ background: COLORS.surface, borderRadius: 8, padding: 16, border: `1px solid ${COLORS.border}` }}>
+                    <h4 style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, margin: "0 0 8px" }}>設置手順</h4>
+                    <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: COLORS.textMuted, lineHeight: 1.8 }}>
+                      <li>上のコードを「コードをコピー」ボタンでコピー</li>
+                      <li>サイトのHTMLファイルを開く</li>
+                      <li><code style={{ background: "#E5E7EB", padding: "2px 6px", borderRadius: 4, fontSize: 12 }}>&lt;head&gt;</code>タグの直前（閉じタグ<code style={{ background: "#E5E7EB", padding: "2px 6px", borderRadius: 4, fontSize: 12 }}>&lt;/head&gt;</code>の前）にペースト</li>
+                      <li><code style={{ background: "#E5E7EB", padding: "2px 6px", borderRadius: 4, fontSize: 12 }}>[要編集: ○○]</code>の部分を貴社の実際の情報に置き換え</li>
+                      <li>保存してデプロイ</li>
+                    </ol>
+                  </div>
+                </>
+              )}
+
+              {!structuredDataResult && !sdLoading && (
+                <div style={{ textAlign: "center", padding: "24px 0", color: COLORS.textDim, fontSize: 13 }}>
+                  「JSON-LDを生成」ボタンを押すと、貴社サイトに最適な構造化データを自動生成します。
+                </div>
+              )}
+            </div>
+
+            {/* metaタグ改善案 */}
+            <div style={{ background: COLORS.card, borderRadius: 12, border: `1px solid ${COLORS.border}`, padding: 24, marginBottom: 24 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: mob ? "flex-start" : "center", flexDirection: mob ? "column" : "row", gap: 12, marginBottom: 20 }}>
+                <div>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, margin: "0 0 4px" }}>metaタグ改善案</h3>
+                  <p style={{ fontSize: 13, color: COLORS.textMuted, margin: 0 }}>
+                    AI検索で引用されやすいtitle・descriptionの改善案を3パターン提案します
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!diagnosisData) return;
+                    setMetaLoading(true);
+                    setMetaError("");
+                    try {
+                      const res = await fetch("/api/improvements/meta-tags", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ diagnosis_id: customerId }),
+                      });
+                      if (!res.ok) {
+                        const err = await res.json();
+                        throw new Error(err.error || "生成に失敗しました");
+                      }
+                      setMetaTagResult(await res.json());
+                    } catch (e) {
+                      setMetaError(e.message || "エラーが発生しました");
+                    } finally {
+                      setMetaLoading(false);
+                    }
+                  }}
+                  disabled={metaLoading || !diagnosisData}
+                  style={{
+                    padding: "10px 24px", borderRadius: 8, border: "none",
+                    background: metaLoading ? COLORS.border : `linear-gradient(135deg, ${COLORS.accent}, #1D4ED8)`,
+                    color: metaLoading ? COLORS.textDim : "#fff",
+                    fontSize: 13, fontWeight: 700, cursor: metaLoading ? "default" : "pointer",
+                    whiteSpace: "nowrap", flexShrink: 0,
+                  }}
+                >
+                  {metaLoading ? "生成中..." : metaTagResult ? "再生成" : "改善案を生成"}
+                </button>
+              </div>
+
+              {metaError && (
+                <div style={{ background: COLORS.redBg, border: `1px solid ${COLORS.red}20`, borderRadius: 8, padding: 12, marginBottom: 16 }}>
+                  <p style={{ fontSize: 13, color: COLORS.red, margin: 0 }}>{metaError}</p>
+                </div>
+              )}
+
+              {metaTagResult && (
+                <>
+                  <div style={{ background: COLORS.surface, borderRadius: 8, padding: 14, marginBottom: 16, border: `1px solid ${COLORS.border}` }}>
+                    <div style={{ fontSize: 12, color: COLORS.textDim, marginBottom: 4 }}>現在のタイトル</div>
+                    <div style={{ fontSize: 14, color: COLORS.text, fontWeight: 600 }}>
+                      {metaTagResult.currentTitle || "（未設定）"}
+                    </div>
+                    <div style={{ fontSize: 12, color: COLORS.textDim, marginTop: 8, marginBottom: 4 }}>現在のmeta description</div>
+                    <div style={{ fontSize: 14, color: COLORS.text }}>
+                      {metaTagResult.currentDescription || "（未設定）"}
+                    </div>
+                  </div>
+
+                  {metaTagResult.improvements.map((imp, i) => (
+                    <div key={i} style={{
+                      background: COLORS.bg, borderRadius: 10, border: `1px solid ${COLORS.border}`,
+                      padding: 16, marginBottom: 12,
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                        <span style={{
+                          fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
+                          background: COLORS.accentGlow, color: COLORS.accent,
+                        }}>
+                          パターン {i + 1}
+                        </span>
+                        <span style={{ fontSize: 12, color: COLORS.textMuted }}>{imp.rationale}</span>
+                      </div>
+                      <div style={{ marginBottom: 8 }}>
+                        <div style={{ fontSize: 12, color: COLORS.textDim, marginBottom: 2 }}>title</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <code style={{
+                            flex: 1, fontSize: 13, background: COLORS.surface, padding: "8px 12px",
+                            borderRadius: 6, border: `1px solid ${COLORS.border}`, color: COLORS.text,
+                            overflow: "hidden", textOverflow: "ellipsis",
+                          }}>
+                            {imp.title}
+                          </code>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(imp.title);
+                              setCopiedField(`title-${i}`);
+                              setTimeout(() => setCopiedField(""), 2000);
+                            }}
+                            style={{
+                              padding: "6px 10px", borderRadius: 6, border: `1px solid ${COLORS.border}`,
+                              background: copiedField === `title-${i}` ? COLORS.greenBg : COLORS.bg,
+                              color: copiedField === `title-${i}` ? COLORS.green : COLORS.textMuted,
+                              fontSize: 11, cursor: "pointer", whiteSpace: "nowrap",
+                            }}
+                          >
+                            {copiedField === `title-${i}` ? "✓" : "コピー"}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 12, color: COLORS.textDim, marginBottom: 2 }}>description</div>
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                          <code style={{
+                            flex: 1, fontSize: 13, background: COLORS.surface, padding: "8px 12px",
+                            borderRadius: 6, border: `1px solid ${COLORS.border}`, color: COLORS.text,
+                            lineHeight: 1.6, whiteSpace: "pre-wrap",
+                          }}>
+                            {imp.description}
+                          </code>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(imp.description);
+                              setCopiedField(`desc-${i}`);
+                              setTimeout(() => setCopiedField(""), 2000);
+                            }}
+                            style={{
+                              padding: "6px 10px", borderRadius: 6, border: `1px solid ${COLORS.border}`,
+                              background: copiedField === `desc-${i}` ? COLORS.greenBg : COLORS.bg,
+                              color: copiedField === `desc-${i}` ? COLORS.green : COLORS.textMuted,
+                              fontSize: 11, cursor: "pointer", whiteSpace: "nowrap", marginTop: 6,
+                            }}
+                          >
+                            {copiedField === `desc-${i}` ? "✓" : "コピー"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {!metaTagResult && !metaLoading && (
+                <div style={{ textAlign: "center", padding: "24px 0", color: COLORS.textDim, fontSize: 13 }}>
+                  「改善案を生成」ボタンを押すと、AI検索に最適化されたmeta情報の改善案を提案します。
+                </div>
+              )}
+            </div>
+
+            {!diagnosisData && (
+              <div style={{
+                background: COLORS.card, borderRadius: 12, padding: "48px 24px",
+                border: `1px solid ${COLORS.border}`, textAlign: "center",
+              }}>
+                <div style={{ fontSize: 36, marginBottom: 16 }}>📋</div>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, margin: "0 0 8px" }}>診断データがありません</h3>
+                <p style={{ fontSize: 14, color: COLORS.textMuted, margin: 0 }}>
+                  まずサイト診断を実行してから、改善アクションをご利用ください。
+                </p>
               </div>
             )}
           </div>
