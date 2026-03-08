@@ -569,8 +569,8 @@ export default function FormPilotAutoV2(){
               <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginBottom:12,padding:"6px 10px",background:C.card,borderRadius:6,border:`1px solid ${C.bdr}`,flexWrap:"wrap"}}>
                 {["企業発見","フォーム検出","無料診断を案内","無料登録","有料課金（Pro）"].map((t,i,a)=>(
                   <span key={i} style={{display:"flex",alignItems:"center",gap:6}}>
-                    <span style={{fontSize:12,color:C.sub,fontWeight:600}}>{t}</span>
-                    {i<a.length-1&&<span style={{fontSize:12,color:C.dim}}>→</span>}
+                    <span style={{fontSize:12,color:"#fff",fontWeight:600}}>{t}</span>
+                    {i<a.length-1&&<span style={{fontSize:12,color:"#ccd0da"}}>→</span>}
                   </span>
                 ))}
               </div>
@@ -589,9 +589,9 @@ export default function FormPilotAutoV2(){
                       <span style={{fontSize:12,fontWeight:700,padding:"2px 5px",borderRadius:2,background:s.auto==="自動"||s.auto==="FU自動"?C.gB:s.auto==="パイプライン内"?C.b+"20":C.o+"20",color:s.auto==="自動"||s.auto==="FU自動"?C.g:s.auto==="パイプライン内"?C.b:C.o}}>{s.auto}</span>
                     </div>
                     <div style={{fontSize:22,fontWeight:800,color:s.color,fontFamily:"'Geist Mono',monospace"}}>{s.count}</div>
-                    <div style={{fontSize:12,color:C.dim,marginTop:3,lineHeight:1.3}}>{s.label}</div>
-                    <div style={{fontSize:12,color:C.dim,marginTop:4,lineHeight:1.3,minHeight:24}}>{s.desc}</div>
-                    {i<4&&<div style={{position:"absolute",right:-7,top:"50%",transform:"translateY(-50%)",color:C.dim,fontSize:12,zIndex:1,display:"flex",flexDirection:"column",alignItems:"center"}}><span style={{fontSize:12,color:C.dim,whiteSpace:"nowrap"}}>{s.next}</span></div>}
+                    <div style={{fontSize:12,color:"#fff",fontWeight:700,marginTop:3,lineHeight:1.3}}>{s.label}</div>
+                    <div style={{fontSize:12,color:"#ccd0da",marginTop:4,lineHeight:1.3,minHeight:24}}>{s.desc}</div>
+                    {i<4&&<div style={{position:"absolute",right:-7,top:"50%",transform:"translateY(-50%)",color:"#ccd0da",fontSize:12,zIndex:1,display:"flex",flexDirection:"column",alignItems:"center"}}><span style={{fontSize:12,color:"#ccd0da",whiteSpace:"nowrap"}}>{s.next}</span></div>}
                   </div>
                 ))}
               </div>
