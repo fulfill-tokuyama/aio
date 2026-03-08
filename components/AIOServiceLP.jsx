@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
 
@@ -28,6 +30,11 @@ const C = {
 };
 
 const STRIPE_PAYMENT_LINK = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK || "#";
+
+const goToDiagnosis = (url) => {
+  const path = url ? `/diagnosis?url=${encodeURIComponent(url)}` : "/diagnosis";
+  if (typeof window !== "undefined") window.location.href = path;
+};
 
 // ── Data ──
 
@@ -194,48 +201,39 @@ const EVIDENCE = [
 
 const PLANS = [
   {
-    name: "ライト",
+    name: "無料",
+    price: "¥0",
+    target: "まずは試したい方",
+    badge: null,
+    isFree: true,
+    features: [
+      { label: "AI検索可視性診断", value: "○" },
+      { label: "基本レポート（スコア・カテゴリ別評価）", value: "○" },
+      { label: "課題の件数・重要度表示", value: "○" },
+      { label: "課題の詳細・改善提案", value: "メアド登録で閲覧" },
+      { label: "AI検索エンジン別 表示予測", value: "メアド登録で閲覧" },
+      { label: "同業種比較データ", value: "メアド登録で閲覧" },
+      { label: "構造化データ自動生成", value: "—" },
+      { label: "metaタグ改善案生成", value: "—" },
+      { label: "月次スコアモニタリング", value: "—" },
+    ],
+  },
+  {
+    name: "プロ",
     price: "¥10,000",
-    target: "個人・小規模事業者",
-    badge: null,
+    target: "本格的にAI検索対策したい方",
+    badge: "RECOMMENDED",
+    isFree: false,
     features: [
-      { label: "AIスキャン頻度", value: "週1回" },
-      { label: "AIプラットフォーム", value: "3（GPT / Perplexity / Gemini）" },
-      { label: "競合比較", value: "1社" },
-      { label: "月次レポート", value: "○" },
-      { label: "改善提案", value: "基本" },
-      { label: "管理サイト数", value: "1" },
+      { label: "AI検索可視性診断", value: "○（月次自動再診断）" },
+      { label: "基本レポート（スコア・カテゴリ別評価）", value: "○" },
+      { label: "課題の詳細・改善提案", value: "○（全文）" },
+      { label: "AI検索エンジン別 表示予測", value: "○" },
+      { label: "同業種比較データ", value: "○" },
+      { label: "構造化データ（JSON-LD）自動生成", value: "○" },
+      { label: "metaタグ改善案生成（AI）", value: "○" },
+      { label: "月次スコアモニタリング+メール", value: "○" },
       { label: "サポート", value: "メール" },
-    ],
-  },
-  {
-    name: "スタンダード",
-    price: "¥30,000",
-    target: "中小企業",
-    badge: "POPULAR",
-    features: [
-      { label: "AIスキャン頻度", value: "毎日" },
-      { label: "AIプラットフォーム", value: "6（+ Copilot / Claude / Grok）" },
-      { label: "競合比較", value: "3社" },
-      { label: "月次レポート", value: "○" },
-      { label: "改善提案", value: "詳細 + 優先度" },
-      { label: "管理サイト数", value: "3" },
-      { label: "サポート", value: "メール + チャット" },
-    ],
-  },
-  {
-    name: "エージェンシー",
-    price: "¥80,000",
-    target: "代理店・大企業",
-    badge: null,
-    features: [
-      { label: "AIスキャン頻度", value: "リアルタイム" },
-      { label: "AIプラットフォーム", value: "6 + カスタム" },
-      { label: "競合比較", value: "10社" },
-      { label: "月次レポート", value: "○（カスタム対応）" },
-      { label: "改善提案", value: "専任コンサル付き" },
-      { label: "管理サイト数", value: "無制限" },
-      { label: "サポート", value: "専任担当" },
     ],
   },
 ];
@@ -316,11 +314,8 @@ const StatCard = ({ value, label, sub, color, mob }) => (
 
 export default function AIOServiceLP() {
   const [mounted, setMounted] = useState(false);
-  const [formData, setFormData] = useState({ company: "", name: "", email: "", url: "", message: "" });
-  const [formErrors, setFormErrors] = useState({});
-  const [formSubmitted, setFormSubmitted] = useState(false);
-  const [formSending, setFormSending] = useState(false);
-  const [formError, setFormError] = useState("");
+  const [diagnosisUrl, setDiagnosisUrl] = useState("");
+  const [diagnosisUrlError, setDiagnosisUrlError] = useState("");
   const [expandedEvidence, setExpandedEvidence] = useState({});
   const [activeEvidenceTab, setActiveEvidenceTab] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -328,42 +323,6 @@ export default function AIOServiceLP() {
   const mob = useIsMobile();
 
   useEffect(() => { setMounted(true); }, []);
-
-  const validateForm = () => {
-    const errors = {};
-    if (!formData.company.trim()) errors.company = "会社名を入力してください";
-    if (!formData.name.trim()) errors.name = "お名前を入力してください";
-    if (!formData.email.trim()) errors.email = "メールアドレスを入力してください";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.email = "正しいメールアドレスを入力してください";
-    if (!formData.url.trim()) errors.url = "WebサイトURLを入力してください";
-    return errors;
-  };
-
-  const handleSubmit = async () => {
-    const errors = validateForm();
-    setFormErrors(errors);
-    if (Object.keys(errors).length > 0) return;
-    setFormSending(true);
-    setFormError("");
-    try {
-      const res = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      const result = await res.json();
-      if (!res.ok) {
-        setFormError(result.error || "送信に失敗しました");
-        setFormSending(false);
-        return;
-      }
-      setFormSending(false);
-      setFormSubmitted(true);
-    } catch {
-      setFormError("ネットワークエラーが発生しました。もう一度お試しください。");
-      setFormSending(false);
-    }
-  };
 
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 
@@ -431,7 +390,7 @@ export default function AIOServiceLP() {
               onMouseLeave={e => e.target.style.color = C.textSub}
               >{n.label}</button>
             ))}
-            <button className="btn-primary" onClick={() => scrollTo("contact")}
+            <button className="btn-primary" onClick={() => goToDiagnosis()}
               style={{ padding: "8px 20px", fontSize: 13 }}>
               無料診断
             </button>
@@ -451,7 +410,7 @@ export default function AIOServiceLP() {
               textAlign: "left", borderBottom: `1px solid ${C.border}`,
             }}>{n.label}</button>
           ))}
-          <button className="btn-primary" onClick={() => { scrollTo("contact"); setMenuOpen(false); }}
+          <button className="btn-primary" onClick={() => { goToDiagnosis(); setMenuOpen(false); }}
             style={{ padding: "10px 20px", fontSize: 14, marginTop: 8, marginBottom: 4 }}>
             無料診断
           </button>
@@ -505,8 +464,8 @@ export default function AIOServiceLP() {
             flexDirection: mob ? "column" : "row", alignItems: "center",
             animationDelay: "300ms",
           }}>
-            <button className="btn-primary" onClick={() => scrollTo("contact")} style={mob ? { width: "100%" } : undefined}>
-              無料AI可視性診断を受ける →
+            <button className="btn-primary" onClick={() => goToDiagnosis()} style={mob ? { width: "100%" } : undefined}>
+              無料でAI検索可視性を診断する →
             </button>
             <button className="btn-outline" onClick={() => scrollTo("evidence")} style={mob ? { width: "100%" } : undefined}>
               エビデンスを確認
@@ -841,13 +800,13 @@ export default function AIOServiceLP() {
         <SectionTitle
           tag="Pricing"
           title="料金プラン"
-          sub="規模や目的に合わせて3つのプランからお選びいただけます"
+          sub="無料診断でまずは試し、本格対策はプロプランで"
         />
 
         <div style={{
           display: "grid",
-          gridTemplateColumns: mob ? "1fr" : "repeat(3, 1fr)",
-          gap: 18, maxWidth: 960, margin: "0 auto",
+          gridTemplateColumns: mob ? "1fr" : "1fr 1fr",
+          gap: 18, maxWidth: 800, margin: "0 auto",
         }}>
           {PLANS.map((plan, i) => (
             <div key={i} style={{
@@ -896,12 +855,12 @@ export default function AIOServiceLP() {
                   ))}
                 </div>
 
-                <button className="btn-primary" onClick={() => plan.badge ? window.open(STRIPE_PAYMENT_LINK, "_blank") : scrollTo("contact")}
+                <button className="btn-primary" onClick={() => plan.isFree ? scrollTo("diagnosis-form") : window.open(STRIPE_PAYMENT_LINK, "_blank")}
                   style={{
                     width: "100%", padding: 14, fontSize: 14, borderRadius: 10,
                     background: plan.badge ? `linear-gradient(135deg, ${C.accent}, #7C3AED)` : C.accent,
                   }}>
-                  {plan.name === "エージェンシー" ? "お問い合わせ" : "このプランで始める"}
+                  {plan.isFree ? "無料で診断する" : "有料プランに申し込む"}
                 </button>
               </div>
             </div>
@@ -951,9 +910,9 @@ export default function AIOServiceLP() {
             display: "flex", gap: 16, justifyContent: "center",
             flexDirection: mob ? "column" : "row", alignItems: "center",
           }}>
-            <button className="btn-primary" onClick={() => scrollTo("contact")}
+            <button className="btn-primary" onClick={() => goToDiagnosis()}
               style={{ ...(mob ? { width: "100%" } : {}), padding: "16px 36px", fontSize: 16 }}>
-              無料AI可視性診断を受ける →
+              無料でAI検索可視性を診断する →
             </button>
             <button className="btn-outline" onClick={() => scrollTo("pricing")} style={mob ? { width: "100%" } : undefined}>
               料金プランを見る
@@ -962,109 +921,55 @@ export default function AIOServiceLP() {
         </div>
       </Section>
 
-      {/* ===== 11. CONTACT ===== */}
-      <Section mob={mob} id="contact" style={{ background: C.bgAlt }}>
+      {/* ===== 11. DIAGNOSIS FORM (URL入力) ===== */}
+      <Section mob={mob} id="diagnosis-form" style={{ background: C.bgAlt }}>
         <SectionTitle
           tag="Contact"
           title="無料AI可視性診断"
-          sub="貴社サイトのURLを入力するだけ。AI検索での可視性をスコアリングし、弱点と改善提案を数分以内にメールでお届けします。"
+          sub="貴社サイトのURLを入力するだけ。診断ページへ遷移し、AI検索での可視性をスコアリングします。"
         />
 
         <div style={{ maxWidth: 600, margin: "0 auto" }}>
-          {formSubmitted ? (
-            <div className="fade-up" style={{
-              background: C.card, borderRadius: 16, padding: 48,
-              border: `1px solid ${C.green}30`, textAlign: "center",
-            }}>
-              <div style={{ fontSize: 48, marginBottom: 16, animation: "float 3s ease-in-out infinite" }}>🎉</div>
-              <h3 style={{ fontSize: 22, fontWeight: 700, margin: "0 0 12px" }}>診断リクエストを受け付けました</h3>
-              <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.7, margin: "0 0 8px" }}>
-                数分以内に診断結果をメールでお届けします。
-              </p>
-              <p style={{ fontSize: 13, color: C.textDim }}>※ 迷惑メールフォルダもご確認ください</p>
-            </div>
-          ) : (
-            <div style={{
-              background: C.card, borderRadius: 16, padding: mob ? "28px 20px" : "36px 32px",
-              border: `1px solid ${C.border}`,
-            }}>
-              <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
-                <div>
-                  <label style={{ fontSize: 12, color: C.textSub, fontWeight: 600, display: "block", marginBottom: 6 }}>
-                    会社名 <span style={{ color: C.red }}>*</span>
-                  </label>
-                  <input className={`input-field ${formErrors.company ? "input-error" : ""}`}
-                    placeholder="株式会社サンプル" value={formData.company}
-                    onChange={e => setFormData(p => ({ ...p, company: e.target.value }))} />
-                  {formErrors.company && <span style={{ fontSize: 11, color: C.red, marginTop: 4, display: "block" }}>{formErrors.company}</span>}
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, color: C.textSub, fontWeight: 600, display: "block", marginBottom: 6 }}>
-                    お名前 <span style={{ color: C.red }}>*</span>
-                  </label>
-                  <input className={`input-field ${formErrors.name ? "input-error" : ""}`}
-                    placeholder="山田 太郎" value={formData.name}
-                    onChange={e => setFormData(p => ({ ...p, name: e.target.value }))} />
-                  {formErrors.name && <span style={{ fontSize: 11, color: C.red, marginTop: 4, display: "block" }}>{formErrors.name}</span>}
-                </div>
-              </div>
-
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ fontSize: 12, color: C.textSub, fontWeight: 600, display: "block", marginBottom: 6 }}>
-                  メールアドレス <span style={{ color: C.red }}>*</span>
-                </label>
-                <input className={`input-field ${formErrors.email ? "input-error" : ""}`}
-                  type="email" placeholder="your@company.co.jp" value={formData.email}
-                  onChange={e => setFormData(p => ({ ...p, email: e.target.value }))} />
-                {formErrors.email && <span style={{ fontSize: 11, color: C.red, marginTop: 4, display: "block" }}>{formErrors.email}</span>}
-              </div>
-
-              <div style={{ marginBottom: 16 }}>
+          <div style={{
+            background: C.card, borderRadius: 16, padding: mob ? "28px 20px" : "36px 32px",
+            border: `1px solid ${C.border}`,
+          }}>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const url = diagnosisUrl.trim();
+              if (!url) {
+                setDiagnosisUrlError("URLを入力してください");
+                return;
+              }
+              goToDiagnosis(url);
+            }} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
                 <label style={{ fontSize: 12, color: C.textSub, fontWeight: 600, display: "block", marginBottom: 6 }}>
                   WebサイトURL <span style={{ color: C.red }}>*</span>
                 </label>
-                <input className={`input-field ${formErrors.url ? "input-error" : ""}`}
-                  placeholder="https://www.example.co.jp" value={formData.url}
-                  onChange={e => setFormData(p => ({ ...p, url: e.target.value }))} />
-                {formErrors.url && <span style={{ fontSize: 11, color: C.red, marginTop: 4, display: "block" }}>{formErrors.url}</span>}
-                <span style={{ fontSize: 11, color: C.textDim, marginTop: 4, display: "block" }}>※ 簡易AI可視性診断に使用します</span>
+                <input className={`input-field ${diagnosisUrlError ? "input-error" : ""}`}
+                  placeholder="https://www.example.co.jp"
+                  value={diagnosisUrl}
+                  onChange={e => { setDiagnosisUrl(e.target.value); setDiagnosisUrlError(""); }} />
+                {diagnosisUrlError && <span style={{ fontSize: 11, color: C.red, marginTop: 4, display: "block" }}>{diagnosisUrlError}</span>}
+                <span style={{ fontSize: 11, color: C.textDim, marginTop: 4, display: "block" }}>※ 診断ページでAI可視性を分析します</span>
               </div>
 
-              <div style={{ marginBottom: 24 }}>
-                <label style={{ fontSize: 12, color: C.textSub, fontWeight: 600, display: "block", marginBottom: 6 }}>
-                  ご相談内容（任意）
-                </label>
-                <textarea className="input-field" rows={4}
-                  placeholder="AI検索での自社の見え方について知りたい、競合との差を把握したい、等"
-                  value={formData.message}
-                  onChange={e => setFormData(p => ({ ...p, message: e.target.value }))}
-                  style={{ resize: "vertical", minHeight: 80 }}
-                />
-              </div>
-
-              <button className="btn-primary" onClick={handleSubmit} disabled={formSending}
+              <button type="submit" className="btn-primary"
+                disabled={!diagnosisUrl.trim()}
                 style={{
                   width: "100%", padding: 16, fontSize: 15,
-                  opacity: formSending ? 0.7 : 1,
+                  opacity: !diagnosisUrl.trim() ? 0.7 : 1,
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                 }}>
-                {formSending ? (
-                  <span style={{ animation: "pulse2 1s infinite" }}>送信中...</span>
-                ) : (
-                  <>無料AI可視性診断を受ける</>
-                )}
+                無料でAI検索可視性を診断する →
               </button>
 
-              {formError && (
-                <p style={{ fontSize: 13, color: C.red, textAlign: "center", marginTop: 12 }}>{formError}</p>
-              )}
-
-              <p style={{ fontSize: 11, color: C.textDim, textAlign: "center", marginTop: 12, lineHeight: 1.6 }}>
-                ※ ご入力いただいた情報は、AI可視性診断の目的のみに使用します。
-                <br />第三者への提供は一切行いません。
+              <p style={{ fontSize: 11, color: C.textDim, textAlign: "center", margin: 0, lineHeight: 1.6 }}>
+                ※ 診断結果は診断ページで即座にご確認いただけます。
               </p>
-            </div>
-          )}
+            </form>
+          </div>
         </div>
       </Section>
 
@@ -1117,7 +1022,7 @@ export default function AIOServiceLP() {
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: C.textSub, marginBottom: 12, textTransform: "uppercase", letterSpacing: 0.5 }}>法的情報</div>
               {[
-                { label: "お問い合わせ", id: "contact" },
+                { label: "無料診断", id: "diagnosis-form" },
                 { label: "プライバシーポリシー", href: "#" },
                 { label: "利用規約", href: "#" },
                 { label: "特定商取引法に基づく表記", href: "#" },
