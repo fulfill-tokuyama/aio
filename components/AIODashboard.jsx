@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
 
 // ============================================================
@@ -272,6 +272,30 @@ export default function AIODashboard({ customerId = "", diagnosisData = null, di
   const [metaError, setMetaError] = useState("");
   const [copiedField, setCopiedField] = useState("");
 
+  // AIアドバイザー用 state
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatEndRef = useRef(null);
+
+  // 改善タスク用 state
+  const [tasks, setTasks] = useState([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
+  const [tasksGenerating, setTasksGenerating] = useState(false);
+  const [taskFilter, setTaskFilter] = useState("all"); // "all" | "pending" | "in_progress" | "completed"
+
+  // タスク初回読み込み
+  useEffect(() => {
+    if (activeTab === "tasks" && tasks.length === 0 && !tasksLoading) {
+      setTasksLoading(true);
+      fetch("/api/improvement-tasks")
+        .then(r => r.ok ? r.json() : { tasks: [] })
+        .then(data => setTasks(data.tasks || []))
+        .catch(() => {})
+        .finally(() => setTasksLoading(false));
+    }
+  }, [activeTab]);
+
   // Ahrefs API states
   const [ahrefsConnected, setAhrefsConnected] = useState(null); // null=loading, true/false
   const [brandRadarConnected, setBrandRadarConnected] = useState(null); // null=loading, true/false
@@ -500,7 +524,9 @@ export default function AIODashboard({ customerId = "", diagnosisData = null, di
       }}>
         {[
           { id: "overview", label: "📊 概要", },
+          { id: "ai-advisor", label: "💬 AIアドバイザー" },
           { id: "improvements", label: "🛠️ 改善アクション" },
+          { id: "tasks", label: "✅ 改善タスク" },
           { id: "ai-traffic", label: "🤖 AIトラフィック" },
           { id: "brand-radar", label: "📡 Brand Radar" },
           { id: "competitors", label: "⚔️ 競合分析" },
@@ -517,6 +543,33 @@ export default function AIODashboard({ customerId = "", diagnosisData = null, di
         {/* ===== OVERVIEW TAB ===== */}
         {activeTab === "overview" && (
           <div className="fade-up">
+
+            {/* Score Change Notification */}
+            {diagnosisHistory.length >= 2 && (() => {
+              const latest = diagnosisHistory[diagnosisHistory.length - 1];
+              const prev = diagnosisHistory[diagnosisHistory.length - 2];
+              const diff = latest.score - prev.score;
+              if (diff === 0) return null;
+              const isUp = diff > 0;
+              return (
+                <div style={{
+                  background: isUp ? COLORS.greenBg : COLORS.redBg,
+                  border: `1px solid ${isUp ? COLORS.green : COLORS.red}20`,
+                  borderRadius: 12, padding: "14px 20px", marginBottom: 20,
+                  display: "flex", alignItems: "center", gap: 12,
+                }}>
+                  <span style={{ fontSize: 24 }}>{isUp ? "📈" : "📉"}</span>
+                  <div>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: isUp ? COLORS.green : COLORS.red, margin: "0 0 2px" }}>
+                      スコアが{isUp ? "上昇" : "下降"}しました: {prev.score}点 → {latest.score}点（{isUp ? "+" : ""}{diff}pt）
+                    </p>
+                    <p style={{ fontSize: 12, color: COLORS.textMuted, margin: 0 }}>
+                      前回診断からの変化です。{isUp ? "改善施策の効果が出ています。" : "AIアドバイザータブで改善方法をご確認ください。"}
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Diagnosis Result Panel (real data from props) */}
             {diagnosisData && (
@@ -958,6 +1011,413 @@ export default function AIODashboard({ customerId = "", diagnosisData = null, di
                 <p style={{ fontSize: 14, color: COLORS.textMuted, margin: 0 }}>
                   まずサイト診断を実行してから、改善アクションをご利用ください。
                 </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== AI ADVISOR TAB ===== */}
+        {activeTab === "ai-advisor" && (
+          <div className="fade-up">
+            <div style={{ background: COLORS.card, borderRadius: 12, border: `1px solid ${COLORS.border}`, overflow: "hidden", display: "flex", flexDirection: "column", height: mob ? "calc(100vh - 200px)" : "600px" }}>
+              {/* Header */}
+              <div style={{ padding: "16px 20px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.surface }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, margin: "0 0 4px" }}>AIO改善アドバイザー</h3>
+                <p style={{ fontSize: 13, color: COLORS.textMuted, margin: 0 }}>
+                  診断結果に基づいて、AI検索最適化の具体的な改善方法をご提案します
+                </p>
+              </div>
+
+              {/* Messages */}
+              <div style={{ flex: 1, overflowY: "auto", padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+                {chatMessages.length === 0 && (
+                  <div style={{ textAlign: "center", padding: "40px 20px" }}>
+                    <div style={{ fontSize: 48, marginBottom: 16 }}>🤖</div>
+                    <p style={{ fontSize: 15, fontWeight: 600, color: COLORS.text, margin: "0 0 8px" }}>AIアドバイザーに質問してみましょう</p>
+                    <p style={{ fontSize: 13, color: COLORS.textMuted, margin: "0 0 20px", maxWidth: 400, marginLeft: "auto", marginRight: "auto" }}>
+                      貴社の診断結果を元に、具体的な改善方法をお教えします。
+                    </p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
+                      {[
+                        "構造化データの改善方法を教えて",
+                        "FAQページの作り方を教えて",
+                        "E-E-A-Tを強化するには？",
+                        "AI検索で上位表示されるコンテンツ戦略は？",
+                        "弱点を優先順位付けして",
+                      ].map((q) => (
+                        <button
+                          key={q}
+                          onClick={() => {
+                            setChatInput(q);
+                          }}
+                          style={{
+                            padding: "8px 14px", borderRadius: 20, border: `1px solid ${COLORS.border}`,
+                            background: COLORS.bg, color: COLORS.textMuted, fontSize: 12, cursor: "pointer",
+                          }}
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {chatMessages.map((msg, i) => (
+                  <div key={i} style={{
+                    display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+                  }}>
+                    <div style={{
+                      maxWidth: "80%", padding: "12px 16px", borderRadius: 12,
+                      background: msg.role === "user" ? COLORS.accent : COLORS.surface,
+                      color: msg.role === "user" ? "#fff" : COLORS.text,
+                      fontSize: 14, lineHeight: 1.7, whiteSpace: "pre-wrap",
+                      border: msg.role === "assistant" ? `1px solid ${COLORS.border}` : "none",
+                    }}>
+                      {msg.content}
+                    </div>
+                  </div>
+                ))}
+                {chatLoading && (
+                  <div style={{ display: "flex", justifyContent: "flex-start" }}>
+                    <div style={{
+                      padding: "12px 16px", borderRadius: 12, background: COLORS.surface,
+                      border: `1px solid ${COLORS.border}`, fontSize: 14, color: COLORS.textDim,
+                    }}>
+                      <span style={{ animation: "pulse 1.5s infinite" }}>考え中...</span>
+                    </div>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Input */}
+              <div style={{ padding: "12px 20px", borderTop: `1px solid ${COLORS.border}`, background: COLORS.surface }}>
+                {!diagnosisData ? (
+                  <p style={{ fontSize: 13, color: COLORS.textDim, textAlign: "center", margin: 0 }}>診断を実行してからAIアドバイザーをご利用ください</p>
+                ) : (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey && chatInput.trim() && !chatLoading) {
+                          e.preventDefault();
+                          const userMsg = chatInput.trim();
+                          setChatInput("");
+                          const newMessages = [...chatMessages, { role: "user", content: userMsg }];
+                          setChatMessages(newMessages);
+                          setChatLoading(true);
+                          setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+                          fetch("/api/ai-advisor", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              message: userMsg,
+                              diagnosis_id: customerId,
+                              history: newMessages.slice(-10),
+                            }),
+                          })
+                            .then(r => r.json())
+                            .then(data => {
+                              if (data.reply) {
+                                setChatMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
+                              } else {
+                                setChatMessages(prev => [...prev, { role: "assistant", content: data.error || "エラーが発生しました。もう一度お試しください。" }]);
+                              }
+                            })
+                            .catch(() => {
+                              setChatMessages(prev => [...prev, { role: "assistant", content: "通信エラーが発生しました。" }]);
+                            })
+                            .finally(() => {
+                              setChatLoading(false);
+                              setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+                            });
+                        }
+                      }}
+                      placeholder="改善方法について質問してください..."
+                      disabled={chatLoading}
+                      style={{
+                        flex: 1, padding: "10px 14px", borderRadius: 8, border: `1px solid ${COLORS.border}`,
+                        background: COLORS.bg, fontSize: 14, color: COLORS.text, outline: "none",
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        if (!chatInput.trim() || chatLoading) return;
+                        const userMsg = chatInput.trim();
+                        setChatInput("");
+                        const newMessages = [...chatMessages, { role: "user", content: userMsg }];
+                        setChatMessages(newMessages);
+                        setChatLoading(true);
+                        setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+                        fetch("/api/ai-advisor", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            message: userMsg,
+                            diagnosis_id: customerId,
+                            history: newMessages.slice(-10),
+                          }),
+                        })
+                          .then(r => r.json())
+                          .then(data => {
+                            if (data.reply) {
+                              setChatMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
+                            } else {
+                              setChatMessages(prev => [...prev, { role: "assistant", content: data.error || "エラーが発生しました。" }]);
+                            }
+                          })
+                          .catch(() => {
+                            setChatMessages(prev => [...prev, { role: "assistant", content: "通信エラーが発生しました。" }]);
+                          })
+                          .finally(() => {
+                            setChatLoading(false);
+                            setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+                          });
+                      }}
+                      disabled={chatLoading || !chatInput.trim()}
+                      style={{
+                        padding: "10px 20px", borderRadius: 8, border: "none",
+                        background: chatLoading || !chatInput.trim() ? COLORS.border : `linear-gradient(135deg, ${COLORS.accent}, #1D4ED8)`,
+                        color: chatLoading || !chatInput.trim() ? COLORS.textDim : "#fff",
+                        fontSize: 14, fontWeight: 700, cursor: chatLoading ? "default" : "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {chatLoading ? "..." : "送信"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===== IMPROVEMENT TASKS TAB ===== */}
+        {activeTab === "tasks" && (
+          <div className="fade-up">
+            {/* Header with auto-generate button */}
+            <div style={{
+              display: "flex", justifyContent: "space-between", alignItems: mob ? "flex-start" : "center",
+              flexDirection: mob ? "column" : "row", gap: 12, marginBottom: 20,
+            }}>
+              <div>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, margin: "0 0 4px" }}>改善タスク管理</h3>
+                <p style={{ fontSize: 13, color: COLORS.textMuted, margin: 0 }}>
+                  診断結果から生成された改善タスクの進捗を管理します
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={async () => {
+                    setTasksLoading(true);
+                    try {
+                      const res = await fetch("/api/improvement-tasks");
+                      if (res.ok) {
+                        const data = await res.json();
+                        setTasks(data.tasks || []);
+                      }
+                    } catch {} finally { setTasksLoading(false); }
+                  }}
+                  style={{
+                    padding: "8px 16px", borderRadius: 8, border: `1px solid ${COLORS.border}`,
+                    background: COLORS.bg, color: COLORS.textMuted, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  }}
+                >
+                  更新
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!diagnosisData) return;
+                    setTasksGenerating(true);
+                    try {
+                      const res = await fetch("/api/improvement-tasks", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ action: "auto_generate", diagnosis_id: customerId }),
+                      });
+                      if (res.ok) {
+                        const data = await res.json();
+                        setTasks(data.tasks || []);
+                      }
+                    } catch {} finally { setTasksGenerating(false); }
+                  }}
+                  disabled={tasksGenerating || !diagnosisData}
+                  style={{
+                    padding: "8px 16px", borderRadius: 8, border: "none",
+                    background: tasksGenerating || !diagnosisData ? COLORS.border : `linear-gradient(135deg, ${COLORS.accent}, #1D4ED8)`,
+                    color: tasksGenerating || !diagnosisData ? COLORS.textDim : "#fff",
+                    fontSize: 13, fontWeight: 700, cursor: tasksGenerating ? "default" : "pointer",
+                  }}
+                >
+                  {tasksGenerating ? "生成中..." : "診断から自動生成"}
+                </button>
+              </div>
+            </div>
+
+            {/* Filter tabs */}
+            <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+              {[
+                { id: "all", label: "すべて" },
+                { id: "pending", label: "未着手" },
+                { id: "in_progress", label: "進行中" },
+                { id: "completed", label: "完了" },
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setTaskFilter(f.id)}
+                  style={{
+                    padding: "6px 14px", borderRadius: 20, border: `1px solid ${taskFilter === f.id ? COLORS.accent : COLORS.border}`,
+                    background: taskFilter === f.id ? COLORS.accentGlow : COLORS.bg,
+                    color: taskFilter === f.id ? COLORS.accent : COLORS.textMuted,
+                    fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  }}
+                >
+                  {f.label}
+                  {f.id !== "all" && ` (${tasks.filter(t => t.status === f.id).length})`}
+                  {f.id === "all" && ` (${tasks.length})`}
+                </button>
+              ))}
+            </div>
+
+            {/* Progress summary */}
+            {tasks.length > 0 && (
+              <div style={{
+                background: COLORS.card, borderRadius: 12, border: `1px solid ${COLORS.border}`,
+                padding: 20, marginBottom: 20,
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>進捗</span>
+                  <span style={{ fontSize: 13, color: COLORS.textMuted }}>
+                    {tasks.filter(t => t.status === "completed").length} / {tasks.length} 完了
+                  </span>
+                </div>
+                <div style={{ background: COLORS.surface, borderRadius: 4, height: 8, overflow: "hidden" }}>
+                  <div style={{
+                    height: "100%", borderRadius: 4,
+                    background: `linear-gradient(90deg, ${COLORS.green}, #34D399)`,
+                    width: `${tasks.length > 0 ? (tasks.filter(t => t.status === "completed").length / tasks.length) * 100 : 0}%`,
+                    transition: "width 0.5s ease",
+                  }} />
+                </div>
+              </div>
+            )}
+
+            {/* Task list */}
+            {tasksLoading ? <LoadingState /> : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {tasks.length === 0 && (
+                  <div style={{
+                    background: COLORS.card, borderRadius: 12, padding: "48px 24px",
+                    border: `1px solid ${COLORS.border}`, textAlign: "center",
+                  }}>
+                    <div style={{ fontSize: 36, marginBottom: 16 }}>📋</div>
+                    <h3 style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, margin: "0 0 8px" }}>タスクがありません</h3>
+                    <p style={{ fontSize: 14, color: COLORS.textMuted, margin: 0 }}>
+                      「診断から自動生成」ボタンで、診断結果に基づく改善タスクを自動作成できます。
+                    </p>
+                  </div>
+                )}
+                {tasks
+                  .filter(t => taskFilter === "all" || t.status === taskFilter)
+                  .map(task => {
+                    const statusColors = {
+                      pending: { bg: COLORS.orangeBg, text: COLORS.orange, label: "未着手" },
+                      in_progress: { bg: COLORS.accentGlow, text: COLORS.accent, label: "進行中" },
+                      completed: { bg: COLORS.greenBg, text: COLORS.green, label: "完了" },
+                    };
+                    const st = statusColors[task.status] || statusColors.pending;
+                    const catLabels = {
+                      structured_data: "構造化データ",
+                      meta_tags: "metaタグ",
+                      content: "コンテンツ",
+                      eeat: "E-E-A-T",
+                      technical: "技術",
+                      other: "その他",
+                    };
+                    const priorityColors = {
+                      high: COLORS.red,
+                      medium: COLORS.orange,
+                      low: COLORS.textDim,
+                    };
+                    return (
+                      <div key={task.id} style={{
+                        background: COLORS.card, borderRadius: 10, border: `1px solid ${COLORS.border}`,
+                        padding: 16, transition: "border-color 0.2s",
+                      }} className="card-hover">
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{task.title}</span>
+                              <span style={{
+                                fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 12,
+                                background: st.bg, color: st.text,
+                              }}>
+                                {st.label}
+                              </span>
+                              {task.category && (
+                                <span style={{
+                                  fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 12,
+                                  background: COLORS.surface, color: COLORS.textMuted, border: `1px solid ${COLORS.border}`,
+                                }}>
+                                  {catLabels[task.category] || task.category}
+                                </span>
+                              )}
+                              {task.priority && (
+                                <span style={{
+                                  fontSize: 10, fontWeight: 600, color: priorityColors[task.priority] || COLORS.textDim,
+                                }}>
+                                  {task.priority === "high" ? "優先度: 高" : task.priority === "medium" ? "優先度: 中" : "優先度: 低"}
+                                </span>
+                              )}
+                            </div>
+                            <p style={{ fontSize: 13, color: COLORS.textMuted, margin: 0, lineHeight: 1.6 }}>{task.description}</p>
+                          </div>
+                          <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                            {task.status !== "in_progress" && task.status !== "completed" && (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch("/api/improvement-tasks", {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ action: "update", task_id: task.id, updates: { status: "in_progress" } }),
+                                    });
+                                    if (res.ok) setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: "in_progress" } : t));
+                                  } catch {}
+                                }}
+                                style={{
+                                  padding: "6px 12px", borderRadius: 6, border: `1px solid ${COLORS.accent}`,
+                                  background: "transparent", color: COLORS.accent, fontSize: 11, fontWeight: 600, cursor: "pointer",
+                                }}
+                              >
+                                着手
+                              </button>
+                            )}
+                            {task.status !== "completed" && (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch("/api/improvement-tasks", {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ action: "update", task_id: task.id, updates: { status: "completed" } }),
+                                    });
+                                    if (res.ok) setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: "completed", completed_at: new Date().toISOString() } : t));
+                                  } catch {}
+                                }}
+                                style={{
+                                  padding: "6px 12px", borderRadius: 6, border: "none",
+                                  background: COLORS.green, color: "#fff", fontSize: 11, fontWeight: 600, cursor: "pointer",
+                                }}
+                              >
+                                完了
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </div>
