@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
+import KPICards from "./dashboard/KPICards";
 
 // ============================================================
 // FormPilot AUTONOMOUS v2 — 超効率営業自動化
@@ -244,7 +245,9 @@ export default function FormPilotAutoV2(){
     const followedUp=leads.filter(l=>l.followUpCount>0).length;
     const opened=leads.filter(l=>l.openedEmail&&l.phase!=="discovered"&&l.phase!=="form_found").length;
     const sentCount=leads.filter(l=>l.sentAt).length;
-    return{t,ff,sent,replied,cust,mrr,hotLeads,withDiag,followedUp,opened,sentCount,
+    const now=new Date();const mStart=new Date(now.getFullYear(),now.getMonth(),1);
+    const newThisMonth=leads.filter(l=>{const d=l.createdAt?new Date(l.createdAt):null;return d&&d>=mStart;}).length;
+    return{t,ff,sent,replied,cust,mrr,hotLeads,withDiag,followedUp,opened,sentCount,newThisMonth,
       formRate:t?(ff/t*100).toFixed(1):"0",
       replyRate:sent?(replied/sent*100).toFixed(1):"0",
       convRate:sent?(cust/sent*100).toFixed(1):"0",
@@ -469,6 +472,8 @@ export default function FormPilotAutoV2(){
                   </div>
                 ))}
               </div>
+
+              <KPICards leads={leads}/>
 
               <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(5,1fr)",gap:8,marginBottom:20}}>
                 <KPI icon={ic.radar} ic={C.b} label="総リード数" val={kpi.t.toString()} sub={`累計${autoConfig.totalScans}回スキャン`} trend={18} good/>
