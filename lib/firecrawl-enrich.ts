@@ -129,7 +129,7 @@ export async function enrichLeadContact(
   url: string,
   companyName: string
 ): Promise<EnrichFields> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;
   const firecrawlKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey || !firecrawlKey) return {};
 

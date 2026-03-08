@@ -181,7 +181,7 @@ export async function searchCompaniesWithGemini(
   keyword?: string,
   segments?: string[]
 ): Promise<GeminiSearchResult> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY が設定されていません");
   }

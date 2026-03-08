@@ -93,7 +93,7 @@ export async function runAiTest(
   industry: string,
   region: string
 ): Promise<AiTestResult> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY が設定されていません");
   }
