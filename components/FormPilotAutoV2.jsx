@@ -880,8 +880,35 @@ export default function FormPilotAutoV2(){
               <div style={{background:C.accGl,borderRadius:8,padding:12,border:`1px solid ${C.acc}30`,marginBottom:16}}>
                 <div style={{fontSize:11,fontWeight:700,color:C.acc,marginBottom:4}}>💡 自動化の仕組み</div>
                 <div style={{fontSize:10,color:C.sub,lineHeight:1.6}}>
-                  <strong style={{color:C.g}}>自動（Cron）</strong>: フォローアップメールのみ、平日10:00 JST に実行。<br/>
-                  <strong style={{color:C.o}}>手動</strong>: リード発見・診断・初回送信は「リード一覧」のボタンで実行してください。
+                  <strong style={{color:C.g}}>リード発見〜初回送信</strong>: ON にすると平日 09:00 JST に Cron で自動実行。<br/>
+                  <strong style={{color:C.g}}>フォローアップメール</strong>: 平日 10:00 JST に Cron で自動送信。<br/>
+                  <strong style={{color:C.o}}>手動</strong>: 各トグルを OFF にすると、該当処理は「リード一覧」のボタンで実行してください。
+                </div>
+              </div>
+              {/* Cron 自動化 ON/OFF */}
+              <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12,marginBottom:16}}>
+                <div style={{background:C.card,borderRadius:8,padding:18,border:`1px solid ${C.bdr}`}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                    <div>
+                      <h3 style={{fontSize:13,fontWeight:700,margin:0}}>🔍 リード発見〜初回送信</h3>
+                      <div style={{fontSize:9,color:C.dim,marginTop:4}}>Cron: 平日 09:00 JST（発見→診断→フォーム探索→初回送信）</div>
+                    </div>
+                    <button onClick={()=>setAutoConfig(p=>({...p,autoDiscoverEnabled:!p.autoDiscoverEnabled}))} style={{padding:"6px 14px",borderRadius:4,border:"none",background:autoConfig.autoDiscoverEnabled?C.gB:C.rB,color:autoConfig.autoDiscoverEnabled?C.g:C.r,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoConfig.autoDiscoverEnabled?"ON":"OFF"}</button>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderTop:`1px solid ${C.bdr}`}}>
+                    <span style={{fontSize:10,color:C.sub}}>初回メールも自動送信</span>
+                    <button onClick={()=>setAutoConfig(p=>({...p,autoInitialSendEnabled:!p.autoInitialSendEnabled}))} style={{padding:"5px 12px",borderRadius:4,border:"none",background:autoConfig.autoInitialSendEnabled?C.gB:C.rB,color:autoConfig.autoInitialSendEnabled?C.g:C.r,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoConfig.autoInitialSendEnabled?"ON":"OFF"}</button>
+                  </div>
+                  <div style={{fontSize:8,color:C.dim,marginTop:6}}>OFF の場合は診断・フォーム探索のみ自動。初回送信は手動。</div>
+                </div>
+                <div style={{background:C.card,borderRadius:8,padding:18,border:`1px solid ${C.bdr}`}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div>
+                      <h3 style={{fontSize:13,fontWeight:700,margin:0}}>📨 フォローアップ自動送信</h3>
+                      <div style={{fontSize:9,color:C.dim,marginTop:4}}>Cron: 平日 10:00 JST</div>
+                    </div>
+                    <button onClick={()=>setAutoConfig(p=>({...p,autoSendEnabled:!p.autoSendEnabled}))} style={{padding:"6px 14px",borderRadius:4,border:"none",background:autoConfig.autoSendEnabled?C.gB:C.rB,color:autoConfig.autoSendEnabled?C.g:C.r,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoConfig.autoSendEnabled?"ON":"OFF"}</button>
+                  </div>
                 </div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
@@ -914,13 +941,7 @@ export default function FormPilotAutoV2(){
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:12}}>
                   <div style={{background:C.card,borderRadius:8,padding:18,border:`1px solid ${C.bdr}`}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-                      <div>
-                        <h3 style={{fontSize:13,fontWeight:700,margin:0}}>📨 フォローアップ自動送信</h3>
-                        <div style={{fontSize:9,color:C.dim,marginTop:4}}>Cron: 平日 10:00 JST</div>
-                      </div>
-                      <button onClick={()=>setAutoConfig(p=>({...p,autoSendEnabled:!p.autoSendEnabled}))} style={{padding:"5px 10px",borderRadius:4,border:"none",background:autoConfig.autoSendEnabled?C.gB:C.rB,color:autoConfig.autoSendEnabled?C.g:C.r,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoConfig.autoSendEnabled?"ON":"OFF"}</button>
-                    </div>
+                    <h3 style={{fontSize:13,fontWeight:700,margin:0,marginBottom:14}}>📨 フォローアップ送信設定</h3>
                     <div style={{marginBottom:10}}>
                       <label style={{fontSize:9,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>手動送信時の上限件数</label>
                       <select value={autoConfig.sendThreshold} onChange={e=>setAutoConfig(p=>({...p,sendThreshold:+e.target.value}))} style={{width:"100%",padding:"7px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:11,outline:"none"}}>{[5,10,20,30,50].map(n=><option key={n} value={n}>{n}件まで</option>)}</select>
