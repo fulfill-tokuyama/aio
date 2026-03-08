@@ -3,8 +3,8 @@ import { useIsMobile } from "../hooks/useIsMobile";
 import KPICards from "./dashboard/KPICards";
 
 // ============================================================
-// FormPilot AUTONOMOUS v2 — 超効率営業自動化
-// 7つの新機能で契約数を最大化
+// FormPilot AUTONOMOUS v2 — LLMO未対策企業を自動発見→無料診断→有料課金
+// リード発見 → フォーム/メール送信 → 無料登録 → Stripe課金（セルフサービス）
 // ============================================================
 
 const C = {
@@ -98,14 +98,14 @@ const KPI=({icon,ic:icC,label,val,sub,trend,good})=>(
 // A/B Templates
 // ============================================================
 const TEMPLATES = [
-  { id:"t1", name:"Step1: 初回アウトリーチ", subject:"【無料】貴社のAI検索対策 診断レポートをお送りします",
-    body:"{{company}}様\n\n突然のご連絡失礼いたします。\nBeginAI の {{sender}} と申します。\n\n貴社サイトを拝見し、AI検索（ChatGPT / Perplexity等）からの集客について改善余地がある可能性を発見いたしました。\n\n【貴社の課題（自動検出）】\n{{weaknesses}}\n\n現在、無料のAIO診断レポートを提供しております。\n貴社のAI検索可視性を数値で可視化し、具体的な改善アクションまでご提案します。\n\n▶ 診断レポートを受け取る: {{diagnosis_link}}\n\nお忙しいところ恐れ入りますが、ご検討いただけますと幸いです。",
+  { id:"t1", name:"Step1: 無料診断の案内", subject:"【無料】貴社のAI検索対策 診断レポートをお送りします",
+    body:"{{company}}様\n\n突然のご連絡失礼いたします。\n{{sender}} と申します。\n\n貴社サイトを拝見し、AI検索（ChatGPT / Perplexity等）での表示について改善余地がある可能性を発見いたしました。\n\n【貴社の課題（自動検出）】\n{{weaknesses}}\n\n現在、無料のAIO診断レポートを提供しております。\n貴社のAI検索可視性を数値で可視化し、具体的な改善アクションまでご提案します。\n\n▶ 無料診断レポートを見る: {{diagnosis_link}}\n\nお忙しいところ恐れ入りますが、ご検討いただけますと幸いです。",
     sent:0, opened:0, replied:0, converted:0 },
   { id:"t2", name:"Step2: 競合比較データ", subject:"貴社の競合はAI検索で先行しています — 無料データ共有",
-    body:"{{company}}様\n\nBeginAI の {{sender}} です。\n\n{{industry}}業界のAI検索動向を分析したところ、貴社の競合他社がChatGPT / Perplexity 等のAI検索で既に言及されている一方、貴社はまだ十分な露出を確保できていない状況です。\n\n【現状スコア】\nLLMO対策スコア: {{llmo_score}} / 100（業界平均: 45）\n\n競合との差分データを無料でお送りできます。\nお手数ですが、下記よりお申込みください。\n\n▶ 無料レポート: {{diagnosis_link}}\n\n何卒よろしくお願いいたします。",
+    body:"{{company}}様\n\n{{sender}} です。\n\n{{industry}}業界のAI検索動向を分析したところ、貴社の競合他社がChatGPT / Perplexity 等のAI検索で既に言及されている一方、貴社はまだ十分な露出を確保できていない状況です。\n\n【現状スコア】\nLLMO対策スコア: {{llmo_score}} / 100（業界平均: 45）\n\n競合との差分データを無料でお送りできます。\nお手数ですが、下記よりお申込みください。\n\n▶ 無料レポート: {{diagnosis_link}}\n\n何卒よろしくお願いいたします。",
     sent:0, opened:0, replied:0, converted:0 },
-  { id:"t3", name:"Step3: 成功事例", subject:"AI検索利用者が527%増 — 貴社サイトは対応済みですか？",
-    body:"{{company}}様\n\nBeginAI の {{sender}} です。\n\n2025年、AI検索（ChatGPT、Perplexity、Gemini）からのWebサイト流入が前年比527%増加しています。\n\nしかし、現時点で貴社サイトには以下の課題が見受けられます：\n{{weaknesses}}\n\n月額1万円から始められるAIO対策サービスで、AI検索からの集客を開始しませんか？\n\n▶ 30秒で無料診断: {{diagnosis_link}}\n\nご質問等ございましたらお気軽にご連絡ください。",
+  { id:"t3", name:"Step3: 有料プラン案内", subject:"AI検索利用者が527%増 — 貴社サイトは対応済みですか？",
+    body:"{{company}}様\n\n{{sender}} です。\n\n2025年、AI検索（ChatGPT、Perplexity、Gemini）からのWebサイト流入が前年比527%増加しています。\n\nしかし、現時点で貴社サイトには以下の課題が見受けられます：\n{{weaknesses}}\n\n月額1万円のProプランで、構造化データ自動生成・metaタグ改善案・月次モニタリングをすべてAIが自動で対応します。生成されたコードをコピペするだけで対策完了です。\n\n▶ まずは無料診断から: {{diagnosis_link}}\n\nご質問等ございましたらお気軽にご連絡ください。",
     sent:0, opened:0, replied:0, converted:0 },
 ];
 
@@ -504,7 +504,7 @@ export default function FormPilotAutoV2(){
           {/* ===== PIPELINE ===== */}
           {!loading&&view==="pipeline"&&(
             <div className="fi">
-              <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>自動営業パイプライン</div>
+              <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>自動集客パイプライン</div>
 
               {/* 自動化の現状 — 何が自動・何が手動かを明確に */}
               <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`,marginBottom:16}}>
@@ -518,8 +518,8 @@ export default function FormPilotAutoV2(){
                     </div>
                     <ul style={{margin:0,paddingLeft:16,fontSize:10,color:C.sub,lineHeight:1.8}}>
                       <li><strong style={{color:C.tx}}>フォローアップメール</strong> — 平日 10:00 JST に Cron で自動送信</li>
-                      {autoConfig.autoDiscoverEnabled&&<li><strong style={{color:C.tx}}>リード発見〜診断{autoConfig.autoInitialSendEnabled?"〜初回送信":""}</strong> — 平日 09:00 JST に Cron で自動実行</li>}
-                      <li><strong style={{color:C.tx}}>無料登録 → 有料課金</strong> — 診断レポート閲覧 → Stripe決済で自動</li>
+                      {autoConfig.autoDiscoverEnabled&&<li><strong style={{color:C.tx}}>リード発見〜診断{autoConfig.autoInitialSendEnabled?"〜無料診断案内":""}</strong> — 平日 09:00 JST に Cron で自動実行</li>}
+                      <li><strong style={{color:C.tx}}>無料登録 → 有料課金</strong> — 診断レポートを見て無料登録 → Proプランに課金（セルフサービス）</li>
                     </ul>
                   </div>
                   <div>
@@ -527,10 +527,10 @@ export default function FormPilotAutoV2(){
                       <span style={{width:6,height:6,borderRadius:"50%",background:C.o}}/> 手動実行が必要
                     </div>
                     <ul style={{margin:0,paddingLeft:16,fontSize:10,color:C.sub,lineHeight:1.8}}>
-                      {!autoConfig.autoDiscoverEnabled&&<><li><strong style={{color:C.tx}}>リード発見</strong> — 「自動発見」ボタンで実行</li><li><strong style={{color:C.tx}}>LLMO診断</strong> — 「一括LLMO調査」で実行</li><li><strong style={{color:C.tx}}>初回メール送信</strong> — 「AIスコア順送信」で実行</li></>}
-                      {autoConfig.autoDiscoverEnabled&&!autoConfig.autoInitialSendEnabled&&<li><strong style={{color:C.tx}}>初回メール送信</strong> — 「AIスコア順送信」で手動実行（診断のみ自動）</li>}
+                      {!autoConfig.autoDiscoverEnabled&&<><li><strong style={{color:C.tx}}>リード発見</strong> — 「自動発見」ボタンで実行</li><li><strong style={{color:C.tx}}>LLMO診断</strong> — 「一括LLMO調査」で実行</li><li><strong style={{color:C.tx}}>無料診断の案内</strong> — 「AIスコア順送信」で実行</li></>}
+                      {autoConfig.autoDiscoverEnabled&&!autoConfig.autoInitialSendEnabled&&<li><strong style={{color:C.tx}}>無料診断の案内</strong> — 「AIスコア順送信」で手動実行（診断のみ自動）</li>}
                       <li><strong style={{color:C.tx}}>フォーム送信</strong> — リード一覧から手動実行（問い合わせフォームに自動入力・送信）</li>
-                      {autoConfig.autoDiscoverEnabled&&autoConfig.autoInitialSendEnabled&&<li>その他は手動不要</li>}
+                      {autoConfig.autoDiscoverEnabled&&autoConfig.autoInitialSendEnabled&&<li>その他は手動不要（登録・課金はセルフサービス）</li>}
                     </ul>
                   </div>
                 </div>
@@ -542,7 +542,7 @@ export default function FormPilotAutoV2(){
                 const needFormScan=leads.filter(l=>l.phase==="discovered").length;
                 const noLeads=leads.length===0;
                 const actions=[];
-                if(readyToSend>0)actions.push({msg:`送信待ち ${readyToSend}件 — メール送信またはフォーム送信で営業開始できます`,action:"send",cta:"AIスコア順送信",priority:1});
+                if(readyToSend>0)actions.push({msg:`送信待ち ${readyToSend}件 — メール送信またはフォーム送信で無料診断を案内できます`,action:"send",cta:"AIスコア順送信",priority:1});
                 if(needFormScan>0)actions.push({msg:`フォーム未探索のリードが ${needFormScan}件 あります。自動発見パイプラインで一括処理できます`,action:"discover",cta:"自動発見",priority:2});
                 if(noLeads)actions.push({msg:"リードが0件です。自動発見またはリード追加で開始しましょう",action:"discover",cta:"自動発見",priority:3});
                 if(actions.length===0&&leads.length>0)actions.push({msg:"パイプラインは順調です。リード一覧で進捗を確認しましょう",action:null,cta:"リード一覧",priority:0});
@@ -567,7 +567,7 @@ export default function FormPilotAutoV2(){
               })()}
 
               <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginBottom:12,padding:"6px 10px",background:C.card,borderRadius:6,border:`1px solid ${C.bdr}`,flexWrap:"wrap"}}>
-                {["リード発見","フォーム探索","フォーム送信","メール送信","無料登録","有料顧客"].map((t,i,a)=>(
+                {["企業発見","フォーム検出","無料診断を案内","無料登録","有料課金（Pro）"].map((t,i,a)=>(
                   <span key={i} style={{display:"flex",alignItems:"center",gap:6}}>
                     <span style={{fontSize:10,color:C.sub,fontWeight:600}}>{t}</span>
                     {i<a.length-1&&<span style={{fontSize:10,color:C.dim}}>→</span>}
@@ -576,11 +576,11 @@ export default function FormPilotAutoV2(){
               </div>
               <div style={{display:"grid",gridTemplateColumns:mob?"repeat(3,1fr)":"repeat(5,1fr)",gap:5,marginBottom:20}}>
                 {[
-                  {label:"LLMO未対策企業発見",count:leads.filter(l=>l.phase==="discovered").length,color:C.cy,icon:ic.radar,desc:"AIがLLMO未対策の企業をスキャン・発見",next:"フォーム探索 →",auto:"手動"},
-                  {label:"フォーム発見",count:leads.filter(l=>l.phase==="form_found").length,color:C.b,icon:ic.link,desc:"問合せフォーム・メールアドレスを検出",next:"送信 →",auto:"パイプライン内"},
-                  {label:"アウトリーチ送信済",count:leads.filter(l=>["sent","step2","step3","step4"].includes(l.phase)).length,color:C.p,icon:ic.send,desc:"フォーム送信・メール送信（FU自動）",next:"登録 →",auto:"FU自動"},
-                  {label:"無料登録",count:leads.filter(l=>l.phase==="replied").length,color:C.acc,icon:ic.check,desc:"無料診断レポートから会員登録",next:"課金 →",auto:"自動"},
-                  {label:"有料顧客",count:leads.filter(l=>l.phase==="customer").length,color:C.g,icon:ic.dollar,desc:"Stripe決済で有料プランに移行",next:"",auto:"自動"},
+                  {label:"LLMO未対策企業発見",count:leads.filter(l=>l.phase==="discovered").length,color:C.cy,icon:ic.radar,desc:"AIがLLMO未対策の企業をスキャン・発見",next:"探索 →",auto:"手動"},
+                  {label:"フォーム・メール検出",count:leads.filter(l=>l.phase==="form_found").length,color:C.b,icon:ic.link,desc:"問合せフォームやメールアドレスを検出",next:"送信 →",auto:"パイプライン内"},
+                  {label:"無料診断を案内済",count:leads.filter(l=>["sent","step2","step3","step4"].includes(l.phase)).length,color:C.p,icon:ic.send,desc:"フォーム/メールで無料診断を案内（FU自動）",next:"登録 →",auto:"FU自動"},
+                  {label:"無料登録",count:leads.filter(l=>l.phase==="replied").length,color:C.acc,icon:ic.check,desc:"診断レポートを閲覧し無料会員登録",next:"課金 →",auto:"自動"},
+                  {label:"有料顧客（Pro）",count:leads.filter(l=>l.phase==="customer").length,color:C.g,icon:ic.dollar,desc:"構造化データ生成・meta改善・月次モニタリング",next:"",auto:"自動"},
                 ].map((s,i)=>(
                   <div key={i} style={{background:C.card,borderRadius:7,padding:"14px 10px 10px",border:`1px solid ${C.bdr}`,textAlign:"center",position:"relative"}}>
                     <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:s.color,opacity:.5}}/>
@@ -600,10 +600,10 @@ export default function FormPilotAutoV2(){
 
               <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(5,1fr)",gap:8,marginBottom:20}}>
                 <KPI icon={ic.radar} ic={C.b} label="総リード数" val={kpi.t.toString()} sub={`累計${autoConfig.totalScans}回スキャン`} trend={18} good/>
-                <KPI icon={ic.send} ic={C.p} label="送信完了" val={kpi.sent.toString()} sub={`フォーム発見率 ${kpi.formRate}%`}/>
-                <KPI icon={ic.check} ic={C.g} label="登録率" val={`${kpi.replyRate}%`} sub={`${kpi.replied}件登録`} trend={5} good/>
-                <KPI icon={ic.dollar} ic={C.acc} label="課金率" val={`${kpi.convRate}%`} sub="送信→有料顧客"/>
-                <KPI icon={ic.dollar} ic={C.g} label="MRR" val={`¥${kpi.mrr.toLocaleString()}`} sub={`${kpi.cust}社 × ¥10,000`} trend={22} good/>
+                <KPI icon={ic.send} ic={C.p} label="案内送信済" val={kpi.sent.toString()} sub={`フォーム発見率 ${kpi.formRate}%`}/>
+                <KPI icon={ic.check} ic={C.g} label="無料登録率" val={`${kpi.replyRate}%`} sub={`${kpi.replied}件登録`} trend={5} good/>
+                <KPI icon={ic.dollar} ic={C.acc} label="有料課金率" val={`${kpi.convRate}%`} sub="案内→Pro課金"/>
+                <KPI icon={ic.dollar} ic={C.g} label="MRR" val={`¥${kpi.mrr.toLocaleString()}`} sub={`${kpi.cust}社 × ¥10,000/月`} trend={22} good/>
               </div>
 
               <div style={{marginBottom:16}}>
@@ -611,9 +611,9 @@ export default function FormPilotAutoV2(){
                   <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>自動化ステータス</div>
                   <div style={{fontSize:9,color:C.dim,marginBottom:12}}>Cron（定期実行）の ON/OFF を設定できます</div>
                   {[
-                    {l:"リード発見〜初回送信",d:"平日 09:00 JST に Cron で自動実行（発見→診断→フォーム探索→初回送信）",on:autoConfig.autoDiscoverEnabled,key:"autoDiscoverEnabled",cron:true},
-                    {l:"初回メール自動送信",d:"リード発見 ON 時のみ有効。OFF の場合は診断・フォーム探索のみ自動",on:autoConfig.autoInitialSendEnabled,key:"autoInitialSendEnabled",cron:false},
-                    {l:"フォローアップメール",d:"平日 10:00 JST に Cron で自動送信（Step2→3→4）",on:autoConfig.autoSendEnabled,key:"autoSendEnabled",cron:true},
+                    {l:"リード発見〜無料診断案内",d:"平日 09:00 JST に Cron で自動実行（発見→診断→フォーム探索→無料診断案内）",on:autoConfig.autoDiscoverEnabled,key:"autoDiscoverEnabled",cron:true},
+                    {l:"初回案内メール自動送信",d:"リード発見 ON 時のみ有効。OFF の場合は診断・フォーム探索のみ自動",on:autoConfig.autoInitialSendEnabled,key:"autoInitialSendEnabled",cron:false},
+                    {l:"フォローアップメール",d:"平日 10:00 JST に Cron で自動送信（Step2: 競合比較 → Step3: 有料プラン案内）",on:autoConfig.autoSendEnabled,key:"autoSendEnabled",cron:true},
                   ].map((s,i)=>(
                     <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:i<2?`1px solid ${C.bdr}`:"none"}}>
                       <div>
@@ -632,9 +632,10 @@ export default function FormPilotAutoV2(){
               <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`,maxWidth:400}}>
                 <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>Stripe 収益サマリー</div>
                 <div style={{display:"flex",alignItems:"center",gap:12}}>
-                  <span style={{fontSize:10,color:C.sub}}>契約中</span>
-                  <span style={{fontSize:18,fontWeight:800,fontFamily:"'Geist Mono',monospace",color:C.g}}>{kpi.cust}社 ¥{kpi.mrr.toLocaleString()}</span>
+                  <span style={{fontSize:10,color:C.sub}}>Proプラン契約中</span>
+                  <span style={{fontSize:18,fontWeight:800,fontFamily:"'Geist Mono',monospace",color:C.g}}>{kpi.cust}社 ¥{kpi.mrr.toLocaleString()}/月</span>
                 </div>
+                <div style={{fontSize:9,color:C.dim,marginTop:6}}>構造化データ生成・metaタグ改善案・月次モニタリング提供中</div>
               </div>
             </div>
           )}
@@ -744,9 +745,9 @@ export default function FormPilotAutoV2(){
                   ))}
                   {(selectedLead.weaknesses||[]).length===0&&<div style={{fontSize:10,color:C.dim,padding:"8px 0"}}>弱点データなし</div>}
                   <div style={{marginTop:12,padding:"10px 12px",borderRadius:5,background:C.accGl,border:`1px solid ${C.acc}15`}}>
-                    <div style={{fontSize:10,fontWeight:700,color:C.acc,marginBottom:4}}>💡 AIパーソナライズ文案プレビュー</div>
+                    <div style={{fontSize:10,fontWeight:700,color:C.acc,marginBottom:4}}>💡 案内文プレビュー</div>
                     <div style={{fontSize:9,color:C.sub,lineHeight:1.6}}>
-                      「{selectedLead.company}様のサイトを分析した結果、{(selectedLead.weaknesses||[]).slice(0,2).join("、")||"未分析"} など{(selectedLead.weaknesses||[]).length}件の改善点を発見しました。AI検索での露出を改善し、新規顧客獲得につなげませんか？」
+                      「{selectedLead.company}様のサイトを分析した結果、{(selectedLead.weaknesses||[]).slice(0,2).join("、")||"未分析"} など{(selectedLead.weaknesses||[]).length}件の改善点を発見しました。無料の診断レポートで詳細をご確認いただけます。」
                     </div>
                   </div>
 
@@ -796,8 +797,8 @@ export default function FormPilotAutoV2(){
                         {[
                           {l:"送信数",v:bt.sent,c:C.tx},
                           {l:"開封率",v:bt.openRate+"%",c:C.b},
-                          {l:"返信率",v:bt.replyRate+"%",c:C.acc},
-                          {l:"成約率",v:bt.convRate+"%",c:C.g},
+                          {l:"登録率",v:bt.replyRate+"%",c:C.acc},
+                          {l:"課金率",v:bt.convRate+"%",c:C.g},
                         ].map((m,j)=>(
                           <div key={j} style={{padding:"6px 8px",borderRadius:4,background:C.ca}}>
                             <div style={{fontSize:8,color:C.dim}}>{m.l}</div>
@@ -832,8 +833,8 @@ export default function FormPilotAutoV2(){
             <div className="fi">
               <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(4,1fr)",gap:10,marginBottom:16}}>
                 <KPI icon={ic.repeat} ic={C.pk} label="フォローアップ済" val={kpi.followedUp.toString()} sub="自動追客"/>
-                <KPI icon={ic.send} ic={C.p} label="未返信（送信済）" val={leads.filter(l=>l.phase==="sent").length.toString()} sub="フォロー対象"/>
-                <KPI icon={ic.check} ic={C.g} label="FU後返信" val={leads.filter(l=>l.followUpCount>0&&l.phase==="replied").length.toString()} sub="追客効果"/>
+                <KPI icon={ic.send} ic={C.p} label="未登録（案内済）" val={leads.filter(l=>l.phase==="sent").length.toString()} sub="フォロー対象"/>
+                <KPI icon={ic.check} ic={C.g} label="FU後登録" val={leads.filter(l=>l.followUpCount>0&&l.phase==="replied").length.toString()} sub="追客効果"/>
                 <KPI icon={ic.clock} ic={C.o} label="次回FU予定" val={leads.filter(l=>l.followUpScheduled).length.toString()}/>
               </div>
               <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
@@ -857,9 +858,9 @@ export default function FormPilotAutoV2(){
                   <div style={{padding:10,borderRadius:5,background:C.pB,border:`1px solid ${C.pk}15`}}>
                     <div style={{fontSize:10,fontWeight:700,color:C.pk,marginBottom:6}}>フォローアップ戦略</div>
                     {[
-                      {n:1,desc:"初回送信から3日後: 開封確認 + 追加価値提案",delay:"3日後"},
-                      {n:2,desc:"2回目から5日後: 業界事例の共有",delay:"8日後"},
-                      {n:3,desc:"3回目から7日後: 最終案内 + 期間限定オファー",delay:"15日後"},
+                      {n:1,desc:"初回送信から3日後: 競合のAI検索状況データを共有",delay:"3日後"},
+                      {n:2,desc:"2回目から5日後: 有料プランの具体的メリットを案内",delay:"8日後"},
+                      {n:3,desc:"3回目から7日後: 最終案内（構造化データ・meta改善・月次モニタリング）",delay:"15日後"},
                     ].map((f,i)=>(
                       <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"5px 0",borderBottom:i<2?`1px solid ${C.pk}10`:"none"}}>
                         <span style={{fontSize:9,fontWeight:800,color:C.pk,width:14,flexShrink:0}}>#{f.n}</span>
@@ -891,11 +892,11 @@ export default function FormPilotAutoV2(){
           {/* ===== ANALYSIS ===== */}
           {view==="analysis"&&(
             <div className="fi">
-              <div style={{fontSize:10,fontWeight:700,color:C.sub,marginBottom:8}}>📊 Win/Loss 分析 — どの条件で契約が取れるか</div>
+              <div style={{fontSize:10,fontWeight:700,color:C.sub,marginBottom:8}}>📊 コンバージョン分析 — どの条件で課金されやすいか</div>
               <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12,marginBottom:14}}>
                 {/* By Industry */}
                 <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
-                  <div style={{fontSize:11,fontWeight:700,marginBottom:10}}>業種別 成約率</div>
+                  <div style={{fontSize:11,fontWeight:700,marginBottom:10}}>業種別 課金率</div>
                   {Object.entries(winLoss.byIndustry).sort((a,b)=>parseFloat(b[1].rate)-parseFloat(a[1].rate)).map(([ind,d],i)=>(
                     <div key={ind} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:`1px solid ${C.bdr}`}}>
                       <span style={{fontSize:10,width:60,flexShrink:0}}>{ind}</span>
@@ -909,7 +910,7 @@ export default function FormPilotAutoV2(){
                 </div>
                 {/* By Company Size */}
                 <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
-                  <div style={{fontSize:11,fontWeight:700,marginBottom:10}}>企業規模別 成約率</div>
+                  <div style={{fontSize:11,fontWeight:700,marginBottom:10}}>企業規模別 課金率</div>
                   {Object.entries(winLoss.bySize).sort((a,b)=>parseFloat(b[1].rate)-parseFloat(a[1].rate)).map(([sz,d],i)=>(
                     <div key={sz} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:`1px solid ${C.bdr}`}}>
                       <span style={{fontSize:10,width:65,flexShrink:0}}>{sz}</span>
@@ -934,8 +935,8 @@ export default function FormPilotAutoV2(){
                         {[
                           {l:"送信",v:bt.sent,w:100,c:C.p},
                           {l:"開封",v:bt.opened,w:bt.sent?bt.opened/bt.sent*100:0,c:C.b},
-                          {l:"返信",v:bt.replied,w:bt.sent?bt.replied/bt.sent*100:0,c:C.acc},
-                          {l:"成約",v:bt.converted,w:bt.sent?bt.converted/bt.sent*100:0,c:C.g},
+                          {l:"登録",v:bt.replied,w:bt.sent?bt.replied/bt.sent*100:0,c:C.acc},
+                          {l:"課金",v:bt.converted,w:bt.sent?bt.converted/bt.sent*100:0,c:C.g},
                         ].map((s,j)=>(
                           <div key={j} style={{marginBottom:4}}>
                             <div style={{display:"flex",justifyContent:"space-between",fontSize:9,marginBottom:2}}>
@@ -960,8 +961,9 @@ export default function FormPilotAutoV2(){
               <div style={{background:C.accGl,borderRadius:8,padding:12,border:`1px solid ${C.acc}30`,marginBottom:16}}>
                 <div style={{fontSize:11,fontWeight:700,color:C.acc,marginBottom:4}}>💡 自動化の仕組み</div>
                 <div style={{fontSize:10,color:C.sub,lineHeight:1.6}}>
-                  <strong style={{color:C.g}}>リード発見〜初回送信</strong>: ON にすると平日 09:00 JST に Cron で自動実行。<br/>
+                  <strong style={{color:C.g}}>リード発見〜無料診断案内</strong>: ON にすると平日 09:00 JST に Cron で自動実行。<br/>
                   <strong style={{color:C.g}}>フォローアップメール</strong>: 平日 10:00 JST に Cron で自動送信。<br/>
+                  <strong style={{color:C.g}}>無料登録 → 有料課金</strong>: 診断レポート閲覧 → Stripe決済まですべてセルフサービス。<br/>
                   <strong style={{color:C.o}}>手動</strong>: 各トグルを OFF にすると、該当処理は「リード一覧」のボタンで実行してください。
                 </div>
               </div>
@@ -970,8 +972,8 @@ export default function FormPilotAutoV2(){
                 <div style={{background:C.card,borderRadius:8,padding:18,border:`1px solid ${C.bdr}`}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                     <div>
-                      <h3 style={{fontSize:13,fontWeight:700,margin:0}}>🔍 リード発見〜初回送信</h3>
-                      <div style={{fontSize:9,color:C.dim,marginTop:4}}>Cron: 平日 09:00 JST（発見→診断→フォーム探索→初回送信）</div>
+                      <h3 style={{fontSize:13,fontWeight:700,margin:0}}>🔍 リード発見〜無料診断案内</h3>
+                      <div style={{fontSize:9,color:C.dim,marginTop:4}}>Cron: 平日 09:00 JST（発見→診断→フォーム探索→無料診断を案内）</div>
                     </div>
                     <button onClick={()=>setAutoConfig(p=>({...p,autoDiscoverEnabled:!p.autoDiscoverEnabled}))} style={{padding:"6px 14px",borderRadius:4,border:"none",background:autoConfig.autoDiscoverEnabled?C.gB:C.rB,color:autoConfig.autoDiscoverEnabled?C.g:C.r,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoConfig.autoDiscoverEnabled?"ON":"OFF"}</button>
                   </div>
@@ -1065,12 +1067,12 @@ export default function FormPilotAutoV2(){
                   <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
                     <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>🔄 パイプライン全体（自動/手動の区別）</div>
                     {[
-                      {s:"1",l:"リード発見",d:"手動: 自動発見 or 一括LLMO調査",c:C.cy,auto:false},
-                      {s:"2",l:"フォーム探索",d:"パイプライン実行時に自動",c:C.b,auto:true},
+                      {s:"1",l:"LLMO未対策企業を発見",d:"手動: 自動発見 or 一括LLMO調査",c:C.cy,auto:false},
+                      {s:"2",l:"フォーム・メール検出",d:"パイプライン実行時に自動",c:C.b,auto:true},
                       {s:"3",l:"フォーム自動送信",d:"手動: リード一覧から実行（Puppeteer）",c:C.p,auto:false},
-                      {s:"4",l:"メール送信 + FU",d:"初回手動 / FU: 平日10:00 JST Cron自動",c:C.pk,auto:true},
-                      {s:"5",l:"無料登録",d:"自動: 診断レポートから会員登録",c:C.acc,auto:true},
-                      {s:"6",l:"有料課金",d:"自動: Stripe Webhook",c:C.g,auto:true},
+                      {s:"4",l:"無料診断の案内メール + FU",d:"初回手動 / FU: 平日10:00 JST Cron自動",c:C.pk,auto:true},
+                      {s:"5",l:"無料登録（セルフ）",d:"診断レポートを閲覧 → 無料会員登録",c:C.acc,auto:true},
+                      {s:"6",l:"Pro課金（セルフ）",d:"Stripe決済 → 構造化データ生成・meta改善・月次モニタリング",c:C.g,auto:true},
                     ].map((s,i)=>(
                       <div key={i} style={{display:"flex",gap:8,alignItems:"center",padding:"5px 0",borderBottom:i<5?`1px solid ${C.bdr}`:"none"}}>
                         <div style={{width:18,height:18,borderRadius:3,background:`${s.c}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:800,color:s.c,flexShrink:0}}>{s.s}</div>
@@ -1090,7 +1092,7 @@ export default function FormPilotAutoV2(){
               <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(4,1fr)",gap:10,marginBottom:16}}>
                 <KPI icon={ic.dollar} ic={C.g} label="MRR" val={`¥${kpi.mrr.toLocaleString()}`} sub={`${kpi.cust}社`} trend={22} good/>
                 <KPI icon={ic.users} ic={C.acc} label="ARR" val={`¥${(kpi.mrr*12).toLocaleString()}`}/>
-                <KPI icon={ic.trending} ic={C.b} label="成約率" val={`${kpi.convRate}%`} sub="パイプライン全体"/>
+                <KPI icon={ic.trending} ic={C.b} label="課金率" val={`${kpi.convRate}%`} sub="案内→Pro課金"/>
                 <KPI icon={ic.eye} ic={C.p} label="開封率" val={`${kpi.openRate}%`} sub="メール開封" trend={8} good/>
               </div>
               <div style={{background:C.card,borderRadius:7,border:`1px solid ${C.bdr}`,overflow:mob?"auto":"hidden",WebkitOverflowScrolling:"touch"}}>
