@@ -183,6 +183,12 @@ export default function FormPilotAutoV2(){
     // リード発見〜初回送信の自動実行（Cron: 平日 09:00 JST）
     autoDiscoverEnabled:false,
     autoInitialSendEnabled:true,
+    // フォーム自動送信用ユーザープロフィール
+    userProfile:{
+      company_name:"",contact_name:"",contact_email:"",phone:"",
+      department:"",position:"",postal_code:"",address:"",fax:"",
+      service_name:"",service_content:"",service_strengths:[],target_customer:"",
+    },
   });
 
   const[log,setLog]=useState([]);
@@ -323,6 +329,53 @@ export default function FormPilotAutoV2(){
     }catch(e){console.error("scanForm error:",e);addLogEntry(`❌ ${lead.company}: フォーム探索失敗`,"form");}
     finally{setScanningLeadId(null);}
   },[addLogEntry]);
+
+  // フォーム自動送信: analyze → submit の2段階
+  const [formSubmittingLeadId, setFormSubmittingLeadId] = useState(null);
+  const [formSubmitResults, setFormSubmitResults] = useState({}); // { [leadId]: { success, message } }
+  const submitFormForLead=useCallback(async(lead)=>{
+    if(!lead.formUrl){addLogEntry(`${lead.company}: フォームURLがありません`,"form");return;}
+    const profile=autoConfig.userProfile||{};
+    if(!profile.company_name||!profile.contact_name||!profile.contact_email){
+      addLogEntry(`フォーム送信にはユーザープロフィール（会社名・担当者名・メール）の設定が必要です。自動化設定から入力してください。`,"form");
+      return;
+    }
+    setFormSubmittingLeadId(lead.id);
+    try{
+      // Step 1: フォーム解析
+      addLogEntry(`${lead.company}: フォーム解析中...`,"form");
+      const analyzeRes=await fetch("/api/analyze-form-fields",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({formUrl:lead.formUrl,userProfile:profile,companyName:lead.company,servicePitch:profile.service_content||undefined})});
+      if(!analyzeRes.ok){const err=await analyzeRes.json().catch(()=>({}));throw new Error(err.error||"フォーム解析エラー");}
+      const analyzeData=await analyzeRes.json();
+      if(analyzeData.hasCaptcha){
+        setFormSubmitResults(p=>({...p,[lead.id]:{success:false,message:"CAPTCHA検出のため自動送信不可"}}));
+        addLogEntry(`${lead.company}: CAPTCHA検出 — 手動送信が必要です`,"form");
+        return;
+      }
+      if(!analyzeData.mappings||analyzeData.mappings.length===0){
+        setFormSubmitResults(p=>({...p,[lead.id]:{success:false,message:"フォームフィールドのマッピングに失敗"}}));
+        addLogEntry(`${lead.company}: フォームフィールドのマッピングに失敗しました`,"form");
+        return;
+      }
+      // Step 2: フォーム送信
+      addLogEntry(`${lead.company}: フォーム送信中...`,"form");
+      const submitRes=await fetch("/api/submit-contact-form",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({formUrl:lead.formUrl,mappings:analyzeData.mappings})});
+      const submitData=await submitRes.json();
+      setFormSubmitResults(p=>({...p,[lead.id]:{success:submitData.success,message:submitData.message}}));
+      if(submitData.success){
+        updateLead(lead.id,{phase:"sent",sentAt:submitData.submittedAt});
+        addLogEntry(`${lead.company}: フォーム送信完了`,"form");
+      }else{
+        addLogEntry(`${lead.company}: ${submitData.message}`,"form");
+      }
+    }catch(e){
+      console.error("submitForm error:",e);
+      setFormSubmitResults(p=>({...p,[lead.id]:{success:false,message:e.message||"送信エラー"}}));
+      addLogEntry(`${lead.company}: フォーム送信失敗 — ${e.message}`,"form");
+    }finally{
+      setFormSubmittingLeadId(null);
+    }
+  },[autoConfig,addLogEntry,updateLead]);
 
   // AIスコア順送信: form_found かつ contactEmail ありのリードを /api/auto-send に POST
   const [sending, setSending] = useState(false);
@@ -512,7 +565,7 @@ export default function FormPilotAutoV2(){
               })()}
 
               <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginBottom:12,padding:"6px 10px",background:C.card,borderRadius:6,border:`1px solid ${C.bdr}`,flexWrap:"wrap"}}>
-                {["リード発見","フォーム探索","キュー","メール送信","返信・商談","受注"].map((t,i,a)=>(
+                {["リード発見","フォーム探索","フォーム送信","メール送信","返信・商談","受注"].map((t,i,a)=>(
                   <span key={i} style={{display:"flex",alignItems:"center",gap:6}}>
                     <span style={{fontSize:10,color:C.sub,fontWeight:600}}>{t}</span>
                     {i<a.length-1&&<span style={{fontSize:10,color:C.dim}}>→</span>}
@@ -639,6 +692,7 @@ export default function FormPilotAutoV2(){
                     <div style={{display:"flex",gap:2}} onClick={e=>e.stopPropagation()}>
                       {l.phase==="discovered"&&<button onClick={()=>scanFormForLead(l)} disabled={scanningLeadId===l.id} style={{padding:"2px 5px",borderRadius:2,border:`1px solid ${C.bdr}`,background:"transparent",color:C.b,fontSize:8,cursor:scanningLeadId===l.id?"default":"pointer",fontFamily:"inherit",opacity:scanningLeadId===l.id?.5:1}}>{scanningLeadId===l.id?"探索中...":"探索"}</button>}
                       {l.phase==="form_found"&&!l.contactEmail&&<button onClick={()=>scanFormForLead(l)} disabled={scanningLeadId===l.id} style={{padding:"2px 5px",borderRadius:2,border:`1px solid ${C.bdr}`,background:"transparent",color:C.b,fontSize:8,cursor:scanningLeadId===l.id?"default":"pointer",fontFamily:"inherit",opacity:scanningLeadId===l.id?.5:1}}>{scanningLeadId===l.id?"探索中...":"再探索"}</button>}
+                      {l.formUrl&&l.phase==="form_found"&&<button onClick={()=>submitFormForLead(l)} disabled={formSubmittingLeadId===l.id} style={{padding:"2px 5px",borderRadius:2,border:`1px solid ${C.bdr}`,background:"transparent",color:C.p,fontSize:8,cursor:formSubmittingLeadId===l.id?"default":"pointer",fontFamily:"inherit",opacity:formSubmittingLeadId===l.id?.5:1}}>{formSubmittingLeadId===l.id?"送信中...":formSubmitResults[l.id]?formSubmitResults[l.id].success?"送信済":"再送信":"フォーム送信"}</button>}
                       <button onClick={()=>deleteLead(l.id)} style={{padding:"2px 4px",borderRadius:2,border:"none",background:"transparent",color:C.dim,fontSize:8,cursor:"pointer"}}>✕</button>
                     </div>
                   </div>
@@ -694,6 +748,31 @@ export default function FormPilotAutoV2(){
                       「{selectedLead.company}様のサイトを分析した結果、{(selectedLead.weaknesses||[]).slice(0,2).join("、")||"未分析"} など{(selectedLead.weaknesses||[]).length}件の改善点を発見しました。AI検索での露出を改善し、新規顧客獲得につなげませんか？」
                     </div>
                   </div>
+
+                  {/* フォーム自動送信セクション */}
+                  {selectedLead.formUrl&&(
+                    <div style={{marginTop:12,padding:"10px 12px",borderRadius:5,background:`${C.p}08`,border:`1px solid ${C.p}20`}}>
+                      <div style={{fontSize:10,fontWeight:700,color:C.p,marginBottom:6}}>問い合わせフォーム自動送信</div>
+                      <div style={{fontSize:9,color:C.sub,marginBottom:6}}>
+                        フォームURL: <a href={selectedLead.formUrl} target="_blank" rel="noopener noreferrer" style={{color:C.b,textDecoration:"none"}}>{selectedLead.formUrl.replace(/^https?:\/\//,"").slice(0,40)}</a>
+                      </div>
+                      {formSubmitResults[selectedLead.id]&&(
+                        <div style={{fontSize:9,padding:"4px 8px",borderRadius:3,marginBottom:6,background:formSubmitResults[selectedLead.id].success?C.gB:C.rB,color:formSubmitResults[selectedLead.id].success?C.g:C.r}}>
+                          {formSubmitResults[selectedLead.id].message}
+                        </div>
+                      )}
+                      <button
+                        onClick={()=>submitFormForLead(selectedLead)}
+                        disabled={formSubmittingLeadId===selectedLead.id}
+                        style={{padding:"6px 14px",borderRadius:4,border:"none",background:formSubmittingLeadId===selectedLead.id?C.bdr:C.p,color:C.bg,fontSize:10,fontWeight:700,cursor:formSubmittingLeadId===selectedLead.id?"default":"pointer",fontFamily:"inherit",opacity:formSubmittingLeadId===selectedLead.id?.6:1}}
+                      >
+                        {formSubmittingLeadId===selectedLead.id?"送信処理中...":formSubmitResults[selectedLead.id]?.success?"再送信":"フォームに自動送信"}
+                      </button>
+                      {!autoConfig.userProfile?.company_name&&(
+                        <div style={{fontSize:8,color:C.o,marginTop:4}}>自動化設定でユーザープロフィールを入力してください</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -955,15 +1034,43 @@ export default function FormPilotAutoV2(){
                       <div style={{fontSize:8,color:C.dim,marginTop:2}}>このスコア以上を最優先で送信</div>
                     </div>
                   </div>
+                  <div style={{background:C.card,borderRadius:8,padding:18,border:`1px solid ${C.bdr}`,marginBottom:12}}>
+                    <h3 style={{fontSize:13,fontWeight:700,margin:0,marginBottom:14}}>📝 フォーム送信プロフィール</h3>
+                    <div style={{fontSize:9,color:C.dim,marginBottom:10}}>問い合わせフォーム自動送信時に使用する情報です</div>
+                    {[
+                      {l:"会社名",k:"company_name",ph:"例: フルフィル株式会社",req:true},
+                      {l:"担当者名",k:"contact_name",ph:"例: 山田 太郎",req:true},
+                      {l:"メールアドレス",k:"contact_email",ph:"例: info@example.com",req:true},
+                      {l:"電話番号",k:"phone",ph:"例: 03-1234-5678"},
+                      {l:"部署名",k:"department",ph:"例: 営業部"},
+                      {l:"役職",k:"position",ph:"例: 代表取締役"},
+                      {l:"郵便番号",k:"postal_code",ph:"例: 100-0001"},
+                      {l:"住所",k:"address",ph:"例: 東京都千代田区..."},
+                    ].map(({l,k,ph,req})=>(
+                      <div key={k} style={{marginBottom:8}}>
+                        <label style={{fontSize:9,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>{l}{req&&<span style={{color:C.r}}> *</span>}</label>
+                        <input value={autoConfig.userProfile?.[k]||""} onChange={e=>setAutoConfig(p=>({...p,userProfile:{...p.userProfile,[k]:e.target.value}}))} placeholder={ph} style={{width:"100%",padding:"6px 8px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:10,outline:"none",boxSizing:"border-box",fontFamily:"inherit"}}/>
+                      </div>
+                    ))}
+                    <div style={{marginBottom:8}}>
+                      <label style={{fontSize:9,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>サービス名</label>
+                      <input value={autoConfig.userProfile?.service_name||""} onChange={e=>setAutoConfig(p=>({...p,userProfile:{...p.userProfile,service_name:e.target.value}}))} placeholder="例: AIO Insight" style={{width:"100%",padding:"6px 8px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:10,outline:"none",boxSizing:"border-box",fontFamily:"inherit"}}/>
+                    </div>
+                    <div style={{marginBottom:8}}>
+                      <label style={{fontSize:9,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>サービス内容（問い合わせ文面生成に使用）</label>
+                      <textarea value={autoConfig.userProfile?.service_content||""} onChange={e=>setAutoConfig(p=>({...p,userProfile:{...p.userProfile,service_content:e.target.value}}))} rows={3} placeholder="例: AI検索最適化（AIO/LLMO）サービスを提供しています..." style={{width:"100%",padding:"6px 8px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:10,outline:"none",boxSizing:"border-box",fontFamily:"inherit",resize:"vertical"}}/>
+                    </div>
+                  </div>
                   <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
                     <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>🔄 パイプライン全体（自動/手動の区別）</div>
                     {[
                       {s:"1",l:"リード発見",d:"手動: 自動発見 or 一括LLMO調査",c:C.cy,auto:false},
                       {s:"2",l:"フォーム探索",d:"パイプライン実行時に自動",c:C.b,auto:true},
-                      {s:"3",l:"初回メール送信",d:"手動: AIスコア順送信",c:C.p,auto:false},
-                      {s:"4",l:"フォローアップ（Step2-4）",d:"Cron: 平日10:00 JST 自動",c:C.pk,auto:true},
-                      {s:"5",l:"返信・商談",d:"手動: 人間が対応",c:C.acc,auto:false},
-                      {s:"6",l:"決済・顧客化",d:"自動: Stripe Webhook",c:C.g,auto:true},
+                      {s:"3",l:"フォーム自動送信",d:"手動: リード一覧から実行（Puppeteer）",c:C.p,auto:false},
+                      {s:"4",l:"初回メール送信",d:"手動: AIスコア順送信",c:C.pk,auto:false},
+                      {s:"5",l:"フォローアップ（Step2-4）",d:"Cron: 平日10:00 JST 自動",c:C.pk,auto:true},
+                      {s:"6",l:"返信・商談",d:"手動: 人間が対応",c:C.acc,auto:false},
+                      {s:"7",l:"決済・顧客化",d:"自動: Stripe Webhook",c:C.g,auto:true},
                     ].map((s,i)=>(
                       <div key={i} style={{display:"flex",gap:8,alignItems:"center",padding:"5px 0",borderBottom:i<5?`1px solid ${C.bdr}`:"none"}}>
                         <div style={{width:18,height:18,borderRadius:3,background:`${s.c}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:800,color:s.c,flexShrink:0}}>{s.s}</div>
