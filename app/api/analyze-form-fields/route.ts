@@ -225,7 +225,7 @@ export async function POST(req: NextRequest) {
     await browser.close();
 
     // Gemini でマッピング生成
-    const modelName = process.env.GEMINI_MODEL?.trim() || "gemini-2.0-flash";
+    const modelName = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
     const profileInfo = [
       userProfile.company_name ? `会社名: ${userProfile.company_name}` : "",
       userProfile.contact_name ? `担当者名: ${userProfile.contact_name}` : "",

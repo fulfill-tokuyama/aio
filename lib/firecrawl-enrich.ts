@@ -69,7 +69,7 @@ JSONのみ出力（説明不要）:
 ${trimmed}`;
 
   try {
-    const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.0-flash";
+    const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
     const url = `${GEMINI_API_BASE}/models/${model}:generateContent`;
     const res = await fetch(url, {
       method: "POST",

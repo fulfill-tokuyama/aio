@@ -2,7 +2,7 @@
 // Gemini API + Google Search grounding による企業URL検索
 
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
-const DEFAULT_MODELS = ["gemini-2.0-flash", "gemini-2.5-flash"] as const;
+const DEFAULT_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash"] as const;
 
 export interface GeminiSearchSource {
   url: string;

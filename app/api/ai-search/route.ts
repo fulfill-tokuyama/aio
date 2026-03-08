@@ -8,7 +8,7 @@ import { requireAuth } from "@/lib/api-auth";
 export const maxDuration = 300;
 
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
-const DEFAULT_MODELS = ["gemini-2.0-flash", "gemini-2.5-flash"] as const;
+const DEFAULT_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash"] as const;
 
 const DEFAULT_SEARCH_SEGMENTS = [
   "Leading Providers & Major Organizations (大手・有名事業者)",
@@ -99,7 +99,7 @@ JSONのみ出力（説明不要）:
 ${trimmed}`;
 
   try {
-    const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.0-flash";
+    const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
     const url = `${GEMINI_API_BASE}/models/${model}:generateContent`;
     const res = await fetch(url, {
       method: "POST",

@@ -35,7 +35,7 @@ export async function generateWithGemini(
   checkRateLimit();
 
   const model = genAI.getGenerativeModel({
-    model: options?.model || "gemini-2.0-flash",
+    model: options?.model || "gemini-2.5-flash",
     generationConfig: {
       maxOutputTokens: options?.maxTokens || 4096,
       temperature: 0.7,

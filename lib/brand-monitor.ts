@@ -206,7 +206,7 @@ export async function checkGemini(
     const geminiController = new AbortController();
     const geminiTimeout = setTimeout(() => geminiController.abort(), 30000);
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
       {
         method: "POST",
         signal: geminiController.signal,
