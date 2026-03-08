@@ -40,24 +40,64 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const {
       urls: rawUrls,
+      companies: rawCompanies,
       llmoScoreMax = 40,
       industry,
       region,
       skipAutoSend = false,
     } = body as {
-      urls: string[];
+      urls?: string[];
+      companies?: Array<{
+        name: string;
+        url: string;
+        industry?: string;
+        region?: string;
+        address?: string;
+        phone?: string;
+        email?: string;
+        google_maps_url?: string;
+        founded_year?: number;
+        employee_count?: string;
+        representative?: string;
+        contact_name?: string;
+        contact_position?: string;
+        capital?: string;
+        description?: string;
+        heat_score?: number;
+      }>;
       llmoScoreMax?: number;
       industry?: string;
       region?: string;
       skipAutoSend?: boolean;
     };
 
-    if (!Array.isArray(rawUrls) || rawUrls.length === 0) {
-      return NextResponse.json({ error: "URLリストは必須です" }, { status: 400 });
+    // AI Search から companies が渡された場合、URLリストに変換 + 企業情報をマッピング
+    interface CompanyInput {
+      name: string; url: string; industry?: string; region?: string; address?: string;
+      phone?: string; email?: string; google_maps_url?: string; founded_year?: number;
+      employee_count?: string; representative?: string; contact_name?: string;
+      contact_position?: string; capital?: string; description?: string; heat_score?: number;
+    }
+    const companyDataMap = new Map<string, CompanyInput>();
+    let urlList: string[] = [];
+
+    if (rawCompanies && rawCompanies.length > 0) {
+      for (const c of rawCompanies) {
+        if (c.url) {
+          urlList.push(c.url);
+          companyDataMap.set(normalizeUrl(c.url), c);
+        }
+      }
+    } else if (rawUrls && rawUrls.length > 0) {
+      urlList = rawUrls;
+    }
+
+    if (urlList.length === 0) {
+      return NextResponse.json({ error: "URLリストまたは企業リストは必須です" }, { status: 400 });
     }
 
     // 最大20 URL/回
-    const limitedUrls = rawUrls.slice(0, MAX_URLS);
+    const limitedUrls = urlList.slice(0, MAX_URLS);
 
     // ============================================================
     // Step 1: 重複排除
@@ -198,6 +238,25 @@ export async function POST(req: NextRequest) {
       if (region) insertData.region = region;
       if (diagnosisReportId) insertData.diagnosis_report_id = diagnosisReportId;
 
+      // AI Search から渡された企業詳細データがあれば追加
+      const companyData = companyDataMap.get(normalizeUrl(lead.url));
+      if (companyData) {
+        if (companyData.industry) insertData.industry = companyData.industry;
+        if (companyData.region) insertData.region = companyData.region;
+        if (companyData.address) insertData.address = companyData.address;
+        if (companyData.phone) insertData.contact_phone = companyData.phone;
+        if (companyData.email) insertData.contact_email = companyData.email;
+        if (companyData.google_maps_url) insertData.google_maps_url = companyData.google_maps_url;
+        if (companyData.founded_year) insertData.founded_year = companyData.founded_year;
+        if (companyData.employee_count) insertData.employee_count = companyData.employee_count;
+        if (companyData.representative) insertData.representative = companyData.representative;
+        if (companyData.contact_name) insertData.contact_name = companyData.contact_name;
+        if (companyData.contact_position) insertData.contact_position = companyData.contact_position;
+        if (companyData.capital) insertData.capital = companyData.capital;
+        if (companyData.description) insertData.description = companyData.description;
+        if (typeof companyData.heat_score === "number") insertData.heat_score = companyData.heat_score;
+      }
+
       const { data, error } = await supabaseAdmin
         .from("pipeline_leads")
         .insert(insertData)
@@ -296,11 +355,18 @@ export async function POST(req: NextRequest) {
       for (const lead of needsEnrich) {
         try {
           const enriched = await enrichLeadContact(lead.url, lead.company);
-          if (enriched.contactEmail || enriched.contactPhone) {
+          if (enriched.contactEmail || enriched.contactPhone || enriched.representative || enriched.foundedYear || enriched.employeeCount || enriched.capital || enriched.description) {
             const updates: Record<string, unknown> = {};
             if (enriched.contactEmail) updates.contact_email = enriched.contactEmail;
             if (enriched.contactPhone) updates.contact_phone = enriched.contactPhone;
             if (enriched.contactEmail || lead.formUrl) updates.phase = "form_found";
+            if (enriched.representative) updates.representative = enriched.representative;
+            if (enriched.contactName) updates.contact_name = enriched.contactName;
+            if (enriched.contactPosition) updates.contact_position = enriched.contactPosition;
+            if (enriched.foundedYear) updates.founded_year = enriched.foundedYear;
+            if (enriched.employeeCount) updates.employee_count = enriched.employeeCount;
+            if (enriched.capital) updates.capital = enriched.capital;
+            if (enriched.description) updates.description = enriched.description;
 
             if (Object.keys(updates).length > 0) {
               await supabaseAdmin

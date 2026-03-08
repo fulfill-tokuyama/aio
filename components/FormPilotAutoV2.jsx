@@ -1266,16 +1266,26 @@ function BulkScanModal({onClose,scanResults,setScanResults,onComplete}){
 }
 
 // ============================================================
-// 自動発見パイプラインモーダル
+// 自動発見パイプラインモーダル（AI検索機能統合）
 // ============================================================
 function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
-  const[tab,setTab]=useState("search"); // "search" | "csv"
+  const[tab,setTab]=useState("ai"); // "ai" | "search" | "csv"
   const[industry,setIndustry]=useState("");
   const[region,setRegion]=useState("");
   const[keyword,setKeyword]=useState("");
   const[csvText,setCsvText]=useState("");
   const[scoreMax,setScoreMax]=useState(defaultLlmoMax||40);
   const[autoSend,setAutoSend]=useState(true);
+
+  // AI Search state
+  const[aiCompanies,setAiCompanies]=useState([]);
+  const[aiSearching,setAiSearching]=useState(false);
+  const[aiEnriching,setAiEnriching]=useState(false);
+  const[aiEnrichTotal,setAiEnrichTotal]=useState(0);
+  const[aiComplete,setAiComplete]=useState(false);
+  const[aiSearchMeta,setAiSearchMeta]=useState(null);
+  const[selectedCompanyIds,setSelectedCompanyIds]=useState(new Set());
+  const[selectAll,setSelectAll]=useState(false);
 
   // Pipeline state
   const[phase,setPhase]=useState(0); // 0=idle, 1=discovering, 2=llmo, 3=forms, 4=email, 5=done
@@ -1290,7 +1300,50 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
     {label:"メール送信",icon:ic.send,color:C.g},
   ];
 
-  const canStart=tab==="search"?(industry&&region):csvText.trim().length>0;
+  const canStart=tab==="ai"?(industry||region||keyword.trim())
+    :tab==="search"?(industry&&region)
+    :csvText.trim().length>0;
+
+  // AI Search: SSE ストリーミング
+  const runAiSearch=async()=>{
+    setError("");setAiCompanies([]);setAiSearching(true);setAiComplete(false);setAiSearchMeta(null);setAiEnriching(false);setAiEnrichTotal(0);setSelectedCompanyIds(new Set());setSelectAll(false);
+    try{
+      const res=await fetch("/api/ai-search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({industry,region,keyword:keyword||undefined})});
+      if(!res.ok){const err=await res.json().catch(()=>({error:"AI検索エラー"}));throw new Error(err.error||"AI検索エラー");}
+      const reader=res.body.getReader();const decoder=new TextDecoder();let buffer="";const companiesAccum=[];const enrichUpdates={};
+      while(true){
+        const{done,value}=await reader.read();if(done)break;
+        buffer+=decoder.decode(value,{stream:true});const lines=buffer.split("\n");buffer=lines.pop()||"";
+        for(const line of lines){
+          if(!line.startsWith("data: "))continue;
+          try{
+            const data=JSON.parse(line.slice(6));
+            if(data.type==="company"){const c=data.company;if(enrichUpdates[c.id])Object.assign(c,enrichUpdates[c.id]);companiesAccum.push(c);setAiCompanies([...companiesAccum]);}
+            else if(data.type==="enrich_start"){setAiEnriching(true);setAiEnrichTotal(data.total);}
+            else if(data.type==="enrich"){enrichUpdates[data.companyId]=data.fields;const idx=companiesAccum.findIndex(c=>c.id===data.companyId);if(idx>=0){Object.assign(companiesAccum[idx],data.fields);setAiCompanies([...companiesAccum]);}}
+            else if(data.type==="complete"){setAiComplete(true);setAiSearchMeta(data.searchMeta||null);const allIds=new Set(companiesAccum.map(c=>c.id));setSelectedCompanyIds(allIds);setSelectAll(true);}
+            else if(data.type==="error"){throw new Error(data.error);}
+          }catch(parseErr){if(parseErr.message&&!parseErr.message.includes("JSON"))throw parseErr;}
+        }
+      }
+    }catch(e){setError(e.message||"AI検索エラー");}finally{setAiSearching(false);setAiEnriching(false);}
+  };
+
+  // AI Search 結果をパイプラインに投入
+  const importAiResults=async()=>{
+    const selected=aiCompanies.filter(c=>selectedCompanyIds.has(c.id));
+    if(selected.length===0){setError("インポートする企業を選択してください");return;}
+    setPhase(2);setError("");setDiscoveredUrls(selected.map(c=>({url:c.url,title:c.name})));
+    try{
+      const companies=selected.map(c=>({name:c.name,url:c.url,industry:c.industry||industry||undefined,region:c.region||region||undefined,address:c.address||undefined,phone:c.phone||undefined,email:c.email||undefined,google_maps_url:c.google_maps_url||undefined,founded_year:c.founded_year||undefined,employee_count:c.employee_count||undefined,representative:c.representative||undefined,contact_name:c.contact_name||undefined,contact_position:c.contact_position||undefined,capital:c.capital||undefined,description:c.description||undefined,heat_score:typeof c.heat_score==="number"?c.heat_score:undefined}));
+      const pipeRes=await fetch("/api/auto-pipeline",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({companies,llmoScoreMax:scoreMax,industry:industry||undefined,region:region||undefined,skipAutoSend:!autoSend})});
+      if(!pipeRes.ok){const err=await pipeRes.json();throw new Error(err.error||"パイプラインエラー");}
+      const pipeData=await pipeRes.json();setPipelineResult(pipeData);setPhase(5);if(onComplete&&pipeData.summary)onComplete(pipeData.summary);
+    }catch(e){setError(e.message||"エラーが発生しました");setPhase(0);}
+  };
+
+  const toggleCompany=(id)=>{setSelectedCompanyIds(prev=>{const next=new Set(prev);if(next.has(id))next.delete(id);else next.add(id);return next;});};
+  const toggleSelectAll=()=>{if(selectAll){setSelectedCompanyIds(new Set());setSelectAll(false);}else{setSelectedCompanyIds(new Set(aiCompanies.map(c=>c.id)));setSelectAll(true);}};
 
   const runPipeline=async()=>{
     setError("");
@@ -1346,17 +1399,18 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
   const inputStyle={width:"100%",padding:"8px 10px",borderRadius:5,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:11,outline:"none",boxSizing:"border-box",fontFamily:"inherit"};
   const labelStyle={fontSize:10,color:C.sub,fontWeight:600,display:"block",marginBottom:4};
   const running=phase>=1&&phase<5;
+  const showAiResults=(tab==="ai")&&(aiCompanies.length>0||aiSearching)&&phase===0;
 
   return(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={running?undefined:onClose}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.card,borderRadius:10,border:`1px solid ${C.bdr}`,width:"100%",maxWidth:560,maxHeight:"90vh",overflow:"auto",padding:24}}>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={(running||aiSearching)?undefined:onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.card,borderRadius:10,border:`1px solid ${C.bdr}`,width:"100%",maxWidth:showAiResults?720:560,maxHeight:"90vh",overflow:"auto",padding:24,transition:"max-width .3s"}}>
         {/* Header */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
           <h2 style={{fontSize:15,fontWeight:800,margin:0,display:"flex",alignItems:"center",gap:8}}>
             <span style={{width:28,height:28,borderRadius:5,background:`linear-gradient(135deg,${C.cy},${C.b})`,display:"inline-flex",alignItems:"center",justifyContent:"center"}}><I d={ic.globe} s={14} c={C.bg}/></span>
-            自動リード発見パイプライン
+            {tab==="ai"?"AI企業検索":"自動リード発見パイプライン"}
           </h2>
-          {!running&&<button onClick={onClose} style={{background:"none",border:"none",color:C.sub,fontSize:18,cursor:"pointer"}}>✕</button>}
+          {!running&&!aiSearching&&<button onClick={onClose} style={{background:"none",border:"none",color:C.sub,fontSize:18,cursor:"pointer"}}>✕</button>}
         </div>
 
         {/* Progress bar (visible during execution) */}
@@ -1395,16 +1449,46 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
         )}
 
         {/* Idle: Tab selector + input form */}
-        {phase===0&&(
+        {phase===0&&!showAiResults&&(
           <>
             {/* Tabs */}
             <div style={{display:"flex",gap:2,marginBottom:16,background:C.bg,borderRadius:6,padding:3}}>
-              {[{id:"search",label:"検索発見"},{id:"csv",label:"CSV取込"}].map(t=>(
+              {[{id:"ai",label:"AI検索"},{id:"search",label:"検索発見"},{id:"csv",label:"CSV取込"}].map(t=>(
                 <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:"7px 0",borderRadius:4,border:"none",background:tab===t.id?C.ca:"transparent",color:tab===t.id?C.tx:C.dim,fontSize:11,fontWeight:tab===t.id?700:400,cursor:"pointer",fontFamily:"inherit"}}>
                   {t.label}
                 </button>
               ))}
             </div>
+
+            {/* AI Search tab */}
+            {tab==="ai"&&(
+              <div>
+                <div style={{padding:10,borderRadius:6,background:`${C.cy}10`,border:`1px solid ${C.cy}30`,marginBottom:14}}>
+                  <div style={{fontSize:10,fontWeight:700,color:C.cy,marginBottom:4}}>Gemini + Google Search で企業を発見</div>
+                  <div style={{fontSize:9,color:C.sub}}>AIがリアルタイムで企業を検索し、Firecrawlで詳細情報を自動収集します。結果を確認してからパイプラインに投入できます。</div>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+                  <div>
+                    <label style={labelStyle}>業種</label>
+                    <select value={industry} onChange={e=>setIndustry(e.target.value)} style={inputStyle}>
+                      <option value="">全業種</option>
+                      {INDUSTRIES.map(i=><option key={i} value={i}>{i}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>地域</label>
+                    <select value={region} onChange={e=>setRegion(e.target.value)} style={inputStyle}>
+                      <option value="">全地域</option>
+                      {REGIONS.map(r=><option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div style={{marginBottom:12}}>
+                  <label style={labelStyle}>キーワード</label>
+                  <input value={keyword} onChange={e=>setKeyword(e.target.value)} placeholder="例: クラウド, DX, 介護, Web制作" style={inputStyle}/>
+                </div>
+              </div>
+            )}
 
             {/* Search tab */}
             {tab==="search"&&(
@@ -1447,8 +1531,8 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
               </div>
             )}
 
-            {/* Settings */}
-            <div style={{background:C.bg,borderRadius:6,padding:14,marginBottom:16}}>
+            {/* Settings (for search/csv tabs) */}
+            {tab!=="ai"&&<div style={{background:C.bg,borderRadius:6,padding:14,marginBottom:16}}>
               <div style={{fontSize:10,fontWeight:700,color:C.sub,marginBottom:10}}>設定</div>
               <div style={{marginBottom:10}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
@@ -1465,16 +1549,108 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
                 </div>
                 <button onClick={()=>setAutoSend(!autoSend)} style={{padding:"4px 12px",borderRadius:4,border:"none",background:autoSend?C.gB:C.rB,color:autoSend?C.g:C.r,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoSend?"ON":"OFF"}</button>
               </div>
-            </div>
+            </div>}
 
             {/* Error */}
             {error&&<div style={{padding:10,borderRadius:6,background:C.rB,border:`1px solid ${C.r}`,color:C.r,fontSize:11,marginBottom:12}}>{error}</div>}
 
             {/* Start button */}
-            <button onClick={runPipeline} disabled={!canStart} style={{width:"100%",padding:"12px",borderRadius:6,border:"none",background:canStart?`linear-gradient(135deg,${C.cy},${C.b})`:`${C.bdr}`,color:canStart?C.bg:C.dim,fontSize:13,fontWeight:800,cursor:canStart?"pointer":"default",fontFamily:"inherit",opacity:canStart?1:.6}}>
-              パイプライン実行
+            <button onClick={tab==="ai"?runAiSearch:runPipeline} disabled={!canStart} style={{width:"100%",padding:"12px",borderRadius:6,border:"none",background:canStart?`linear-gradient(135deg,${C.cy},${C.b})`:`${C.bdr}`,color:canStart?C.bg:C.dim,fontSize:13,fontWeight:800,cursor:canStart?"pointer":"default",fontFamily:"inherit",opacity:canStart?1:.6}}>
+              {tab==="ai"?"AI検索を開始":"パイプライン実行"}
             </button>
           </>
+        )}
+
+        {/* AI Search: Streaming results */}
+        {showAiResults&&phase===0&&(
+          <div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                {aiSearching&&<div style={{width:14,height:14,border:`2px solid ${C.bdr}`,borderTop:`2px solid ${C.cy}`,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>}
+                {aiSearching&&!aiEnriching&&<span style={{fontSize:11,color:C.cy,fontWeight:600}}>企業を検索中...</span>}
+                {aiEnriching&&<span style={{fontSize:11,color:C.b,fontWeight:600}}>詳細情報を収集中... ({aiEnrichTotal}社)</span>}
+                {aiComplete&&!aiSearching&&<span style={{fontSize:11,color:C.g,fontWeight:600}}>検索完了</span>}
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:18,fontWeight:800,color:C.cy,fontFamily:"'Geist Mono',monospace"}}>{aiCompanies.length}</span>
+                <span style={{fontSize:9,color:C.sub}}>社発見</span>
+              </div>
+            </div>
+
+            {aiCompanies.length>0&&(
+              <div style={{marginBottom:14}}>
+                {aiComplete&&(
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 10px",background:C.bg,borderRadius:"6px 6px 0 0",border:`1px solid ${C.bdr}`,borderBottom:"none"}}>
+                    <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:10,color:C.sub}}>
+                      <input type="checkbox" checked={selectAll} onChange={toggleSelectAll} style={{accentColor:C.cy}}/>
+                      全選択 ({selectedCompanyIds.size}/{aiCompanies.length})
+                    </label>
+                    {aiSearchMeta&&aiSearchMeta.queries&&(
+                      <span style={{fontSize:8,color:C.dim}}>{aiSearchMeta.queries.length}クエリ / {aiSearchMeta.sources?.length||0}ソース</span>
+                    )}
+                  </div>
+                )}
+                <div style={{maxHeight:350,overflow:"auto",border:`1px solid ${C.bdr}`,borderRadius:aiComplete?"0 0 6px 6px":"6px"}}>
+                  {aiCompanies.map((c,i)=>{
+                    const isSelected=selectedCompanyIds.has(c.id);
+                    return(
+                      <div key={c.id||i} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"8px 10px",borderBottom:i<aiCompanies.length-1?`1px solid ${C.bdr}`:"none",background:isSelected?`${C.cy}08`:"transparent",transition:"background .2s"}}>
+                        {aiComplete&&<input type="checkbox" checked={isSelected} onChange={()=>toggleCompany(c.id)} style={{accentColor:C.cy,marginTop:2,flexShrink:0}}/>}
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                            <span style={{fontWeight:700,fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</span>
+                            {typeof c.heat_score==="number"&&<span style={{fontSize:8,fontWeight:700,padding:"1px 5px",borderRadius:3,background:c.heat_score>=70?C.gB:c.heat_score>=40?`${C.o}15`:C.rB,color:c.heat_score>=70?C.g:c.heat_score>=40?C.o:C.r,fontFamily:"'Geist Mono',monospace"}}>{c.heat_score}</span>}
+                          </div>
+                          <div style={{fontSize:9,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:2}}>{c.url?.replace(/^https?:\/\//,"").slice(0,40)}</div>
+                          <div style={{display:"flex",flexWrap:"wrap",gap:4,fontSize:8}}>
+                            {c.industry&&<span style={{padding:"1px 5px",borderRadius:3,background:`${C.b}15`,color:C.b}}>{c.industry}</span>}
+                            {c.region&&<span style={{padding:"1px 5px",borderRadius:3,background:`${C.p}15`,color:C.p}}>{c.region}</span>}
+                            {c.email&&<span style={{padding:"1px 5px",borderRadius:3,background:C.gB,color:C.g}}>mail</span>}
+                            {c.phone&&c.phone!=="不明"&&<span style={{padding:"1px 5px",borderRadius:3,background:`${C.cy}15`,color:C.cy}}>tel</span>}
+                            {c.employee_count&&<span style={{padding:"1px 5px",borderRadius:3,background:`${C.sub}15`,color:C.sub}}>{c.employee_count}</span>}
+                            {c.capital&&<span style={{padding:"1px 5px",borderRadius:3,background:`${C.sub}15`,color:C.sub}}>{c.capital}</span>}
+                            {c.representative&&<span style={{padding:"1px 5px",borderRadius:3,background:`${C.sub}15`,color:C.sub}}>{c.representative}</span>}
+                          </div>
+                          {c.description&&<div style={{fontSize:8,color:C.dim,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.description}</div>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {error&&<div style={{padding:10,borderRadius:6,background:C.rB,border:`1px solid ${C.r}`,color:C.r,fontSize:11,marginBottom:12}}>{error}</div>}
+
+            {aiComplete&&aiCompanies.length>0&&(
+              <>
+                <div style={{background:C.bg,borderRadius:6,padding:14,marginBottom:14}}>
+                  <div style={{fontSize:10,fontWeight:700,color:C.sub,marginBottom:10}}>パイプライン設定</div>
+                  <div style={{marginBottom:10}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                      <label style={{fontSize:10,color:C.sub,fontWeight:600}}>LLMOスコア上限</label>
+                      <span style={{fontSize:13,fontWeight:800,fontFamily:"'Geist Mono',monospace",color:C.acc}}>{scoreMax}</span>
+                    </div>
+                    <input type="range" min="10" max="60" value={scoreMax} onChange={e=>setScoreMax(+e.target.value)} style={{width:"100%"}}/>
+                    <div style={{fontSize:8,color:C.dim}}>このスコア以下のサイトのみリードとして保存</div>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div>
+                      <div style={{fontSize:10,fontWeight:600,color:C.tx}}>自動メール送信</div>
+                      <div style={{fontSize:8,color:C.dim}}>フォーム発見後に初回ステップメールを自動送信</div>
+                    </div>
+                    <button onClick={()=>setAutoSend(!autoSend)} style={{padding:"4px 12px",borderRadius:4,border:"none",background:autoSend?C.gB:C.rB,color:autoSend?C.g:C.r,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoSend?"ON":"OFF"}</button>
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>{setAiCompanies([]);setAiComplete(false);setAiSearchMeta(null);setError("");}} style={{flex:1,padding:"10px",borderRadius:6,border:`1px solid ${C.bdr}`,background:"transparent",color:C.tx,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>新しい検索</button>
+                  <button onClick={importAiResults} disabled={selectedCompanyIds.size===0} style={{flex:2,padding:"10px",borderRadius:6,border:"none",background:selectedCompanyIds.size>0?`linear-gradient(135deg,${C.cy},${C.b})`:`${C.bdr}`,color:selectedCompanyIds.size>0?C.bg:C.dim,fontSize:12,fontWeight:800,cursor:selectedCompanyIds.size>0?"pointer":"default",fontFamily:"inherit",opacity:selectedCompanyIds.size>0?1:.6}}>
+                    {selectedCompanyIds.size}社をパイプラインに投入
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         )}
 
         {/* Results (phase 5) */}
@@ -1540,7 +1716,7 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
 
             {/* Action buttons */}
             <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
-              <button onClick={()=>{setPhase(0);setPipelineResult(null);setDiscoveredUrls([]);setError("");}} style={{padding:"8px 16px",borderRadius:5,border:`1px solid ${C.bdr}`,background:"transparent",color:C.tx,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+              <button onClick={()=>{setPhase(0);setPipelineResult(null);setDiscoveredUrls([]);setError("");setAiCompanies([]);setAiComplete(false);setAiSearchMeta(null);}} style={{padding:"8px 16px",borderRadius:5,border:`1px solid ${C.bdr}`,background:"transparent",color:C.tx,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
                 新しい発見
               </button>
               <button onClick={onClose} style={{padding:"8px 16px",borderRadius:5,border:"none",background:C.acc,color:C.bg,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>

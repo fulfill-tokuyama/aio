@@ -47,6 +47,10 @@ export interface EnrichFields {
   representative?: string;
   contactName?: string;
   contactPosition?: string;
+  foundedYear?: number;
+  employeeCount?: string;
+  capital?: string;
+  description?: string;
 }
 
 /** Gemini でマークダウンから連絡先を抽出 */
@@ -59,7 +63,7 @@ async function extractFieldsFromMarkdown(
   const prompt = `以下は「${companyName}」の企業サイトから取得したテキストです。
 下記フィールドを抽出してください。不明な場合はnullとしてください。
 JSONのみ出力（説明不要）:
-{"email":"連絡先メールアドレス","phone":"代表電話番号","representative":"代表者名","contact_name":"問い合わせ担当者名","contact_position":"その役職"}
+{"email":"連絡先メールアドレス","phone":"代表電話番号","representative":"代表者名","contact_name":"問い合わせ担当者名","contact_position":"その役職","founded_year":設立年(数値),"employee_count":"従業員数(例:50名)","capital":"資本金(例:1000万円)","description":"事業内容を1文で"}
 
 ---
 ${trimmed}`;
@@ -99,6 +103,18 @@ ${trimmed}`;
       contactPosition:
         typeof parsed.contact_position === "string" && parsed.contact_position !== "null"
           ? parsed.contact_position
+          : undefined,
+      foundedYear:
+        typeof parsed.founded_year === "number" ? parsed.founded_year : undefined,
+      employeeCount:
+        typeof parsed.employee_count === "string" && parsed.employee_count !== "null"
+          ? parsed.employee_count
+          : undefined,
+      capital:
+        typeof parsed.capital === "string" && parsed.capital !== "null" ? parsed.capital : undefined,
+      description:
+        typeof parsed.description === "string" && parsed.description !== "null"
+          ? parsed.description
           : undefined,
     };
   } catch {
