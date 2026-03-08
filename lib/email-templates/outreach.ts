@@ -83,9 +83,9 @@ function trackLink(url: string, leadId?: string): string {
 
 function buildStep1Html(data: OutreachEmailData): string {
   const scoreColor = getScoreColor(data.llmoScore);
-  const weaknessItems = data.weaknesses.slice(0, 3)
-    .map(w => `<li style="color:#8896AB;font-size:13px;line-height:1.8;">${escapeHtml(w)}</li>`)
-    .join("");
+  const issueCount = data.weaknesses.length;
+  // 最も深刻な課題1つだけ表示
+  const topWeakness = data.weaknesses.length > 0 ? escapeHtml(data.weaknesses[0]) : "";
   const diagLink = trackLink(data.diagnosisLink, data.leadId);
 
   return wrapLayout(`
@@ -97,7 +97,7 @@ function buildStep1Html(data: OutreachEmailData): string {
       <p style="color:#8896AB;font-size:13px;line-height:1.7;margin:0 0 20px;">
         突然のご連絡失礼いたします。<br>
         ${escapeHtml(data.senderName)}と申します。<br><br>
-        貴社サイトのAI検索可視性を分析したところ、<strong style="color:#E2E8F0;">改善の余地が見つかりました</strong>ので、無料診断レポートをお送りできればと思いご連絡いたしました。
+        貴社サイトのAI検索可視性を分析したところ、<strong style="color:#E2E8F0;">改善の余地が見つかりました</strong>ので、ご連絡いたしました。
       </p>
 
       <!-- Score -->
@@ -109,27 +109,32 @@ function buildStep1Html(data: OutreachEmailData): string {
         <p style="color:#8896AB;font-size:11px;margin:8px 0 0;">100点満点中</p>
       </div>
 
-      <!-- Weaknesses Top 3 -->
-      ${weaknessItems ? `
-      <h3 style="color:#EF4444;font-size:13px;margin:0 0 10px;">⚠ 検出された主な課題（Top 3）</h3>
-      <ul style="margin:0 0 20px;padding:0 0 0 20px;">
-        ${weaknessItems}
-      </ul>` : ""}
+      <!-- Issue Summary -->
+      <div style="margin-bottom:20px;">
+        <h3 style="color:#EF4444;font-size:13px;margin:0 0 10px;">⚠ ${issueCount}件の課題が検出されました</h3>
+        ${topWeakness ? `
+        <div style="background:#0B0F1A;border-radius:10px;padding:14px;border:1px solid #1E293B;">
+          <p style="color:#8896AB;font-size:11px;margin:0 0 4px;">最も優先度の高い課題:</p>
+          <p style="color:#E2E8F0;font-size:13px;font-weight:600;margin:0;">${topWeakness}</p>
+        </div>` : ""}
+      </div>
 
       <p style="color:#8896AB;font-size:13px;line-height:1.7;margin:0;">
-        詳細な診断レポートでは、各カテゴリの評価と具体的な改善アクションをご提案しています。
+        残り${issueCount > 1 ? ` ${issueCount - 1}件の課題と具体的な改善アクション` : "の詳細な改善アクション"}は、<br>
+        <strong style="color:#E2E8F0;">無料登録するだけ</strong>で詳細レポートとしてご確認いただけます。
       </p>
     </div>
 
     <!-- CTA -->
     <div style="background:#111827;border-radius:16px;border:1px solid #3B82F620;padding:32px;text-align:center;margin-bottom:24px;">
-      <h3 style="color:#E2E8F0;font-size:16px;margin:0 0 12px;">無料でAI可視性診断を受けてみませんか？</h3>
+      <h3 style="color:#E2E8F0;font-size:16px;margin:0 0 12px;">詳しい診断結果を無料で確認する</h3>
       <p style="color:#8896AB;font-size:12px;line-height:1.7;margin:0 0 20px;">
-        30秒の入力で、貴社サイトのAI検索対策レポートを即時発行します。
+        メールアドレスだけの無料登録で、全課題の詳細・改善提案・<br>AI検索エンジン別の表示予測をご覧いただけます。
       </p>
       <a href="${diagLink}" style="display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;font-size:14px;font-weight:700;text-decoration:none;border-radius:10px;">
-        無料診断レポートを受け取る →
+        詳しい診断結果を無料で確認する →
       </a>
+      <p style="color:#5A6A80;font-size:11px;margin:12px 0 0;">詳細レポートは無料登録でご覧いただけます</p>
     </div>`, { leadId: data.leadId, unsubscribeLink: data.unsubscribeLink });
 }
 
@@ -144,7 +149,7 @@ function buildStep2Html(data: OutreachEmailData): string {
         ${escapeHtml(data.company)} ご担当者様
       </p>
       <p style="color:#8896AB;font-size:13px;line-height:1.7;margin:0 0 20px;">
-        先日はご案内差し上げた${escapeHtml(data.senderName)}です。<br>
+        先日ご案内差し上げた${escapeHtml(data.senderName)}です。<br>
         本日は、<strong style="color:#E2E8F0;">貴社と同業界のAI検索対策状況</strong>をお伝えします。
       </p>
 
@@ -173,7 +178,7 @@ function buildStep2Html(data: OutreachEmailData): string {
 
       <p style="color:#8896AB;font-size:13px;line-height:1.7;margin:0;">
         競合他社がAI検索対策を始める前に、先行者優位を確立しませんか？<br>
-        無料の診断レポートで、貴社の現在地と改善ロードマップをお示しします。
+        <strong style="color:#E2E8F0;">無料登録するだけ</strong>で、貴社の詳細な診断レポートと同業種比較データをご覧いただけます。
       </p>
     </div>
 
@@ -181,17 +186,17 @@ function buildStep2Html(data: OutreachEmailData): string {
     <div style="background:#111827;border-radius:16px;border:1px solid #3B82F620;padding:32px;text-align:center;margin-bottom:24px;">
       <h3 style="color:#E2E8F0;font-size:16px;margin:0 0 12px;">競合に差をつける第一歩</h3>
       <p style="color:#8896AB;font-size:12px;line-height:1.7;margin:0 0 20px;">
-        無料でAI検索可視性レポートを発行します。
+        無料登録で詳細レポート・同業種比較・AI検索エンジン別の表示予測を確認できます。
       </p>
       <a href="${diagLink}" style="display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;font-size:14px;font-weight:700;text-decoration:none;border-radius:10px;">
-        無料診断を受ける →
+        無料で詳細レポートを見る →
       </a>
+      <p style="color:#5A6A80;font-size:11px;margin:12px 0 0;">メールアドレスだけで登録できます</p>
     </div>`, { leadId: data.leadId, unsubscribeLink: data.unsubscribeLink });
 }
 
 function buildStep3Html(data: OutreachEmailData): string {
   const diagLink = trackLink(data.diagnosisLink, data.leadId);
-  const payLink = trackLink(data.paymentLink, data.leadId);
 
   return wrapLayout(`
     <!-- Main Card -->
@@ -201,12 +206,12 @@ function buildStep3Html(data: OutreachEmailData): string {
       </p>
       <p style="color:#8896AB;font-size:13px;line-height:1.7;margin:0 0 20px;">
         ${escapeHtml(data.senderName)}です。<br>
-        本日は、<strong style="color:#E2E8F0;">AIO Insightをご導入いただいた企業様の成果事例</strong>をご紹介いたします。
+        本日は、<strong style="color:#E2E8F0;">AIO Insightをご利用いただいた企業様の成果事例</strong>をご紹介いたします。
       </p>
 
       <!-- Case Studies -->
       <div style="border-top:1px solid #1E293B;padding:20px 0;margin-bottom:20px;">
-        <h3 style="color:#10B981;font-size:14px;margin:0 0 16px;">📈 導入企業の改善実績</h3>
+        <h3 style="color:#10B981;font-size:14px;margin:0 0 16px;">📈 改善実績</h3>
 
         <div style="background:#0B0F1A;border-radius:10px;padding:16px;margin-bottom:12px;border:1px solid #1E293B;">
           <div style="font-size:12px;font-weight:700;color:#E2E8F0;margin-bottom:6px;">IT企業 A社</div>
@@ -246,27 +251,26 @@ function buildStep3Html(data: OutreachEmailData): string {
       </div>
 
       <p style="color:#8896AB;font-size:13px;line-height:1.7;margin:0;">
-        まずは無料診断で貴社の現状を把握し、改善の可能性をご確認ください。
+        まずは<strong style="color:#E2E8F0;">無料登録</strong>で貴社の詳細な診断レポートをご確認ください。<br>
+        同業種との比較データやAI検索エンジン別の表示予測もご覧いただけます。
       </p>
     </div>
 
-    <!-- CTA (2 options) -->
+    <!-- CTA -->
     <div style="background:#111827;border-radius:16px;border:1px solid #3B82F620;padding:32px;text-align:center;margin-bottom:24px;">
-      <h3 style="color:#E2E8F0;font-size:16px;margin:0 0 16px;">貴社も成果を出しませんか？</h3>
-      <div style="margin-bottom:12px;">
-        <a href="${diagLink}" style="display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;font-size:14px;font-weight:700;text-decoration:none;border-radius:10px;">
-          無料診断を受ける →
-        </a>
-      </div>
-      <p style="color:#5A6A80;font-size:11px;margin:0 0 12px;">または</p>
-      <a href="${payLink}" style="display:inline-block;padding:12px 36px;background:linear-gradient(135deg,#F0B429,#D49B1F);color:#0B0F1A;font-size:13px;font-weight:700;text-decoration:none;border-radius:10px;">
-        月額プランに申し込む（¥10,000/月）
+      <h3 style="color:#E2E8F0;font-size:16px;margin:0 0 12px;">貴社も成果を出しませんか？</h3>
+      <p style="color:#8896AB;font-size:12px;line-height:1.7;margin:0 0 20px;">
+        無料登録で詳細レポートを確認 → 改善の方向性が分かります。
+      </p>
+      <a href="${diagLink}" style="display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;font-size:14px;font-weight:700;text-decoration:none;border-radius:10px;">
+        無料で詳細レポートを見る →
       </a>
+      <p style="color:#5A6A80;font-size:11px;margin:12px 0 0;">メールアドレスだけで登録できます</p>
     </div>`, { leadId: data.leadId, unsubscribeLink: data.unsubscribeLink });
 }
 
 function buildStep4Html(data: OutreachEmailData): string {
-  const payLink = trackLink(data.paymentLink, data.leadId);
+  const diagLink = trackLink(data.diagnosisLink, data.leadId);
 
   return wrapLayout(`
     <!-- Main Card -->
@@ -298,35 +302,35 @@ function buildStep4Html(data: OutreachEmailData): string {
         </table>
       </div>
 
-      <!-- Limited Offer -->
-      <div style="background:#F0B42910;border:1px solid #F0B42930;border-radius:10px;padding:20px;margin-bottom:20px;">
+      <!-- Free Registration Nudge -->
+      <div style="background:#3B82F610;border:1px solid #3B82F630;border-radius:10px;padding:20px;margin-bottom:20px;">
         <div style="text-align:center;">
-          <span style="color:#F0B429;font-size:13px;font-weight:700;">🎁 今月限定特典</span>
+          <span style="color:#3B82F6;font-size:13px;font-weight:700;">📋 まだ詳細レポートをご覧いただいていません</span>
           <p style="color:#E2E8F0;font-size:14px;font-weight:600;margin:8px 0;">
-            月額プランお申込みで初月のセットアップ費用（通常¥30,000）が無料
+            無料登録で全課題の詳細・改善提案・同業種比較データを確認できます
           </p>
           <p style="color:#8896AB;font-size:11px;margin:0;">
-            AI検索対策の初期設定・構造化データ実装・改善アクションプランを無料で提供
+            メールアドレスだけで登録完了 — 料金は一切かかりません
           </p>
         </div>
       </div>
 
       <p style="color:#8896AB;font-size:13px;line-height:1.7;margin:0;">
         本メールが最後のご案内となります。<br>
-        ご検討いただけますと幸いです。
+        まずは無料の詳細レポートだけでもご確認いただけますと幸いです。
       </p>
     </div>
 
-    <!-- CTA (Stripe直リンク) -->
-    <div style="background:#111827;border-radius:16px;border:1px solid #F0B42930;padding:32px;text-align:center;margin-bottom:24px;">
+    <!-- CTA -->
+    <div style="background:#111827;border-radius:16px;border:1px solid #3B82F620;padding:32px;text-align:center;margin-bottom:24px;">
       <h3 style="color:#E2E8F0;font-size:16px;margin:0 0 8px;">AI検索時代の先行者になる</h3>
       <p style="color:#8896AB;font-size:12px;line-height:1.7;margin:0 0 20px;">
-        月額¥10,000でAI検索可視性を継続モニタリング＆改善
+        無料登録で貴社の詳細な診断レポートを確認し、<br>改善の第一歩を踏み出しましょう。
       </p>
-      <a href="${payLink}" style="display:inline-block;padding:16px 48px;background:linear-gradient(135deg,#F0B429,#D49B1F);color:#0B0F1A;font-size:15px;font-weight:800;text-decoration:none;border-radius:10px;">
-        有料プランに申し込む →
+      <a href="${diagLink}" style="display:inline-block;padding:16px 48px;background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;font-size:15px;font-weight:800;text-decoration:none;border-radius:10px;">
+        無料で詳細レポートを見る →
       </a>
-      <p style="color:#5A6A80;font-size:11px;margin:12px 0 0;">初月セットアップ費用無料キャンペーン中</p>
+      <p style="color:#5A6A80;font-size:11px;margin:12px 0 0;">詳細レポートは無料登録でご覧いただけます</p>
     </div>`, { leadId: data.leadId, unsubscribeLink: data.unsubscribeLink });
 }
 
