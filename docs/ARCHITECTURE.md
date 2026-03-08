@@ -1,5 +1,7 @@
 # AIO Insight — 機能・アーキテクチャ資料
 
+**全体設計は [OVERVIEW.md](./OVERVIEW.md) を参照。**
+
 ## 概要
 
 **AIO Insight** は AI検索（ChatGPT / Perplexity / Gemini 等）における企業サイトの可視性を診断・改善するSaaSサービス。
@@ -30,6 +32,11 @@
 | `/reset-password` | page.tsx | パスワードリセット（メール送信 / 新パスワード設定） |
 | `/payment-success` | page.tsx | Stripe決済完了ページ |
 | `/unsubscribe` | page.tsx | メール配信停止ページ（HMAC署名検証） |
+| `/privacy` | page.tsx | プライバシーポリシー |
+| `/terms` | page.tsx | 利用規約 |
+| `/tokusho` | page.tsx | 特定商取引法に基づく表記 |
+| `/signup` | page.tsx | 新規登録（メールアドレスのみ・Magic Link） |
+| `/diagnosis/[id]/detail` | DiagnosisDetailClient | 詳細診断レポート（認証必須） |
 
 ---
 
@@ -231,6 +238,8 @@ discovered → form_found → sent → step2 → step3 → step4 → dormant
 | `NEXT_PUBLIC_SENDER_NAME` | メール送信者名 | No (default: AIO Insight) |
 | `AHREFS_API_KEY` | Ahrefs APIキー | No (オプション) |
 | `GOOGLE_PAGESPEED_API_KEY` | PageSpeed Insights APIキー | No |
+| `GEMINI_API_KEY` | Gemini API（リード発見・AI実測・エンリッチ） | No (gemini_search / AI実測時は必須) |
+| `FIRECRAWL_API_KEY` | Firecrawl API（SPAクロール・エンリッチ） | No (設定時は Firecrawl 優先) |
 
 ---
 

@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { runDiagnosis, Weakness, type DiagnosisResult } from "@/lib/diagnosis";
 import { scanUrl } from "@/lib/scan-forms";
+import { enrichLeadContact } from "@/lib/firecrawl-enrich";
 import { sendOutreachEmail } from "@/lib/email";
 import { normalizeUrl, domainToCompany, calculateAiScore, getExistingUrls, incrementTemplateStat } from "@/lib/pipeline-utils";
 import { requireAuth } from "@/lib/api-auth";
@@ -283,6 +284,36 @@ export async function POST(req: NextRequest) {
             contactPhone: null,
             formUrl: null,
           });
+        }
+      }
+    }
+
+    // ============================================================
+    // Step 4.5: Firecrawl エンリッチ（contact_email が空のリードのみ）
+    // ============================================================
+    if (process.env.FIRECRAWL_API_KEY) {
+      const needsEnrich = leadsWithContact.filter((l) => !l.contactEmail && l.url);
+      for (const lead of needsEnrich) {
+        try {
+          const enriched = await enrichLeadContact(lead.url, lead.company);
+          if (enriched.contactEmail || enriched.contactPhone) {
+            const updates: Record<string, unknown> = {};
+            if (enriched.contactEmail) updates.contact_email = enriched.contactEmail;
+            if (enriched.contactPhone) updates.contact_phone = enriched.contactPhone;
+            if (enriched.contactEmail || lead.formUrl) updates.phase = "form_found";
+
+            if (Object.keys(updates).length > 0) {
+              await supabaseAdmin
+                .from("pipeline_leads")
+                .update(updates)
+                .eq("id", lead.id);
+            }
+
+            lead.contactEmail = enriched.contactEmail ?? lead.contactEmail;
+            lead.contactPhone = enriched.contactPhone ?? lead.contactPhone;
+          }
+        } catch {
+          // エンリッチ失敗はスキップ
         }
       }
     }

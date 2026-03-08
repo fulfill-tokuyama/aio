@@ -1,4 +1,6 @@
 import * as cheerio from "cheerio";
+import { crawlUrl } from "./firecrawl";
+import { runAiTest, type AiTestResult } from "./diagnosis-ai-test";
 
 // ============================================================
 // AIO Diagnosis Engine
@@ -34,6 +36,15 @@ export interface DiagnosisResult {
   weaknesses: string[];
   weaknessDetails: Weakness[];
   suggestions: string[];
+  /** AI実測スコア（includeAiTest: true の場合のみ） */
+  aiTest?: AiTestResult;
+}
+
+export interface RunDiagnosisOptions {
+  /** AI実測を実行する（6プロンプト × Gemini、約40秒追加） */
+  includeAiTest?: boolean;
+  industry?: string;
+  region?: string;
 }
 
 interface PageSpeedData {
@@ -84,7 +95,10 @@ interface CrawlabilityResult {
 // ============================================================
 // Main diagnosis function
 // ============================================================
-export async function runDiagnosis(url: string): Promise<DiagnosisResult> {
+export async function runDiagnosis(
+  url: string,
+  options?: RunDiagnosisOptions
+): Promise<DiagnosisResult> {
   // Normalize URL
   if (!url.startsWith("http")) {
     url = "https://" + url;
@@ -122,7 +136,7 @@ export async function runDiagnosis(url: string): Promise<DiagnosisResult> {
   const weaknesses = weaknessDetails.map(w => w.message);
   const suggestions = weaknessDetails.map(w => w.suggestion);
 
-  return {
+  const result: DiagnosisResult = {
     score,
     breakdown,
     pagespeedData,
@@ -131,6 +145,22 @@ export async function runDiagnosis(url: string): Promise<DiagnosisResult> {
     weaknessDetails,
     suggestions,
   };
+
+  // AI実測（オプション）
+  if (options?.includeAiTest && htmlAnalysis.title) {
+    try {
+      const aiTest = await runAiTest(
+        htmlAnalysis.title,
+        options.industry || "",
+        options.region || ""
+      );
+      result.aiTest = aiTest;
+    } catch {
+      // AI実測失敗時はスキップ
+    }
+  }
+
+  return result;
 }
 
 // ============================================================
@@ -169,28 +199,47 @@ async function checkPageSpeed(url: string): Promise<PageSpeedData> {
   }
 }
 
-// ============================================================
-// 2. HTML Analysis (fetch + cheerio)
-// ============================================================
-async function checkHtml(url: string): Promise<HtmlAnalysis> {
+/** fetch による HTML 取得（Firecrawl フォールバック用） */
+async function fetchHtmlFallback(url: string): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
-
   try {
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; AIOInsightBot/1.0)",
-      },
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; AIOInsightBot/1.0)" },
     });
     clearTimeout(timeout);
+    if (!res.ok) return "";
+    return await res.text();
+  } catch {
+    clearTimeout(timeout);
+    return "";
+  }
+}
 
-    if (!res.ok) throw new Error(`Fetch error: ${res.status}`);
+// ============================================================
+// 2. HTML Analysis (Firecrawl優先、失敗時はfetch+cheerio)
+// ============================================================
+async function checkHtml(url: string): Promise<HtmlAnalysis> {
+  let html: string;
 
-    const html = await res.text();
-    const $ = cheerio.load(html);
+  // Firecrawl が設定されている場合は優先（SPA・JS レンダリング対応）
+  if (process.env.FIRECRAWL_API_KEY) {
+    const crawl = await crawlUrl(url);
+    if (crawl.success && crawl.html) {
+      html = crawl.html;
+    } else {
+      html = await fetchHtmlFallback(url);
+    }
+  } else {
+    html = await fetchHtmlFallback(url);
+  }
 
-    // Title extraction (og:site_name preferred, fallback to <title> cleaned)
+  if (!html) throw new Error("HTML取得に失敗しました");
+
+  const $ = cheerio.load(html);
+
+  // Title extraction (og:site_name preferred, fallback to <title> cleaned)
     const ogSiteName = $('meta[property="og:site_name"]').attr("content")?.trim();
     const rawTitle = $("title").text().trim();
     const title = ogSiteName || rawTitle
@@ -356,10 +405,6 @@ async function checkHtml(url: string): Promise<HtmlAnalysis> {
       hasBreadcrumbSchema, hasProductSchema,
       schemaTypeCount: schemaTypes.size,
     };
-  } catch {
-    clearTimeout(timeout);
-    throw new Error("HTML fetch timeout or error");
-  }
 }
 
 // ============================================================

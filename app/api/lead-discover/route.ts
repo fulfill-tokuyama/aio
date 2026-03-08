@@ -1,9 +1,10 @@
 // app/api/lead-discover/route.ts
-// URL自動発見: 検索スクレイピング or CSV取込
+// URL自動発見: DuckDuckGo / Gemini Search / CSV取込
 
 import { NextRequest, NextResponse } from "next/server";
 import * as cheerio from "cheerio";
 import { requireAuth } from "@/lib/api-auth";
+import { searchCompaniesWithGemini } from "@/lib/gemini-search";
 
 export const maxDuration = 60;
 
@@ -235,6 +236,55 @@ export async function POST(req: NextRequest) {
         },
       });
 
+    } else if (mode === "gemini_search") {
+      // === Gemini Google Search モード ===
+      const { industry, region, keyword, segments } = body as {
+        industry: string;
+        region: string;
+        keyword?: string;
+        segments?: string[];
+      };
+
+      if (!industry || !region) {
+        return NextResponse.json({ error: "industry と region は必須です" }, { status: 400 });
+      }
+
+      const geminiResult = await searchCompaniesWithGemini(
+        industry,
+        region,
+        keyword,
+        segments
+      );
+
+      // ブロックリストフィルタ適用
+      const seenDomains = new Set<string>();
+      const filtered: { url: string; title: string; source: string; company?: string }[] = [];
+
+      for (const item of geminiResult.urls) {
+        const domain = extractDomain(item.url);
+        if (!domain) continue;
+        if (isDomainBlocked(domain)) continue;
+        if (seenDomains.has(domain)) continue;
+
+        seenDomains.add(domain);
+        filtered.push({
+          url: item.url,
+          title: item.title || "",
+          source: item.source,
+          company: item.company,
+        });
+      }
+
+      return NextResponse.json({
+        urls: filtered,
+        summary: {
+          totalFound: geminiResult.summary.totalFound,
+          afterFilter: filtered.length,
+          segments: geminiResult.summary.segments,
+          queries: geminiResult.queries.length,
+        },
+      });
+
     } else if (mode === "csv") {
       // === CSVモード ===
       const { csvText } = body as { csvText: string };
@@ -274,7 +324,10 @@ export async function POST(req: NextRequest) {
       });
 
     } else {
-      return NextResponse.json({ error: "mode は 'search' または 'csv' を指定してください" }, { status: 400 });
+      return NextResponse.json(
+        { error: "mode は 'search'、'gemini_search'、'csv' のいずれかを指定してください" },
+        { status: 400 }
+      );
     }
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Discovery failed";

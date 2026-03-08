@@ -6,18 +6,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { runDiagnosis } from "@/lib/diagnosis";
 import { supabaseAdmin } from "@/lib/supabase";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { url } = body;
+    const { url, includeAiTest, industry, region } = body as {
+      url: string;
+      includeAiTest?: boolean;
+      industry?: string;
+      region?: string;
+    };
 
     if (!url || typeof url !== "string") {
       return NextResponse.json({ error: "url は必須です" }, { status: 400 });
     }
 
-    const result = await runDiagnosis(url);
+    const result = await runDiagnosis(url, {
+      includeAiTest: !!includeAiTest,
+      industry,
+      region,
+    });
 
     // diagnosis_reports に保存
     const { data: report, error: insertError } = await supabaseAdmin
