@@ -10,7 +10,7 @@ import KPICards from "./dashboard/KPICards";
 const C = {
   bg:"#04060B",bg2:"#080B13",sf:"#0C1019",card:"#111622",
   ca:"#161C2B",bdr:"#1B2235",bdrH:"#252E45",
-  tx:"#D2DAE8",sub:"#7E8CA4",dim:"#454F63",
+  tx:"#E4E9F2",sub:"#99A4B8",dim:"#6B7590",
   acc:"#F0B429",accDk:"#D49B1F",accGl:"rgba(240,180,41,.07)",
   g:"#34D399",gB:"rgba(52,211,153,.08)",
   r:"#F87171",rB:"rgba(248,113,113,.08)",
@@ -64,17 +64,17 @@ const ic={
 const Phase=({p})=>{
   const m={discovered:{c:C.cy,l:"発見"},form_found:{c:C.b,l:"フォーム済"},queued:{c:C.o,l:"送信待"},sent:{c:C.p,l:"送信済"},replied:{c:C.acc,l:"無料登録"},customer:{c:C.g,l:"有料顧客"},followup:{c:C.pk,l:"追客中"}};
   const s=m[p]||m.discovered;
-  return<span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:3,background:`${s.c}14`,color:s.c}}>{s.l}</span>;
+  return<span style={{fontSize:12,fontWeight:700,padding:"2px 7px",borderRadius:3,background:`${s.c}14`,color:s.c}}>{s.l}</span>;
 };
 const StBadge=({s})=>{
-  if(!s)return<span style={{fontSize:9,color:C.dim}}>—</span>;
+  if(!s)return<span style={{fontSize:12,color:C.dim}}>—</span>;
   const m={active:{c:C.g,l:"契約中"},trialing:{c:C.b,l:"トライアル"},past_due:{c:C.o,l:"遅延"},canceled:{c:C.r,l:"解約"}};
   const v=m[s]||{c:C.dim,l:s};
-  return<span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:3,background:`${v.c}12`,color:v.c}}>{v.l}</span>;
+  return<span style={{fontSize:12,fontWeight:700,padding:"2px 7px",borderRadius:3,background:`${v.c}12`,color:v.c}}>{v.l}</span>;
 };
 const ScoreBadge=({score})=>{
   const c=score>=80?C.g:score>=60?C.acc:score>=40?C.o:C.r;
-  return<span style={{fontSize:10,fontWeight:800,fontFamily:"'Geist Mono',monospace",color:c,padding:"2px 6px",borderRadius:3,background:`${c}10`}}>{score}</span>;
+  return<span style={{fontSize:12,fontWeight:800,fontFamily:"'Geist Mono',monospace",color:c,padding:"2px 6px",borderRadius:3,background:`${c}10`}}>{score}</span>;
 };
 
 const KPI=({icon,ic:icC,label,val,sub,trend,good})=>(
@@ -82,13 +82,13 @@ const KPI=({icon,ic:icC,label,val,sub,trend,good})=>(
     <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:icC,opacity:.4}}/>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
       <div>
-        <div style={{fontSize:9,color:C.sub,fontWeight:700,letterSpacing:.5,textTransform:"uppercase",marginBottom:3}}>{label}</div>
+        <div style={{fontSize:12,color:C.sub,fontWeight:700,letterSpacing:.5,textTransform:"uppercase",marginBottom:3}}>{label}</div>
         <div style={{fontSize:20,fontWeight:800,color:C.tx,fontFamily:"'Geist Mono',monospace",lineHeight:1}}>{val}</div>
-        {sub&&<div style={{fontSize:9,color:C.dim,marginTop:3}}>{sub}</div>}
+        {sub&&<div style={{fontSize:12,color:C.dim,marginTop:3}}>{sub}</div>}
       </div>
       <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3}}>
         <div style={{width:26,height:26,borderRadius:5,background:`${icC}10`,display:"flex",alignItems:"center",justifyContent:"center"}}><I d={icon} s={12} c={icC}/></div>
-        {trend!==undefined&&<span style={{fontSize:9,fontWeight:700,color:good?C.g:C.r}}>{trend>=0?"↑":"↓"}{Math.abs(trend)}%</span>}
+        {trend!==undefined&&<span style={{fontSize:12,fontWeight:700,color:good?C.g:C.r}}>{trend>=0?"↑":"↓"}{Math.abs(trend)}%</span>}
       </div>
     </div>
   </div>
@@ -434,7 +434,7 @@ export default function FormPilotAutoV2(){
           <div style={{width:28,height:28,borderRadius:5,background:`linear-gradient(135deg,${C.acc},${C.accDk})`,display:"flex",alignItems:"center",justifyContent:"center"}}><I d={ic.zap} s={13} c={C.bg}/></div>
           <div>
             <div style={{fontSize:12,fontWeight:800,color:C.acc,letterSpacing:-.3}}>FormPilot</div>
-            <div style={{fontSize:7,color:C.dim,letterSpacing:1.2,fontWeight:700}}>AUTONOMOUS FULL AUTO</div>
+            <div style={{fontSize:12,color:C.dim,letterSpacing:1.2,fontWeight:700}}>AUTONOMOUS FULL AUTO</div>
           </div>
           {mob&&<button onClick={()=>setSidebarOpen(false)} style={{marginLeft:"auto",background:"none",border:"none",color:C.sub,fontSize:18,cursor:"pointer"}}>✕</button>}
         </div>
@@ -443,7 +443,7 @@ export default function FormPilotAutoV2(){
             <button key={n.id} onClick={()=>{setView(n.id);setPage(0);setSelectedLead(null);if(mob)setSidebarOpen(false);}} style={{
               width:"100%",padding:"7px 9px",borderRadius:4,border:"none",
               background:view===n.id?C.accGl:"transparent",color:view===n.id?C.acc:C.sub,
-              fontSize:10.5,fontWeight:view===n.id?700:400,fontFamily:"inherit",cursor:"pointer",
+              fontSize:13,fontWeight:view===n.id?700:400,fontFamily:"inherit",cursor:"pointer",
               display:"flex",alignItems:"center",gap:7,marginBottom:1,textAlign:"left",
             }}><I d={n.icon} s={13} c={view===n.id?C.acc:C.dim}/>{n.label}</button>
           ))}
@@ -457,9 +457,9 @@ export default function FormPilotAutoV2(){
             <span style={{width:5,height:5,borderRadius:"50%",background:autoConfig.autoSendEnabled?C.g:C.r,animation:autoConfig.autoSendEnabled?"p5 2s infinite":"none"}}/>
             <span style={{fontWeight:700,color:autoConfig.autoSendEnabled?C.g:C.r,fontSize:9}}>{autoConfig.autoSendEnabled?"FU自動":"FU停止"}</span>
           </div>
-          <div style={{fontSize:8,color:C.dim}}>発見: 平日 09:00 / FU: 平日 10:00 JST</div>
+          <div style={{fontSize:12,color:C.dim}}>発見: 平日 09:00 / FU: 平日 10:00 JST</div>
           <div style={{padding:"7px 9px",borderRadius:4,background:C.accGl,marginTop:6}}>
-            <div style={{fontSize:8,color:C.acc,fontWeight:700}}>MRR</div>
+            <div style={{fontSize:12,color:C.acc,fontWeight:700}}>MRR</div>
             <div style={{fontSize:16,fontWeight:800,color:C.g,fontFamily:"'Geist Mono',monospace"}}>¥{kpi.mrr.toLocaleString()}</div>
           </div>
         </div>
@@ -474,20 +474,20 @@ export default function FormPilotAutoV2(){
           </div>
           <div style={{display:"flex",gap:6,alignItems:"center"}}>
             {view==="leads"&&<>
-              <button onClick={()=>setShowAddModal(true)} style={{padding:"5px 11px",borderRadius:4,border:"none",background:C.g,color:C.bg,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
+              <button onClick={()=>setShowAddModal(true)} style={{padding:"5px 11px",borderRadius:4,border:"none",background:C.g,color:C.bg,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
                 + リード追加
               </button>
-              <button onClick={()=>setShowAutoDiscover(true)} style={{padding:"5px 11px",borderRadius:4,border:"none",background:`linear-gradient(135deg,${C.cy},${C.b})`,color:C.bg,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
+              <button onClick={()=>setShowAutoDiscover(true)} style={{padding:"5px 11px",borderRadius:4,border:"none",background:`linear-gradient(135deg,${C.cy},${C.b})`,color:C.bg,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
                 <I d={ic.globe} s={11} c={C.bg}/>自動発見
               </button>
-              <button onClick={runScan} disabled={scanRunning} style={{padding:"5px 11px",borderRadius:4,border:"none",background:C.acc,color:C.bg,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4,opacity:scanRunning?.5:1}}>
+              <button onClick={runScan} disabled={scanRunning} style={{padding:"5px 11px",borderRadius:4,border:"none",background:C.acc,color:C.bg,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4,opacity:scanRunning?.5:1}}>
                 {scanRunning?"⟳ スキャン中...":<><I d={ic.radar} s={11} c={C.bg}/>一括LLMO調査</>}
               </button>
-              <button onClick={autoSend} disabled={sending} style={{padding:"5px 11px",borderRadius:4,border:`1px solid ${C.bdr}`,background:"transparent",color:C.tx,fontSize:10,fontWeight:600,cursor:sending?"default":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4,opacity:sending?.5:1}}>
+              <button onClick={autoSend} disabled={sending} style={{padding:"5px 11px",borderRadius:4,border:`1px solid ${C.bdr}`,background:"transparent",color:C.tx,fontSize:12,fontWeight:600,cursor:sending?"default":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4,opacity:sending?.5:1}}>
                 <I d={ic.send} s={11} c={C.p}/>{sending?"送信中...":"AIスコア順送信"}
               </button>
             </>}
-            <div style={{padding:"4px 8px",borderRadius:3,background:C.gB,color:C.g,fontSize:9,fontWeight:700}}>{loading?"読込中...":leads.length+" リード"}</div>
+            <div style={{padding:"4px 8px",borderRadius:3,background:C.gB,color:C.g,fontSize:12,fontWeight:700}}>{loading?"読込中...":leads.length+" リード"}</div>
           </div>
         </header>
 
@@ -513,20 +513,20 @@ export default function FormPilotAutoV2(){
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
                   <div>
-                    <div style={{fontSize:9,color:C.g,fontWeight:700,marginBottom:6,display:"flex",alignItems:"center",gap:4}}>
+                    <div style={{fontSize:12,color:C.g,fontWeight:700,marginBottom:6,display:"flex",alignItems:"center",gap:4}}>
                       <span style={{width:6,height:6,borderRadius:"50%",background:C.g}}/> 自動で動いている
                     </div>
-                    <ul style={{margin:0,paddingLeft:16,fontSize:10,color:C.sub,lineHeight:1.8}}>
+                    <ul style={{margin:0,paddingLeft:16,fontSize:12,color:C.sub,lineHeight:1.8}}>
                       <li><strong style={{color:C.tx}}>フォローアップメール</strong> — 平日 10:00 JST に Cron で自動送信</li>
                       {autoConfig.autoDiscoverEnabled&&<li><strong style={{color:C.tx}}>リード発見〜診断{autoConfig.autoInitialSendEnabled?"〜無料診断案内":""}</strong> — 平日 09:00 JST に Cron で自動実行</li>}
                       <li><strong style={{color:C.tx}}>無料登録 → 有料課金</strong> — 診断レポートを見て無料登録 → Proプランに課金（セルフサービス）</li>
                     </ul>
                   </div>
                   <div>
-                    <div style={{fontSize:9,color:C.o,fontWeight:700,marginBottom:6,display:"flex",alignItems:"center",gap:4}}>
+                    <div style={{fontSize:12,color:C.o,fontWeight:700,marginBottom:6,display:"flex",alignItems:"center",gap:4}}>
                       <span style={{width:6,height:6,borderRadius:"50%",background:C.o}}/> 手動実行が必要
                     </div>
-                    <ul style={{margin:0,paddingLeft:16,fontSize:10,color:C.sub,lineHeight:1.8}}>
+                    <ul style={{margin:0,paddingLeft:16,fontSize:12,color:C.sub,lineHeight:1.8}}>
                       {!autoConfig.autoDiscoverEnabled&&<><li><strong style={{color:C.tx}}>リード発見</strong> — 「自動発見」ボタンで実行</li><li><strong style={{color:C.tx}}>LLMO診断</strong> — 「一括LLMO調査」で実行</li><li><strong style={{color:C.tx}}>無料診断の案内</strong> — 「AIスコア順送信」で実行</li></>}
                       {autoConfig.autoDiscoverEnabled&&!autoConfig.autoInitialSendEnabled&&<li><strong style={{color:C.tx}}>無料診断の案内</strong> — 「AIスコア順送信」で手動実行（診断のみ自動）</li>}
                       <li><strong style={{color:C.tx}}>フォーム送信</strong> — リード一覧から手動実行（問い合わせフォームに自動入力・送信）</li>
@@ -550,15 +550,15 @@ export default function FormPilotAutoV2(){
                 if(!top)return null;
                 return(
                   <div style={{background:top.priority>0?C.accGl:C.card,borderRadius:8,padding:12,border:`1px solid ${top.priority>0?C.acc+"30":C.bdr}`,marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
-                    <div style={{fontSize:11,color:C.tx,fontWeight:600}}>
-                      <span style={{fontSize:9,color:C.sub,marginRight:6}}>💡 次のアクション</span>{top.msg}
+                    <div style={{fontSize:12,color:C.tx,fontWeight:600}}>
+                      <span style={{fontSize:12,color:C.sub,marginRight:6}}>💡 次のアクション</span>{top.msg}
                     </div>
                     {top.cta&&(
                       <button onClick={()=>{
                         if(top.action==="send"){setView("leads");setTimeout(autoSend,200);}
                         else if(top.action==="discover")setShowAutoDiscover(true);
                         else setView("leads");
-                      }} style={{padding:"6px 12px",borderRadius:4,border:"none",background:top.priority>0?C.acc:C.bdr,color:top.priority>0?C.bg:C.tx,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                      }} style={{padding:"6px 12px",borderRadius:4,border:"none",background:top.priority>0?C.acc:C.bdr,color:top.priority>0?C.bg:C.tx,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                         {top.cta}
                       </button>
                     )}
@@ -569,8 +569,8 @@ export default function FormPilotAutoV2(){
               <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginBottom:12,padding:"6px 10px",background:C.card,borderRadius:6,border:`1px solid ${C.bdr}`,flexWrap:"wrap"}}>
                 {["企業発見","フォーム検出","無料診断を案内","無料登録","有料課金（Pro）"].map((t,i,a)=>(
                   <span key={i} style={{display:"flex",alignItems:"center",gap:6}}>
-                    <span style={{fontSize:10,color:C.sub,fontWeight:600}}>{t}</span>
-                    {i<a.length-1&&<span style={{fontSize:10,color:C.dim}}>→</span>}
+                    <span style={{fontSize:12,color:C.sub,fontWeight:600}}>{t}</span>
+                    {i<a.length-1&&<span style={{fontSize:12,color:C.dim}}>→</span>}
                   </span>
                 ))}
               </div>
@@ -586,12 +586,12 @@ export default function FormPilotAutoV2(){
                     <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:s.color,opacity:.5}}/>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4,marginBottom:4}}>
                       <div style={{width:28,height:28,borderRadius:5,background:`${s.color}10`,display:"flex",alignItems:"center",justifyContent:"center"}}><I d={s.icon} s={14} c={s.color}/></div>
-                      <span style={{fontSize:7,fontWeight:700,padding:"2px 5px",borderRadius:2,background:s.auto==="自動"||s.auto==="FU自動"?C.gB:s.auto==="パイプライン内"?C.b+"20":C.o+"20",color:s.auto==="自動"||s.auto==="FU自動"?C.g:s.auto==="パイプライン内"?C.b:C.o}}>{s.auto}</span>
+                      <span style={{fontSize:12,fontWeight:700,padding:"2px 5px",borderRadius:2,background:s.auto==="自動"||s.auto==="FU自動"?C.gB:s.auto==="パイプライン内"?C.b+"20":C.o+"20",color:s.auto==="自動"||s.auto==="FU自動"?C.g:s.auto==="パイプライン内"?C.b:C.o}}>{s.auto}</span>
                     </div>
                     <div style={{fontSize:22,fontWeight:800,color:s.color,fontFamily:"'Geist Mono',monospace"}}>{s.count}</div>
-                    <div style={{fontSize:10,color:C.dim,marginTop:3,lineHeight:1.3}}>{s.label}</div>
-                    <div style={{fontSize:9,color:C.dim,marginTop:4,lineHeight:1.3,minHeight:24}}>{s.desc}</div>
-                    {i<4&&<div style={{position:"absolute",right:-7,top:"50%",transform:"translateY(-50%)",color:C.dim,fontSize:10,zIndex:1,display:"flex",flexDirection:"column",alignItems:"center"}}><span style={{fontSize:8,color:C.dim,whiteSpace:"nowrap"}}>{s.next}</span></div>}
+                    <div style={{fontSize:12,color:C.dim,marginTop:3,lineHeight:1.3}}>{s.label}</div>
+                    <div style={{fontSize:12,color:C.dim,marginTop:4,lineHeight:1.3,minHeight:24}}>{s.desc}</div>
+                    {i<4&&<div style={{position:"absolute",right:-7,top:"50%",transform:"translateY(-50%)",color:C.dim,fontSize:12,zIndex:1,display:"flex",flexDirection:"column",alignItems:"center"}}><span style={{fontSize:12,color:C.dim,whiteSpace:"nowrap"}}>{s.next}</span></div>}
                   </div>
                 ))}
               </div>
@@ -609,7 +609,7 @@ export default function FormPilotAutoV2(){
               <div style={{marginBottom:16}}>
                 <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
                   <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>自動化ステータス</div>
-                  <div style={{fontSize:9,color:C.dim,marginBottom:12}}>Cron（定期実行）の ON/OFF を設定できます</div>
+                  <div style={{fontSize:12,color:C.dim,marginBottom:12}}>Cron（定期実行）の ON/OFF を設定できます</div>
                   {[
                     {l:"リード発見〜無料診断案内",d:"平日 09:00 JST に Cron で自動実行（発見→診断→フォーム探索→無料診断案内）",on:autoConfig.autoDiscoverEnabled,key:"autoDiscoverEnabled",cron:true},
                     {l:"初回案内メール自動送信",d:"リード発見 ON 時のみ有効。OFF の場合は診断・フォーム探索のみ自動",on:autoConfig.autoInitialSendEnabled,key:"autoInitialSendEnabled",cron:false},
@@ -617,13 +617,13 @@ export default function FormPilotAutoV2(){
                   ].map((s,i)=>(
                     <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:i<2?`1px solid ${C.bdr}`:"none"}}>
                       <div>
-                        <div style={{fontSize:11,fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
+                        <div style={{fontSize:12,fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
                           {s.l}
-                          {s.cron&&<span style={{fontSize:7,fontWeight:700,padding:"2px 5px",borderRadius:2,background:C.gB,color:C.g}}>Cron</span>}
+                          {s.cron&&<span style={{fontSize:12,fontWeight:700,padding:"2px 5px",borderRadius:2,background:C.gB,color:C.g}}>Cron</span>}
                         </div>
-                        <div style={{fontSize:9,color:C.dim}}>{s.d}</div>
+                        <div style={{fontSize:12,color:C.dim}}>{s.d}</div>
                       </div>
-                      {s.key&&<button onClick={()=>setAutoConfig(p=>({...p,[s.key]:!p[s.key]}))} style={{padding:"4px 10px",borderRadius:4,border:"none",background:s.on?C.gB:C.rB,color:s.on?C.g:C.r,fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s.on?"ON":"OFF"}</button>}
+                      {s.key&&<button onClick={()=>setAutoConfig(p=>({...p,[s.key]:!p[s.key]}))} style={{padding:"4px 10px",borderRadius:4,border:"none",background:s.on?C.gB:C.rB,color:s.on?C.g:C.r,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s.on?"ON":"OFF"}</button>}
                     </div>
                   ))}
                 </div>
@@ -632,10 +632,10 @@ export default function FormPilotAutoV2(){
               <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`,maxWidth:400}}>
                 <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>Stripe 収益サマリー</div>
                 <div style={{display:"flex",alignItems:"center",gap:12}}>
-                  <span style={{fontSize:10,color:C.sub}}>Proプラン契約中</span>
+                  <span style={{fontSize:12,color:C.sub}}>Proプラン契約中</span>
                   <span style={{fontSize:18,fontWeight:800,fontFamily:"'Geist Mono',monospace",color:C.g}}>{kpi.cust}社 ¥{kpi.mrr.toLocaleString()}/月</span>
                 </div>
-                <div style={{fontSize:9,color:C.dim,marginTop:6}}>構造化データ生成・metaタグ改善案・月次モニタリング提供中</div>
+                <div style={{fontSize:12,color:C.dim,marginTop:6}}>構造化データ生成・metaタグ改善案・月次モニタリング提供中</div>
               </div>
             </div>
           )}
@@ -647,11 +647,11 @@ export default function FormPilotAutoV2(){
                 <I d={ic.bell} s={16} c={C.acc}/> アクティビティログ
               </div>
               <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
-                {log.length===0&&<div style={{fontSize:11,color:C.dim,textAlign:"center",padding:20}}>ログはまだありません</div>}
+                {log.length===0&&<div style={{fontSize:12,color:C.dim,textAlign:"center",padding:20}}>ログはまだありません</div>}
                 {log.map((l,i)=>(
                   <div key={i} style={{padding:"10px 0",borderBottom:i<log.length-1?`1px solid ${C.bdr}`:"none",display:"flex",gap:10,alignItems:"flex-start"}}>
-                    <span style={{fontSize:10,color:C.dim,fontFamily:"'Geist Mono',monospace",flexShrink:0}}>{new Date(l.t).toLocaleString("ja-JP",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</span>
-                    <span style={{fontSize:11,color:l.type==="customer"?C.g:l.type==="reply"?C.acc:l.type==="send"?C.p:l.type==="form"?C.b:C.sub,lineHeight:1.5}}>{l.msg}</span>
+                    <span style={{fontSize:12,color:C.dim,fontFamily:"'Geist Mono',monospace",flexShrink:0}}>{new Date(l.t).toLocaleString("ja-JP",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</span>
+                    <span style={{fontSize:12,color:l.type==="customer"?C.g:l.type==="reply"?C.acc:l.type==="send"?C.p:l.type==="form"?C.b:C.sub,lineHeight:1.5}}>{l.msg}</span>
                   </div>
                 ))}
               </div>
@@ -663,47 +663,47 @@ export default function FormPilotAutoV2(){
             <div className="fi">
               <div style={{display:"flex",gap:5,marginBottom:10,alignItems:"center",flexWrap:"wrap"}}>
                 <div style={{position:"relative",flex:"0 0 180px"}}>
-                  <input value={searchQ} onChange={e=>{setSearchQ(e.target.value);setPage(0);}} placeholder="検索..." style={{width:"100%",padding:"6px 9px 6px 26px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.card,color:C.tx,fontSize:10,outline:"none",boxSizing:"border-box"}}/>
+                  <input value={searchQ} onChange={e=>{setSearchQ(e.target.value);setPage(0);}} placeholder="検索..." style={{width:"100%",padding:"6px 9px 6px 26px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.card,color:C.tx,fontSize:12,outline:"none",boxSizing:"border-box"}}/>
                   <div style={{position:"absolute",left:7,top:7}}><I d={ic.search} s={11} c={C.dim}/></div>
                 </div>
                 {["all","discovered","form_found","queued","sent","replied","customer"].map(f=>(
-                  <button key={f} onClick={()=>{setFilterPhase(f);setPage(0);}} style={{padding:"4px 9px",borderRadius:3,border:`1px solid ${filterPhase===f?C.acc+"40":"transparent"}`,background:filterPhase===f?C.accGl:"transparent",color:filterPhase===f?C.acc:C.dim,fontSize:9,fontWeight:filterPhase===f?700:400,cursor:"pointer",fontFamily:"inherit"}}>
+                  <button key={f} onClick={()=>{setFilterPhase(f);setPage(0);}} style={{padding:"4px 9px",borderRadius:3,border:`1px solid ${filterPhase===f?C.acc+"40":"transparent"}`,background:filterPhase===f?C.accGl:"transparent",color:filterPhase===f?C.acc:C.dim,fontSize:12,fontWeight:filterPhase===f?700:400,cursor:"pointer",fontFamily:"inherit"}}>
                     {f==="all"?"全件":{discovered:"発見",form_found:"フォーム済",queued:"送信待",sent:"送信済",replied:"無料登録",customer:"有料顧客"}[f]}
                   </button>
                 ))}
-                <select value={filterIndustry} onChange={e=>{setFilterIndustry(e.target.value);setPage(0);}} style={{padding:"4px 7px",borderRadius:3,border:`1px solid ${C.bdr}`,background:C.card,color:C.tx,fontSize:9,outline:"none"}}>
+                <select value={filterIndustry} onChange={e=>{setFilterIndustry(e.target.value);setPage(0);}} style={{padding:"4px 7px",borderRadius:3,border:`1px solid ${C.bdr}`,background:C.card,color:C.tx,fontSize:12,outline:"none"}}>
                   <option value="all">全業種</option>{INDUSTRIES.map(i=><option key={i} value={i}>{i}</option>)}
                 </select>
-                <div style={{flex:1}}/><span style={{fontSize:9,color:C.dim}}>{filtered.length}件</span>
+                <div style={{flex:1}}/><span style={{fontSize:12,color:C.dim}}>{filtered.length}件</span>
               </div>
 
               <div style={{background:C.card,borderRadius:6,border:`1px solid ${C.bdr}`,overflow:mob?"auto":"hidden",WebkitOverflowScrolling:"touch"}}>
-                <div style={{display:"grid",gridTemplateColumns:"35px 1fr 1fr .8fr 50px 45px 40px 40px 75px",padding:"6px 10px",fontSize:8,color:C.dim,fontWeight:700,textTransform:"uppercase",letterSpacing:.4,borderBottom:`1px solid ${C.bdr}`,background:C.ca,minWidth:mob?700:undefined}}>
+                <div style={{display:"grid",gridTemplateColumns:"35px 1fr 1fr .8fr 50px 45px 40px 40px 75px",padding:"6px 10px",fontSize:12,color:C.dim,fontWeight:700,textTransform:"uppercase",letterSpacing:.4,borderBottom:`1px solid ${C.bdr}`,background:C.ca,minWidth:mob?700:undefined}}>
                   <span>AI</span><span>会社名</span><span>URL</span><span>メール</span><span>業種</span><span>フェーズ</span><span>開封</span><span>FU</span><span>操作</span>
                 </div>
                 {paged.map(l=>(
-                  <div key={l.id} className="rh" onClick={()=>setSelectedLead(l)} style={{display:"grid",gridTemplateColumns:"35px 1fr 1fr .8fr 50px 45px 40px 40px 75px",padding:"7px 10px",borderBottom:`1px solid ${C.bdr}`,alignItems:"center",fontSize:10,cursor:"pointer",minWidth:mob?700:undefined}}>
+                  <div key={l.id} className="rh" onClick={()=>setSelectedLead(l)} style={{display:"grid",gridTemplateColumns:"35px 1fr 1fr .8fr 50px 45px 40px 40px 75px",padding:"7px 10px",borderBottom:`1px solid ${C.bdr}`,alignItems:"center",fontSize:12,cursor:"pointer",minWidth:mob?700:undefined}}>
                     <ScoreBadge score={l.aiScore}/>
                     <span style={{fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.company}</span>
-                    <span style={{fontFamily:"'Geist Mono',monospace",fontSize:8,color:C.sub,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.url}</span>
-                    <span style={{fontFamily:"'Geist Mono',monospace",fontSize:8,color:l.contactEmail?C.g:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.contactEmail||"—"}</span>
-                    <span style={{fontSize:8,color:C.sub}}>{(l.industry||"—").slice(0,4)}</span>
+                    <span style={{fontFamily:"'Geist Mono',monospace",fontSize:12,color:C.sub,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.url}</span>
+                    <span style={{fontFamily:"'Geist Mono',monospace",fontSize:12,color:l.contactEmail?C.g:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.contactEmail||"—"}</span>
+                    <span style={{fontSize:12,color:C.sub}}>{(l.industry||"—").slice(0,4)}</span>
                     <Phase p={l.phase}/>
                     <span style={{fontSize:9}}>{l.openedEmail&&l.sentAt?"👁":"—"}</span>
-                    <span style={{fontSize:9,color:l.followUpCount?C.pk:C.dim}}>{l.followUpCount||"—"}</span>
+                    <span style={{fontSize:12,color:l.followUpCount?C.pk:C.dim}}>{l.followUpCount||"—"}</span>
                     <div style={{display:"flex",gap:2}} onClick={e=>e.stopPropagation()}>
-                      {l.phase==="discovered"&&<button onClick={()=>scanFormForLead(l)} disabled={scanningLeadId===l.id} style={{padding:"2px 5px",borderRadius:2,border:`1px solid ${C.bdr}`,background:"transparent",color:C.b,fontSize:8,cursor:scanningLeadId===l.id?"default":"pointer",fontFamily:"inherit",opacity:scanningLeadId===l.id?.5:1}}>{scanningLeadId===l.id?"探索中...":"探索"}</button>}
-                      {l.phase==="form_found"&&!l.contactEmail&&<button onClick={()=>scanFormForLead(l)} disabled={scanningLeadId===l.id} style={{padding:"2px 5px",borderRadius:2,border:`1px solid ${C.bdr}`,background:"transparent",color:C.b,fontSize:8,cursor:scanningLeadId===l.id?"default":"pointer",fontFamily:"inherit",opacity:scanningLeadId===l.id?.5:1}}>{scanningLeadId===l.id?"探索中...":"再探索"}</button>}
-                      {l.formUrl&&l.phase==="form_found"&&<button onClick={()=>submitFormForLead(l)} disabled={formSubmittingLeadId===l.id} style={{padding:"2px 5px",borderRadius:2,border:`1px solid ${C.bdr}`,background:"transparent",color:C.p,fontSize:8,cursor:formSubmittingLeadId===l.id?"default":"pointer",fontFamily:"inherit",opacity:formSubmittingLeadId===l.id?.5:1}}>{formSubmittingLeadId===l.id?"送信中...":formSubmitResults[l.id]?formSubmitResults[l.id].success?"送信済":"再送信":"フォーム送信"}</button>}
-                      <button onClick={()=>deleteLead(l.id)} style={{padding:"2px 4px",borderRadius:2,border:"none",background:"transparent",color:C.dim,fontSize:8,cursor:"pointer"}}>✕</button>
+                      {l.phase==="discovered"&&<button onClick={()=>scanFormForLead(l)} disabled={scanningLeadId===l.id} style={{padding:"2px 5px",borderRadius:2,border:`1px solid ${C.bdr}`,background:"transparent",color:C.b,fontSize:12,cursor:scanningLeadId===l.id?"default":"pointer",fontFamily:"inherit",opacity:scanningLeadId===l.id?.5:1}}>{scanningLeadId===l.id?"探索中...":"探索"}</button>}
+                      {l.phase==="form_found"&&!l.contactEmail&&<button onClick={()=>scanFormForLead(l)} disabled={scanningLeadId===l.id} style={{padding:"2px 5px",borderRadius:2,border:`1px solid ${C.bdr}`,background:"transparent",color:C.b,fontSize:12,cursor:scanningLeadId===l.id?"default":"pointer",fontFamily:"inherit",opacity:scanningLeadId===l.id?.5:1}}>{scanningLeadId===l.id?"探索中...":"再探索"}</button>}
+                      {l.formUrl&&l.phase==="form_found"&&<button onClick={()=>submitFormForLead(l)} disabled={formSubmittingLeadId===l.id} style={{padding:"2px 5px",borderRadius:2,border:`1px solid ${C.bdr}`,background:"transparent",color:C.p,fontSize:12,cursor:formSubmittingLeadId===l.id?"default":"pointer",fontFamily:"inherit",opacity:formSubmittingLeadId===l.id?.5:1}}>{formSubmittingLeadId===l.id?"送信中...":formSubmitResults[l.id]?formSubmitResults[l.id].success?"送信済":"再送信":"フォーム送信"}</button>}
+                      <button onClick={()=>deleteLead(l.id)} style={{padding:"2px 4px",borderRadius:2,border:"none",background:"transparent",color:C.dim,fontSize:12,cursor:"pointer"}}>✕</button>
                     </div>
                   </div>
                 ))}
               </div>
               {tp>1&&<div style={{display:"flex",justifyContent:"center",gap:4,marginTop:8}}>
-                <button onClick={()=>setPage(p=>Math.max(0,p-1))} disabled={page===0} style={{padding:"3px 7px",borderRadius:3,border:`1px solid ${C.bdr}`,background:"transparent",color:page===0?C.dim:C.tx,fontSize:9,cursor:page===0?"default":"pointer",fontFamily:"inherit"}}>←</button>
-                <span style={{fontSize:9,color:C.sub,padding:"0 6px"}}>{page+1}/{tp}</span>
-                <button onClick={()=>setPage(p=>Math.min(tp-1,p+1))} disabled={page>=tp-1} style={{padding:"3px 7px",borderRadius:3,border:`1px solid ${C.bdr}`,background:"transparent",color:page>=tp-1?C.dim:C.tx,fontSize:9,cursor:page>=tp-1?"default":"pointer",fontFamily:"inherit"}}>→</button>
+                <button onClick={()=>setPage(p=>Math.max(0,p-1))} disabled={page===0} style={{padding:"3px 7px",borderRadius:3,border:`1px solid ${C.bdr}`,background:"transparent",color:page===0?C.dim:C.tx,fontSize:12,cursor:page===0?"default":"pointer",fontFamily:"inherit"}}>←</button>
+                <span style={{fontSize:12,color:C.sub,padding:"0 6px"}}>{page+1}/{tp}</span>
+                <button onClick={()=>setPage(p=>Math.min(tp-1,p+1))} disabled={page>=tp-1} style={{padding:"3px 7px",borderRadius:3,border:`1px solid ${C.bdr}`,background:"transparent",color:page>=tp-1?C.dim:C.tx,fontSize:12,cursor:page>=tp-1?"default":"pointer",fontFamily:"inherit"}}>→</button>
               </div>}
             </div>
           )}
@@ -711,13 +711,13 @@ export default function FormPilotAutoV2(){
           {/* Lead Detail */}
           {!loading&&view==="leads"&&selectedLead&&(
             <div className="fi">
-              <button onClick={()=>setSelectedLead(null)} style={{padding:"5px 10px",borderRadius:4,border:`1px solid ${C.bdr}`,background:"transparent",color:C.sub,fontSize:10,cursor:"pointer",fontFamily:"inherit",marginBottom:12}}>← 一覧に戻る</button>
+              <button onClick={()=>setSelectedLead(null)} style={{padding:"5px 10px",borderRadius:4,border:`1px solid ${C.bdr}`,background:"transparent",color:C.sub,fontSize:12,cursor:"pointer",fontFamily:"inherit",marginBottom:12}}>← 一覧に戻る</button>
               <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
                 <div style={{background:C.card,borderRadius:8,padding:mob?14:18,border:`1px solid ${C.bdr}`}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
                     <div>
                       <div style={{fontSize:16,fontWeight:800}}>{selectedLead.company}</div>
-                      <div style={{fontSize:10,color:C.sub,marginTop:2}}>{selectedLead.url}</div>
+                      <div style={{fontSize:12,color:C.sub,marginTop:2}}>{selectedLead.url}</div>
                     </div>
                     <ScoreBadge score={selectedLead.aiScore}/>
                   </div>
@@ -729,8 +729,8 @@ export default function FormPilotAutoV2(){
                       {l:"フェーズ",v:selectedLead.phase},{l:"フォローアップ",v:`${selectedLead.followUpCount||0}回`},
                     ].map((r,i)=>(
                       <div key={i} style={{padding:"6px 8px",borderRadius:4,background:C.ca}}>
-                        <div style={{fontSize:8,color:C.dim,fontWeight:600}}>{r.l}</div>
-                        <div style={{fontSize:11,fontWeight:600,marginTop:2}}>{r.v}</div>
+                        <div style={{fontSize:12,color:C.dim,fontWeight:600}}>{r.l}</div>
+                        <div style={{fontSize:12,fontWeight:600,marginTop:2}}>{r.v}</div>
                       </div>
                     ))}
                   </div>
@@ -743,10 +743,10 @@ export default function FormPilotAutoV2(){
                       <span style={{fontSize:11}}>{w}</span>
                     </div>
                   ))}
-                  {(selectedLead.weaknesses||[]).length===0&&<div style={{fontSize:10,color:C.dim,padding:"8px 0"}}>弱点データなし</div>}
+                  {(selectedLead.weaknesses||[]).length===0&&<div style={{fontSize:12,color:C.dim,padding:"8px 0"}}>弱点データなし</div>}
                   <div style={{marginTop:12,padding:"10px 12px",borderRadius:5,background:C.accGl,border:`1px solid ${C.acc}15`}}>
-                    <div style={{fontSize:10,fontWeight:700,color:C.acc,marginBottom:4}}>💡 案内文プレビュー</div>
-                    <div style={{fontSize:9,color:C.sub,lineHeight:1.6}}>
+                    <div style={{fontSize:12,fontWeight:700,color:C.acc,marginBottom:4}}>💡 案内文プレビュー</div>
+                    <div style={{fontSize:12,color:C.sub,lineHeight:1.6}}>
                       「{selectedLead.company}様のサイトを分析した結果、{(selectedLead.weaknesses||[]).slice(0,2).join("、")||"未分析"} など{(selectedLead.weaknesses||[]).length}件の改善点を発見しました。無料の診断レポートで詳細をご確認いただけます。」
                     </div>
                   </div>
@@ -754,24 +754,24 @@ export default function FormPilotAutoV2(){
                   {/* フォーム自動送信セクション */}
                   {selectedLead.formUrl&&(
                     <div style={{marginTop:12,padding:"10px 12px",borderRadius:5,background:`${C.p}08`,border:`1px solid ${C.p}20`}}>
-                      <div style={{fontSize:10,fontWeight:700,color:C.p,marginBottom:6}}>問い合わせフォーム自動送信</div>
-                      <div style={{fontSize:9,color:C.sub,marginBottom:6}}>
+                      <div style={{fontSize:12,fontWeight:700,color:C.p,marginBottom:6}}>問い合わせフォーム自動送信</div>
+                      <div style={{fontSize:12,color:C.sub,marginBottom:6}}>
                         フォームURL: <a href={selectedLead.formUrl} target="_blank" rel="noopener noreferrer" style={{color:C.b,textDecoration:"none"}}>{selectedLead.formUrl.replace(/^https?:\/\//,"").slice(0,40)}</a>
                       </div>
                       {formSubmitResults[selectedLead.id]&&(
-                        <div style={{fontSize:9,padding:"4px 8px",borderRadius:3,marginBottom:6,background:formSubmitResults[selectedLead.id].success?C.gB:C.rB,color:formSubmitResults[selectedLead.id].success?C.g:C.r}}>
+                        <div style={{fontSize:12,padding:"4px 8px",borderRadius:3,marginBottom:6,background:formSubmitResults[selectedLead.id].success?C.gB:C.rB,color:formSubmitResults[selectedLead.id].success?C.g:C.r}}>
                           {formSubmitResults[selectedLead.id].message}
                         </div>
                       )}
                       <button
                         onClick={()=>submitFormForLead(selectedLead)}
                         disabled={formSubmittingLeadId===selectedLead.id}
-                        style={{padding:"6px 14px",borderRadius:4,border:"none",background:formSubmittingLeadId===selectedLead.id?C.bdr:C.p,color:C.bg,fontSize:10,fontWeight:700,cursor:formSubmittingLeadId===selectedLead.id?"default":"pointer",fontFamily:"inherit",opacity:formSubmittingLeadId===selectedLead.id?.6:1}}
+                        style={{padding:"6px 14px",borderRadius:4,border:"none",background:formSubmittingLeadId===selectedLead.id?C.bdr:C.p,color:C.bg,fontSize:12,fontWeight:700,cursor:formSubmittingLeadId===selectedLead.id?"default":"pointer",fontFamily:"inherit",opacity:formSubmittingLeadId===selectedLead.id?.6:1}}
                       >
                         {formSubmittingLeadId===selectedLead.id?"送信処理中...":formSubmitResults[selectedLead.id]?.success?"再送信":"フォームに自動送信"}
                       </button>
                       {!autoConfig.userProfile?.company_name&&(
-                        <div style={{fontSize:8,color:C.o,marginTop:4}}>自動化設定でユーザープロフィールを入力してください</div>
+                        <div style={{fontSize:12,color:C.o,marginTop:4}}>自動化設定でユーザープロフィールを入力してください</div>
                       )}
                     </div>
                   )}
@@ -783,16 +783,16 @@ export default function FormPilotAutoV2(){
           {/* ===== A/B TEST ===== */}
           {view==="abtest"&&(
             <div className="fi">
-              <div style={{fontSize:10,fontWeight:700,color:C.sub,marginBottom:8}}>📧 テンプレート別パフォーマンス</div>
+              <div style={{fontSize:12,fontWeight:700,color:C.sub,marginBottom:8}}>📧 テンプレート別パフォーマンス</div>
               <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:10,marginBottom:18}}>
                 {templates.map((t,i)=>{
                   const bt=winLoss.byTemplate[t.id];
                   const isTop=templates.every(x=>winLoss.byTemplate[x.id]?parseFloat(winLoss.byTemplate[x.id].convRate)<=parseFloat(bt.convRate):true);
                   return(
                     <div key={t.id} style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${isTop?C.g+"40":C.bdr}`,position:"relative"}}>
-                      {isTop&&<div style={{position:"absolute",top:8,right:8,fontSize:8,fontWeight:700,padding:"2px 6px",borderRadius:3,background:C.gB,color:C.g}}>🏆 BEST</div>}
-                      <div style={{fontSize:9,color:C.dim,fontWeight:700,marginBottom:2}}>テンプレート {String.fromCharCode(65+i)}</div>
-                      <div style={{fontSize:11,fontWeight:700,marginBottom:10}}>{t.name}</div>
+                      {isTop&&<div style={{position:"absolute",top:8,right:8,fontSize:12,fontWeight:700,padding:"2px 6px",borderRadius:3,background:C.gB,color:C.g}}>🏆 BEST</div>}
+                      <div style={{fontSize:12,color:C.dim,fontWeight:700,marginBottom:2}}>テンプレート {String.fromCharCode(65+i)}</div>
+                      <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>{t.name}</div>
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                         {[
                           {l:"送信数",v:bt.sent,c:C.tx},
@@ -801,28 +801,28 @@ export default function FormPilotAutoV2(){
                           {l:"課金率",v:bt.convRate+"%",c:C.g},
                         ].map((m,j)=>(
                           <div key={j} style={{padding:"6px 8px",borderRadius:4,background:C.ca}}>
-                            <div style={{fontSize:8,color:C.dim}}>{m.l}</div>
+                            <div style={{fontSize:12,color:C.dim}}>{m.l}</div>
                             <div style={{fontSize:14,fontWeight:800,fontFamily:"'Geist Mono',monospace",color:m.c}}>{m.v}</div>
                           </div>
                         ))}
                       </div>
                       <div style={{marginTop:10,padding:8,borderRadius:4,background:C.bg,maxHeight:100,overflow:"auto"}}>
-                        <div style={{fontSize:8,color:C.dim,fontWeight:600,marginBottom:3}}>件名</div>
-                        <div style={{fontSize:9,color:C.acc,lineHeight:1.4}}>{t.subject}</div>
+                        <div style={{fontSize:12,color:C.dim,fontWeight:600,marginBottom:3}}>件名</div>
+                        <div style={{fontSize:12,color:C.acc,lineHeight:1.4}}>{t.subject}</div>
                       </div>
                     </div>
                   );
                 })}
               </div>
               <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
-                <div style={{fontSize:11,fontWeight:700,marginBottom:8}}>🔀 A/Bテスト設定</div>
+                <div style={{fontSize:12,fontWeight:700,marginBottom:8}}>🔀 A/Bテスト設定</div>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0"}}>
-                  <div><div style={{fontSize:11,fontWeight:600}}>ラウンドロビンA/B/Cテスト</div><div style={{fontSize:9,color:C.dim}}>送信時にテンプレートを均等に自動振り分け</div></div>
-                  <button onClick={()=>setAutoConfig(p=>({...p,abTestEnabled:!p.abTestEnabled}))} style={{padding:"5px 12px",borderRadius:4,border:"none",background:autoConfig.abTestEnabled?C.gB:C.rB,color:autoConfig.abTestEnabled?C.g:C.r,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoConfig.abTestEnabled?"ON":"OFF"}</button>
+                  <div><div style={{fontSize:12,fontWeight:600}}>ラウンドロビンA/B/Cテスト</div><div style={{fontSize:12,color:C.dim}}>送信時にテンプレートを均等に自動振り分け</div></div>
+                  <button onClick={()=>setAutoConfig(p=>({...p,abTestEnabled:!p.abTestEnabled}))} style={{padding:"5px 12px",borderRadius:4,border:"none",background:autoConfig.abTestEnabled?C.gB:C.rB,color:autoConfig.abTestEnabled?C.g:C.r,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoConfig.abTestEnabled?"ON":"OFF"}</button>
                 </div>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderTop:`1px solid ${C.bdr}`}}>
-                  <div><div style={{fontSize:11,fontWeight:600}}>無料診断レポート自動添付</div><div style={{fontSize:9,color:C.dim}}>LLMOスコア＋弱点リストのPDFを生成して添付</div></div>
-                  <button onClick={()=>setAutoConfig(p=>({...p,autoDiagnosis:!p.autoDiagnosis}))} style={{padding:"5px 12px",borderRadius:4,border:"none",background:autoConfig.autoDiagnosis?C.gB:C.rB,color:autoConfig.autoDiagnosis?C.g:C.r,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoConfig.autoDiagnosis?"ON":"OFF"}</button>
+                  <div><div style={{fontSize:12,fontWeight:600}}>無料診断レポート自動添付</div><div style={{fontSize:12,color:C.dim}}>LLMOスコア＋弱点リストのPDFを生成して添付</div></div>
+                  <button onClick={()=>setAutoConfig(p=>({...p,autoDiagnosis:!p.autoDiagnosis}))} style={{padding:"5px 12px",borderRadius:4,border:"none",background:autoConfig.autoDiagnosis?C.gB:C.rB,color:autoConfig.autoDiagnosis?C.g:C.r,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoConfig.autoDiagnosis?"ON":"OFF"}</button>
                 </div>
               </div>
             </div>
@@ -841,32 +841,32 @@ export default function FormPilotAutoV2(){
                 <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
                     <div style={{fontSize:12,fontWeight:700}}>🔁 自動フォローアップ設定</div>
-                    <button onClick={()=>setAutoConfig(p=>({...p,autoFollowUp:!p.autoFollowUp}))} style={{padding:"5px 12px",borderRadius:4,border:"none",background:autoConfig.autoFollowUp?C.gB:C.rB,color:autoConfig.autoFollowUp?C.g:C.r,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoConfig.autoFollowUp?"ON":"OFF"}</button>
+                    <button onClick={()=>setAutoConfig(p=>({...p,autoFollowUp:!p.autoFollowUp}))} style={{padding:"5px 12px",borderRadius:4,border:"none",background:autoConfig.autoFollowUp?C.gB:C.rB,color:autoConfig.autoFollowUp?C.g:C.r,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoConfig.autoFollowUp?"ON":"OFF"}</button>
                   </div>
                   <div style={{marginBottom:12}}>
-                    <label style={{fontSize:10,color:C.sub,fontWeight:600,display:"block",marginBottom:4}}>フォローアップ間隔（日）</label>
-                    <select value={autoConfig.followUpInterval} onChange={e=>setAutoConfig(p=>({...p,followUpInterval:+e.target.value}))} style={{width:"100%",padding:"8px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:11,outline:"none"}}>
+                    <label style={{fontSize:12,color:C.sub,fontWeight:600,display:"block",marginBottom:4}}>フォローアップ間隔（日）</label>
+                    <select value={autoConfig.followUpInterval} onChange={e=>setAutoConfig(p=>({...p,followUpInterval:+e.target.value}))} style={{width:"100%",padding:"8px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:12,outline:"none"}}>
                       {[2,3,5,7,10,14].map(d=><option key={d} value={d}>{d}日後</option>)}
                     </select>
                   </div>
                   <div style={{marginBottom:12}}>
-                    <label style={{fontSize:10,color:C.sub,fontWeight:600,display:"block",marginBottom:4}}>最大フォローアップ回数</label>
-                    <select value={autoConfig.followUpMaxCount} onChange={e=>setAutoConfig(p=>({...p,followUpMaxCount:+e.target.value}))} style={{width:"100%",padding:"8px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:11,outline:"none"}}>
+                    <label style={{fontSize:12,color:C.sub,fontWeight:600,display:"block",marginBottom:4}}>最大フォローアップ回数</label>
+                    <select value={autoConfig.followUpMaxCount} onChange={e=>setAutoConfig(p=>({...p,followUpMaxCount:+e.target.value}))} style={{width:"100%",padding:"8px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:12,outline:"none"}}>
                       {[1,2,3,4,5].map(n=><option key={n} value={n}>最大{n}回</option>)}
                     </select>
                   </div>
                   <div style={{padding:10,borderRadius:5,background:C.pB,border:`1px solid ${C.pk}15`}}>
-                    <div style={{fontSize:10,fontWeight:700,color:C.pk,marginBottom:6}}>フォローアップ戦略</div>
+                    <div style={{fontSize:12,fontWeight:700,color:C.pk,marginBottom:6}}>フォローアップ戦略</div>
                     {[
                       {n:1,desc:"初回送信から3日後: 競合のAI検索状況データを共有",delay:"3日後"},
                       {n:2,desc:"2回目から5日後: 有料プランの具体的メリットを案内",delay:"8日後"},
                       {n:3,desc:"3回目から7日後: 最終案内（構造化データ・meta改善・月次モニタリング）",delay:"15日後"},
                     ].map((f,i)=>(
                       <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"5px 0",borderBottom:i<2?`1px solid ${C.pk}10`:"none"}}>
-                        <span style={{fontSize:9,fontWeight:800,color:C.pk,width:14,flexShrink:0}}>#{f.n}</span>
+                        <span style={{fontSize:12,fontWeight:800,color:C.pk,width:14,flexShrink:0}}>#{f.n}</span>
                         <div style={{flex:1}}>
-                          <div style={{fontSize:9,color:C.tx,lineHeight:1.4}}>{f.desc}</div>
-                          <div style={{fontSize:8,color:C.dim}}>初回から{f.delay}</div>
+                          <div style={{fontSize:12,color:C.tx,lineHeight:1.4}}>{f.desc}</div>
+                          <div style={{fontSize:12,color:C.dim}}>初回から{f.delay}</div>
                         </div>
                       </div>
                     ))}
@@ -878,10 +878,10 @@ export default function FormPilotAutoV2(){
                     <div key={l.id} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 0",borderBottom:`1px solid ${C.bdr}`}}>
                       <ScoreBadge score={l.aiScore}/>
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:10,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.company}</div>
-                        <div style={{fontSize:8,color:C.dim}}>FU {l.followUpCount}/{autoConfig.followUpMaxCount}回 · {l.openedEmail?"開封済":"未開封"}</div>
+                        <div style={{fontSize:12,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.company}</div>
+                        <div style={{fontSize:12,color:C.dim}}>FU {l.followUpCount}/{autoConfig.followUpMaxCount}回 · {l.openedEmail?"開封済":"未開封"}</div>
                       </div>
-                      <button onClick={async()=>{try{const res=await fetch("/api/auto-send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({leadIds:[l.id]})});if(res.ok)fetchLeads();}catch(e){console.error("FU send error:",e);}}} style={{padding:"3px 7px",borderRadius:3,border:`1px solid ${C.pk}40`,background:C.pkB,color:C.pk,fontSize:8,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>FU送信</button>
+                      <button onClick={async()=>{try{const res=await fetch("/api/auto-send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({leadIds:[l.id]})});if(res.ok)fetchLeads();}catch(e){console.error("FU send error:",e);}}} style={{padding:"3px 7px",borderRadius:3,border:`1px solid ${C.pk}40`,background:C.pkB,color:C.pk,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>FU送信</button>
                     </div>
                   ))}
                 </div>
@@ -892,46 +892,46 @@ export default function FormPilotAutoV2(){
           {/* ===== ANALYSIS ===== */}
           {view==="analysis"&&(
             <div className="fi">
-              <div style={{fontSize:10,fontWeight:700,color:C.sub,marginBottom:8}}>📊 コンバージョン分析 — どの条件で課金されやすいか</div>
+              <div style={{fontSize:12,fontWeight:700,color:C.sub,marginBottom:8}}>📊 コンバージョン分析 — どの条件で課金されやすいか</div>
               <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12,marginBottom:14}}>
                 {/* By Industry */}
                 <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
-                  <div style={{fontSize:11,fontWeight:700,marginBottom:10}}>業種別 課金率</div>
+                  <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>業種別 課金率</div>
                   {Object.entries(winLoss.byIndustry).sort((a,b)=>parseFloat(b[1].rate)-parseFloat(a[1].rate)).map(([ind,d],i)=>(
                     <div key={ind} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:`1px solid ${C.bdr}`}}>
-                      <span style={{fontSize:10,width:60,flexShrink:0}}>{ind}</span>
+                      <span style={{fontSize:12,width:60,flexShrink:0}}>{ind}</span>
                       <div style={{flex:1,height:6,background:C.bg,borderRadius:3,overflow:"hidden"}}>
                         <div style={{width:`${Math.max(parseFloat(d.rate),2)}%`,height:"100%",background:parseFloat(d.rate)>=10?C.g:parseFloat(d.rate)>=5?C.acc:C.o,borderRadius:3,opacity:.7}}/>
                       </div>
-                      <span style={{fontSize:10,fontWeight:700,fontFamily:"'Geist Mono',monospace",color:parseFloat(d.rate)>=10?C.g:C.acc,width:40,textAlign:"right"}}>{d.rate}%</span>
-                      <span style={{fontSize:8,color:C.dim,width:45}}>{d.won}/{d.sent}件</span>
+                      <span style={{fontSize:12,fontWeight:700,fontFamily:"'Geist Mono',monospace",color:parseFloat(d.rate)>=10?C.g:C.acc,width:40,textAlign:"right"}}>{d.rate}%</span>
+                      <span style={{fontSize:12,color:C.dim,width:45}}>{d.won}/{d.sent}件</span>
                     </div>
                   ))}
                 </div>
                 {/* By Company Size */}
                 <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
-                  <div style={{fontSize:11,fontWeight:700,marginBottom:10}}>企業規模別 課金率</div>
+                  <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>企業規模別 課金率</div>
                   {Object.entries(winLoss.bySize).sort((a,b)=>parseFloat(b[1].rate)-parseFloat(a[1].rate)).map(([sz,d],i)=>(
                     <div key={sz} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:`1px solid ${C.bdr}`}}>
-                      <span style={{fontSize:10,width:65,flexShrink:0}}>{sz}</span>
+                      <span style={{fontSize:12,width:65,flexShrink:0}}>{sz}</span>
                       <div style={{flex:1,height:6,background:C.bg,borderRadius:3,overflow:"hidden"}}>
                         <div style={{width:`${Math.max(parseFloat(d.rate),2)}%`,height:"100%",background:parseFloat(d.rate)>=10?C.g:parseFloat(d.rate)>=5?C.acc:C.o,borderRadius:3,opacity:.7}}/>
                       </div>
-                      <span style={{fontSize:10,fontWeight:700,fontFamily:"'Geist Mono',monospace",color:parseFloat(d.rate)>=10?C.g:C.acc,width:40,textAlign:"right"}}>{d.rate}%</span>
-                      <span style={{fontSize:8,color:C.dim,width:45}}>{d.won}/{d.sent}件</span>
+                      <span style={{fontSize:12,fontWeight:700,fontFamily:"'Geist Mono',monospace",color:parseFloat(d.rate)>=10?C.g:C.acc,width:40,textAlign:"right"}}>{d.rate}%</span>
+                      <span style={{fontSize:12,color:C.dim,width:45}}>{d.won}/{d.sent}件</span>
                     </div>
                   ))}
                 </div>
               </div>
               {/* Template performance */}
               <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
-                <div style={{fontSize:11,fontWeight:700,marginBottom:10}}>📧 テンプレート別ファネル分析</div>
+                <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>📧 テンプレート別ファネル分析</div>
                 <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:10}}>
                   {templates.map((t,i)=>{
                     const bt=winLoss.byTemplate[t.id];
                     return(
                       <div key={t.id} style={{padding:12,borderRadius:6,background:C.ca,border:`1px solid ${C.bdr}`}}>
-                        <div style={{fontSize:10,fontWeight:700,marginBottom:8}}>テンプレート {String.fromCharCode(65+i)}</div>
+                        <div style={{fontSize:12,fontWeight:700,marginBottom:8}}>テンプレート {String.fromCharCode(65+i)}</div>
                         {[
                           {l:"送信",v:bt.sent,w:100,c:C.p},
                           {l:"開封",v:bt.opened,w:bt.sent?bt.opened/bt.sent*100:0,c:C.b},
@@ -939,7 +939,7 @@ export default function FormPilotAutoV2(){
                           {l:"課金",v:bt.converted,w:bt.sent?bt.converted/bt.sent*100:0,c:C.g},
                         ].map((s,j)=>(
                           <div key={j} style={{marginBottom:4}}>
-                            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,marginBottom:2}}>
+                            <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:2}}>
                               <span style={{color:C.sub}}>{s.l}</span><span style={{fontWeight:700,fontFamily:"'Geist Mono',monospace",color:s.c}}>{s.v}</span>
                             </div>
                             <div style={{height:4,background:C.bg,borderRadius:2,overflow:"hidden"}}>
@@ -959,8 +959,8 @@ export default function FormPilotAutoV2(){
           {view==="automation"&&(
             <div className="fi">
               <div style={{background:C.accGl,borderRadius:8,padding:12,border:`1px solid ${C.acc}30`,marginBottom:16}}>
-                <div style={{fontSize:11,fontWeight:700,color:C.acc,marginBottom:4}}>💡 自動化の仕組み</div>
-                <div style={{fontSize:10,color:C.sub,lineHeight:1.6}}>
+                <div style={{fontSize:12,fontWeight:700,color:C.acc,marginBottom:4}}>💡 自動化の仕組み</div>
+                <div style={{fontSize:12,color:C.sub,lineHeight:1.6}}>
                   <strong style={{color:C.g}}>リード発見〜無料診断案内</strong>: ON にすると平日 09:00 JST に Cron で自動実行。<br/>
                   <strong style={{color:C.g}}>フォローアップメール</strong>: 平日 10:00 JST に Cron で自動送信。<br/>
                   <strong style={{color:C.g}}>無料登録 → 有料課金</strong>: 診断レポート閲覧 → Stripe決済まですべてセルフサービス。<br/>
@@ -973,23 +973,23 @@ export default function FormPilotAutoV2(){
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                     <div>
                       <h3 style={{fontSize:13,fontWeight:700,margin:0}}>🔍 リード発見〜無料診断案内</h3>
-                      <div style={{fontSize:9,color:C.dim,marginTop:4}}>Cron: 平日 09:00 JST（発見→診断→フォーム探索→無料診断を案内）</div>
+                      <div style={{fontSize:12,color:C.dim,marginTop:4}}>Cron: 平日 09:00 JST（発見→診断→フォーム探索→無料診断を案内）</div>
                     </div>
-                    <button onClick={()=>setAutoConfig(p=>({...p,autoDiscoverEnabled:!p.autoDiscoverEnabled}))} style={{padding:"6px 14px",borderRadius:4,border:"none",background:autoConfig.autoDiscoverEnabled?C.gB:C.rB,color:autoConfig.autoDiscoverEnabled?C.g:C.r,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoConfig.autoDiscoverEnabled?"ON":"OFF"}</button>
+                    <button onClick={()=>setAutoConfig(p=>({...p,autoDiscoverEnabled:!p.autoDiscoverEnabled}))} style={{padding:"6px 14px",borderRadius:4,border:"none",background:autoConfig.autoDiscoverEnabled?C.gB:C.rB,color:autoConfig.autoDiscoverEnabled?C.g:C.r,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoConfig.autoDiscoverEnabled?"ON":"OFF"}</button>
                   </div>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderTop:`1px solid ${C.bdr}`}}>
-                    <span style={{fontSize:10,color:C.sub}}>初回メールも自動送信</span>
-                    <button onClick={()=>setAutoConfig(p=>({...p,autoInitialSendEnabled:!p.autoInitialSendEnabled}))} style={{padding:"5px 12px",borderRadius:4,border:"none",background:autoConfig.autoInitialSendEnabled?C.gB:C.rB,color:autoConfig.autoInitialSendEnabled?C.g:C.r,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoConfig.autoInitialSendEnabled?"ON":"OFF"}</button>
+                    <span style={{fontSize:12,color:C.sub}}>初回メールも自動送信</span>
+                    <button onClick={()=>setAutoConfig(p=>({...p,autoInitialSendEnabled:!p.autoInitialSendEnabled}))} style={{padding:"5px 12px",borderRadius:4,border:"none",background:autoConfig.autoInitialSendEnabled?C.gB:C.rB,color:autoConfig.autoInitialSendEnabled?C.g:C.r,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoConfig.autoInitialSendEnabled?"ON":"OFF"}</button>
                   </div>
-                  <div style={{fontSize:8,color:C.dim,marginTop:6}}>OFF の場合は診断・フォーム探索のみ自動。初回送信は手動。</div>
+                  <div style={{fontSize:12,color:C.dim,marginTop:6}}>OFF の場合は診断・フォーム探索のみ自動。初回送信は手動。</div>
                 </div>
                 <div style={{background:C.card,borderRadius:8,padding:18,border:`1px solid ${C.bdr}`}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                     <div>
                       <h3 style={{fontSize:13,fontWeight:700,margin:0}}>📨 フォローアップ自動送信</h3>
-                      <div style={{fontSize:9,color:C.dim,marginTop:4}}>Cron: 平日 10:00 JST</div>
+                      <div style={{fontSize:12,color:C.dim,marginTop:4}}>Cron: 平日 10:00 JST</div>
                     </div>
-                    <button onClick={()=>setAutoConfig(p=>({...p,autoSendEnabled:!p.autoSendEnabled}))} style={{padding:"6px 14px",borderRadius:4,border:"none",background:autoConfig.autoSendEnabled?C.gB:C.rB,color:autoConfig.autoSendEnabled?C.g:C.r,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoConfig.autoSendEnabled?"ON":"OFF"}</button>
+                    <button onClick={()=>setAutoConfig(p=>({...p,autoSendEnabled:!p.autoSendEnabled}))} style={{padding:"6px 14px",borderRadius:4,border:"none",background:autoConfig.autoSendEnabled?C.gB:C.rB,color:autoConfig.autoSendEnabled?C.g:C.r,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoConfig.autoSendEnabled?"ON":"OFF"}</button>
                   </div>
                 </div>
               </div>
@@ -997,27 +997,27 @@ export default function FormPilotAutoV2(){
                 <div style={{background:C.card,borderRadius:8,padding:18,border:`1px solid ${C.bdr}`}}>
                   <div style={{marginBottom:14}}>
                     <h3 style={{fontSize:13,fontWeight:700,margin:0}}>🔬 手動実行時の設定</h3>
-                    <div style={{fontSize:9,color:C.dim,marginTop:4}}>自動発見・一括LLMO調査で使用</div>
+                    <div style={{fontSize:12,color:C.dim,marginTop:4}}>自動発見・一括LLMO調査で使用</div>
                   </div>
                   {[
                     {l:"取得件数/回",opts:[10,20,50,100],val:autoConfig.batchSize,key:"batchSize",fmt:n=>`${n}件`},
                   ].map(({l,opts,val,key,fmt})=>(
                     <div key={key} style={{marginBottom:10}}>
-                      <label style={{fontSize:9,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>{l}</label>
-                      <select value={val} onChange={e=>setAutoConfig(p=>({...p,[key]:+e.target.value}))} style={{width:"100%",padding:"7px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:11,outline:"none"}}>{opts.map(o=><option key={o} value={o}>{fmt(o)}</option>)}</select>
+                      <label style={{fontSize:12,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>{l}</label>
+                      <select value={val} onChange={e=>setAutoConfig(p=>({...p,[key]:+e.target.value}))} style={{width:"100%",padding:"7px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:12,outline:"none"}}>{opts.map(o=><option key={o} value={o}>{fmt(o)}</option>)}</select>
                     </div>
                   ))}
                   <div style={{marginBottom:10}}>
-                    <label style={{fontSize:9,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>LLMOスコア上限（この以下をリード化）</label>
+                    <label style={{fontSize:12,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>LLMOスコア上限（この以下をリード化）</label>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       <input type="range" min="10" max="60" value={autoConfig.llmoScoreMax} onChange={e=>setAutoConfig(p=>({...p,llmoScoreMax:+e.target.value}))} style={{flex:1}}/>
                       <span style={{fontSize:13,fontWeight:700,fontFamily:"'Geist Mono',monospace",color:C.acc}}>{autoConfig.llmoScoreMax}</span>
                     </div>
                   </div>
                   <div style={{marginBottom:8}}>
-                    <label style={{fontSize:9,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>対象業種（自動発見時）</label>
+                    <label style={{fontSize:12,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>対象業種（自動発見時）</label>
                     <div style={{display:"flex",flexWrap:"wrap",gap:3}}>{INDUSTRIES.map(i=>(
-                      <button key={i} onClick={()=>setAutoConfig(p=>({...p,scanIndustries:p.scanIndustries.includes(i)?p.scanIndustries.filter(x=>x!==i):[...p.scanIndustries,i]}))} style={{padding:"3px 7px",borderRadius:3,fontSize:8,fontWeight:autoConfig.scanIndustries.includes(i)?700:400,border:`1px solid ${autoConfig.scanIndustries.includes(i)?C.acc+"40":C.bdr}`,background:autoConfig.scanIndustries.includes(i)?C.accGl:"transparent",color:autoConfig.scanIndustries.includes(i)?C.acc:C.dim,cursor:"pointer",fontFamily:"inherit"}}>{i}</button>
+                      <button key={i} onClick={()=>setAutoConfig(p=>({...p,scanIndustries:p.scanIndustries.includes(i)?p.scanIndustries.filter(x=>x!==i):[...p.scanIndustries,i]}))} style={{padding:"3px 7px",borderRadius:3,fontSize:12,fontWeight:autoConfig.scanIndustries.includes(i)?700:400,border:`1px solid ${autoConfig.scanIndustries.includes(i)?C.acc+"40":C.bdr}`,background:autoConfig.scanIndustries.includes(i)?C.accGl:"transparent",color:autoConfig.scanIndustries.includes(i)?C.acc:C.dim,cursor:"pointer",fontFamily:"inherit"}}>{i}</button>
                     ))}</div>
                   </div>
                 </div>
@@ -1025,21 +1025,21 @@ export default function FormPilotAutoV2(){
                   <div style={{background:C.card,borderRadius:8,padding:18,border:`1px solid ${C.bdr}`}}>
                     <h3 style={{fontSize:13,fontWeight:700,margin:0,marginBottom:14}}>📨 フォローアップ送信設定</h3>
                     <div style={{marginBottom:10}}>
-                      <label style={{fontSize:9,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>手動送信時の上限件数</label>
-                      <select value={autoConfig.sendThreshold} onChange={e=>setAutoConfig(p=>({...p,sendThreshold:+e.target.value}))} style={{width:"100%",padding:"7px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:11,outline:"none"}}>{[5,10,20,30,50].map(n=><option key={n} value={n}>{n}件まで</option>)}</select>
+                      <label style={{fontSize:12,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>手動送信時の上限件数</label>
+                      <select value={autoConfig.sendThreshold} onChange={e=>setAutoConfig(p=>({...p,sendThreshold:+e.target.value}))} style={{width:"100%",padding:"7px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:12,outline:"none"}}>{[5,10,20,30,50].map(n=><option key={n} value={n}>{n}件まで</option>)}</select>
                     </div>
                     <div style={{marginBottom:10}}>
-                      <label style={{fontSize:9,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>AIスコア閾値（優先送信）</label>
+                      <label style={{fontSize:12,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>AIスコア閾値（優先送信）</label>
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
                         <input type="range" min="50" max="95" value={autoConfig.aiScoreMinForPriority} onChange={e=>setAutoConfig(p=>({...p,aiScoreMinForPriority:+e.target.value}))} style={{flex:1}}/>
                         <span style={{fontSize:13,fontWeight:700,fontFamily:"'Geist Mono',monospace",color:C.g}}>{autoConfig.aiScoreMinForPriority}</span>
                       </div>
-                      <div style={{fontSize:8,color:C.dim,marginTop:2}}>このスコア以上を最優先で送信</div>
+                      <div style={{fontSize:12,color:C.dim,marginTop:2}}>このスコア以上を最優先で送信</div>
                     </div>
                   </div>
                   <div style={{background:C.card,borderRadius:8,padding:18,border:`1px solid ${C.bdr}`,marginBottom:12}}>
                     <h3 style={{fontSize:13,fontWeight:700,margin:0,marginBottom:14}}>📝 フォーム送信プロフィール</h3>
-                    <div style={{fontSize:9,color:C.dim,marginBottom:10}}>問い合わせフォーム自動送信時に使用する情報です</div>
+                    <div style={{fontSize:12,color:C.dim,marginBottom:10}}>問い合わせフォーム自動送信時に使用する情報です</div>
                     {[
                       {l:"会社名",k:"company_name",ph:"例: フルフィル株式会社",req:true},
                       {l:"担当者名",k:"contact_name",ph:"例: 山田 太郎",req:true},
@@ -1051,17 +1051,17 @@ export default function FormPilotAutoV2(){
                       {l:"住所",k:"address",ph:"例: 東京都千代田区..."},
                     ].map(({l,k,ph,req})=>(
                       <div key={k} style={{marginBottom:8}}>
-                        <label style={{fontSize:9,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>{l}{req&&<span style={{color:C.r}}> *</span>}</label>
-                        <input value={autoConfig.userProfile?.[k]||""} onChange={e=>setAutoConfig(p=>({...p,userProfile:{...p.userProfile,[k]:e.target.value}}))} placeholder={ph} style={{width:"100%",padding:"6px 8px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:10,outline:"none",boxSizing:"border-box",fontFamily:"inherit"}}/>
+                        <label style={{fontSize:12,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>{l}{req&&<span style={{color:C.r}}> *</span>}</label>
+                        <input value={autoConfig.userProfile?.[k]||""} onChange={e=>setAutoConfig(p=>({...p,userProfile:{...p.userProfile,[k]:e.target.value}}))} placeholder={ph} style={{width:"100%",padding:"6px 8px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit"}}/>
                       </div>
                     ))}
                     <div style={{marginBottom:8}}>
-                      <label style={{fontSize:9,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>サービス名</label>
-                      <input value={autoConfig.userProfile?.service_name||""} onChange={e=>setAutoConfig(p=>({...p,userProfile:{...p.userProfile,service_name:e.target.value}}))} placeholder="例: AIO Insight" style={{width:"100%",padding:"6px 8px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:10,outline:"none",boxSizing:"border-box",fontFamily:"inherit"}}/>
+                      <label style={{fontSize:12,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>サービス名</label>
+                      <input value={autoConfig.userProfile?.service_name||""} onChange={e=>setAutoConfig(p=>({...p,userProfile:{...p.userProfile,service_name:e.target.value}}))} placeholder="例: AIO Insight" style={{width:"100%",padding:"6px 8px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit"}}/>
                     </div>
                     <div style={{marginBottom:8}}>
-                      <label style={{fontSize:9,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>サービス内容（問い合わせ文面生成に使用）</label>
-                      <textarea value={autoConfig.userProfile?.service_content||""} onChange={e=>setAutoConfig(p=>({...p,userProfile:{...p.userProfile,service_content:e.target.value}}))} rows={3} placeholder="例: AI検索最適化（AIO/LLMO）サービスを提供しています..." style={{width:"100%",padding:"6px 8px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:10,outline:"none",boxSizing:"border-box",fontFamily:"inherit",resize:"vertical"}}/>
+                      <label style={{fontSize:12,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>サービス内容（問い合わせ文面生成に使用）</label>
+                      <textarea value={autoConfig.userProfile?.service_content||""} onChange={e=>setAutoConfig(p=>({...p,userProfile:{...p.userProfile,service_content:e.target.value}}))} rows={3} placeholder="例: AI検索最適化（AIO/LLMO）サービスを提供しています..." style={{width:"100%",padding:"6px 8px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit",resize:"vertical"}}/>
                     </div>
                   </div>
                   <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
@@ -1075,9 +1075,9 @@ export default function FormPilotAutoV2(){
                       {s:"6",l:"Pro課金（セルフ）",d:"Stripe決済 → 構造化データ生成・meta改善・月次モニタリング",c:C.g,auto:true},
                     ].map((s,i)=>(
                       <div key={i} style={{display:"flex",gap:8,alignItems:"center",padding:"5px 0",borderBottom:i<5?`1px solid ${C.bdr}`:"none"}}>
-                        <div style={{width:18,height:18,borderRadius:3,background:`${s.c}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:800,color:s.c,flexShrink:0}}>{s.s}</div>
-                        <div style={{flex:1}}><div style={{fontSize:10,fontWeight:600}}>{s.l}</div><div style={{fontSize:8,color:C.dim}}>{s.d}</div></div>
-                        <span style={{fontSize:7,fontWeight:700,padding:"2px 6px",borderRadius:2,background:s.auto?C.gB:C.o+"20",color:s.auto?C.g:C.o}}>{s.auto?"自動":"手動"}</span>
+                        <div style={{width:18,height:18,borderRadius:3,background:`${s.c}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:s.c,flexShrink:0}}>{s.s}</div>
+                        <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600}}>{s.l}</div><div style={{fontSize:12,color:C.dim}}>{s.d}</div></div>
+                        <span style={{fontSize:12,fontWeight:700,padding:"2px 6px",borderRadius:2,background:s.auto?C.gB:C.o+"20",color:s.auto?C.g:C.o}}>{s.auto?"自動":"手動"}</span>
                       </div>
                     ))}
                   </div>
@@ -1096,17 +1096,17 @@ export default function FormPilotAutoV2(){
                 <KPI icon={ic.eye} ic={C.p} label="開封率" val={`${kpi.openRate}%`} sub="メール開封" trend={8} good/>
               </div>
               <div style={{background:C.card,borderRadius:7,border:`1px solid ${C.bdr}`,overflow:mob?"auto":"hidden",WebkitOverflowScrolling:"touch"}}>
-                <div style={{display:"grid",gridTemplateColumns:"1.4fr 1.8fr 65px 60px 70px 70px",padding:"6px 10px",fontSize:8,color:C.dim,fontWeight:700,textTransform:"uppercase",letterSpacing:.4,borderBottom:`1px solid ${C.bdr}`,background:C.ca,minWidth:mob?500:undefined}}>
+                <div style={{display:"grid",gridTemplateColumns:"1.4fr 1.8fr 65px 60px 70px 70px",padding:"6px 10px",fontSize:12,color:C.dim,fontWeight:700,textTransform:"uppercase",letterSpacing:.4,borderBottom:`1px solid ${C.bdr}`,background:C.ca,minWidth:mob?500:undefined}}>
                   <span>会社名</span><span>URL</span><span>Stripe</span><span>月額</span><span>業種</span><span>テンプレ</span>
                 </div>
                 {leads.filter(l=>l.stripeStatus).sort((a,b)=>({"active":0,"trialing":1,"past_due":2,"canceled":3}[a.stripeStatus]||9)-({"active":0,"trialing":1,"past_due":2,"canceled":3}[b.stripeStatus]||9)).map(l=>(
-                  <div key={l.id} className="rh" style={{display:"grid",gridTemplateColumns:"1.4fr 1.8fr 65px 60px 70px 70px",padding:"8px 10px",borderBottom:`1px solid ${C.bdr}`,alignItems:"center",fontSize:10,minWidth:mob?500:undefined}}>
+                  <div key={l.id} className="rh" style={{display:"grid",gridTemplateColumns:"1.4fr 1.8fr 65px 60px 70px 70px",padding:"8px 10px",borderBottom:`1px solid ${C.bdr}`,alignItems:"center",fontSize:12,minWidth:mob?500:undefined}}>
                     <span style={{fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.company}</span>
-                    <span style={{fontFamily:"'Geist Mono',monospace",fontSize:8,color:C.sub,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.url}</span>
+                    <span style={{fontFamily:"'Geist Mono',monospace",fontSize:12,color:C.sub,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.url}</span>
                     <StBadge s={l.stripeStatus}/>
                     <span style={{fontFamily:"'Geist Mono',monospace",fontWeight:700,color:l.mrr?C.g:C.dim}}>{l.mrr?`¥${l.mrr.toLocaleString()}`:"—"}</span>
-                    <span style={{fontSize:9,color:C.sub}}>{l.industry}</span>
-                    <span style={{fontSize:8,color:C.dim}}>{l.templateUsed?l.templateUsed.replace("outreach_","").replace("step","S"):"—"}</span>
+                    <span style={{fontSize:12,color:C.sub}}>{l.industry}</span>
+                    <span style={{fontSize:12,color:C.dim}}>{l.templateUsed?l.templateUsed.replace("outreach_","").replace("step","S"):"—"}</span>
                   </div>
                 ))}
               </div>
@@ -1181,8 +1181,8 @@ function AddLeadForm({onSubmit}){
     if(!ok)setError("追加に失敗しました");
   };
 
-  const inputStyle={width:"100%",padding:"8px 10px",borderRadius:5,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:11,outline:"none",boxSizing:"border-box",fontFamily:"inherit"};
-  const labelStyle={fontSize:10,color:C.sub,fontWeight:600,display:"block",marginBottom:4};
+  const inputStyle={width:"100%",padding:"8px 10px",borderRadius:5,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit"};
+  const labelStyle={fontSize:12,color:C.sub,fontWeight:600,display:"block",marginBottom:4};
 
   return(
     <form onSubmit={handleSubmit}>
@@ -1230,7 +1230,7 @@ function AddLeadForm({onSubmit}){
         <label style={labelStyle}>メモ</label>
         <textarea value={form.notes} onChange={e=>set("notes",e.target.value)} rows={3} placeholder="備考・メモ" style={{...inputStyle,resize:"vertical"}}/>
       </div>
-      {error&&<div style={{fontSize:10,color:C.r,marginBottom:10}}>{error}</div>}
+      {error&&<div style={{fontSize:12,color:C.r,marginBottom:10}}>{error}</div>}
       <button type="submit" disabled={submitting} style={{width:"100%",padding:"10px",borderRadius:5,border:"none",background:C.g,color:C.bg,fontSize:12,fontWeight:700,cursor:submitting?"default":"pointer",fontFamily:"inherit",opacity:submitting?.6:1}}>
         {submitting?"追加中...":"リードを追加"}
       </button>
@@ -1280,7 +1280,7 @@ function BulkScanModal({onClose,scanResults,setScanResults,onComplete}){
 
         {/* エラー表示 */}
         {scanResults?.error&&(
-          <div style={{padding:12,borderRadius:6,background:C.rB,border:`1px solid ${C.r}`,color:C.r,fontSize:11,marginBottom:14}}>
+          <div style={{padding:12,borderRadius:6,background:C.rB,border:`1px solid ${C.r}`,color:C.r,fontSize:12,marginBottom:14}}>
             {scanResults.error}
           </div>
         )}
@@ -1288,20 +1288,20 @@ function BulkScanModal({onClose,scanResults,setScanResults,onComplete}){
         {/* 入力画面 */}
         {!scanResults?.summary&&!scanning&&(
           <div>
-            <p style={{fontSize:11,color:C.sub,margin:"0 0 10px"}}>URLを1行に1つずつ入力してください（最大50件）</p>
+            <p style={{fontSize:12,color:C.sub,margin:"0 0 10px"}}>URLを1行に1つずつ入力してください（最大50件）</p>
             <textarea
               value={urlText}
               onChange={e=>setUrlText(e.target.value)}
               rows={8}
               placeholder={"https://example.com\nhttps://example2.co.jp\nhttps://example3.jp"}
-              style={{width:"100%",padding:10,borderRadius:6,border:`1px solid ${C.bdr}`,background:C.sf,color:C.tx,fontSize:11,fontFamily:"'Geist Mono',monospace",resize:"vertical",boxSizing:"border-box"}}
+              style={{width:"100%",padding:10,borderRadius:6,border:`1px solid ${C.bdr}`,background:C.sf,color:C.tx,fontSize:12,fontFamily:"'Geist Mono',monospace",resize:"vertical",boxSizing:"border-box"}}
             />
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10}}>
-              <div style={{fontSize:10,color:urlCount>50?C.r:C.sub}}>
+              <div style={{fontSize:12,color:urlCount>50?C.r:C.sub}}>
                 {urlCount}件{urlCount>0&&` | 推定 ${estimatedTime>60?Math.ceil(estimatedTime/60)+"分":estimatedTime+"秒"}`}
                 {urlCount>50&&" (50件まで)"}
               </div>
-              <button onClick={startScan} disabled={!urlCount||urlCount>50} style={{padding:"8px 18px",borderRadius:5,border:"none",background:C.acc,color:C.bg,fontSize:11,fontWeight:700,cursor:urlCount&&urlCount<=50?"pointer":"default",fontFamily:"inherit",opacity:urlCount&&urlCount<=50?1:.5}}>
+              <button onClick={startScan} disabled={!urlCount||urlCount>50} style={{padding:"8px 18px",borderRadius:5,border:"none",background:C.acc,color:C.bg,fontSize:12,fontWeight:700,cursor:urlCount&&urlCount<=50?"pointer":"default",fontFamily:"inherit",opacity:urlCount&&urlCount<=50?1:.5}}>
                 スキャン開始
               </button>
             </div>
@@ -1313,7 +1313,7 @@ function BulkScanModal({onClose,scanResults,setScanResults,onComplete}){
           <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 0",gap:14}}>
             <div style={{width:36,height:36,border:`3px solid ${C.bdr}`,borderTop:`3px solid ${C.acc}`,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
             <div style={{fontSize:12,color:C.sub}}>LLMO診断中... ({urlCount}件)</div>
-            <div style={{fontSize:10,color:C.dim}}>推定 {estimatedTime>60?Math.ceil(estimatedTime/60)+"分":estimatedTime+"秒"}</div>
+            <div style={{fontSize:12,color:C.dim}}>推定 {estimatedTime>60?Math.ceil(estimatedTime/60)+"分":estimatedTime+"秒"}</div>
           </div>
         )}
 
@@ -1330,7 +1330,7 @@ function BulkScanModal({onClose,scanResults,setScanResults,onComplete}){
               ].map(k=>(
                 <div key={k.label} style={{background:C.sf,borderRadius:6,padding:"10px 8px",textAlign:"center",border:`1px solid ${C.bdr}`}}>
                   <div style={{fontSize:18,fontWeight:800,color:k.color,fontFamily:"'Geist Mono',monospace"}}>{k.value}</div>
-                  <div style={{fontSize:8,color:C.sub,fontWeight:700,marginTop:2}}>{k.label}</div>
+                  <div style={{fontSize:12,color:C.sub,fontWeight:700,marginTop:2}}>{k.label}</div>
                 </div>
               ))}
             </div>
@@ -1342,17 +1342,17 @@ function BulkScanModal({onClose,scanResults,setScanResults,onComplete}){
                   <div style={{width:8,height:8,borderRadius:"50%",background:r.status==="success"?(r.saved?C.g:C.sub):r.status==="skipped"?C.o:C.r,flexShrink:0}}/>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontWeight:600,color:C.tx,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.company}</div>
-                    <div style={{fontSize:9,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.url}</div>
+                    <div style={{fontSize:12,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.url}</div>
                   </div>
                   <div style={{textAlign:"right",flexShrink:0}}>
                     {r.status==="success"&&(
                       <>
                         <div style={{fontWeight:700,color:r.llmoScore<=40?C.r:r.llmoScore<=70?C.o:C.g,fontFamily:"'Geist Mono',monospace"}}>{r.llmoScore}</div>
-                        <div style={{fontSize:8,color:r.saved?C.g:C.dim}}>{r.saved?"追加済":"対象外"}</div>
+                        <div style={{fontSize:12,color:r.saved?C.g:C.dim}}>{r.saved?"追加済":"対象外"}</div>
                       </>
                     )}
-                    {r.status==="skipped"&&<div style={{fontSize:9,color:C.o}}>重複</div>}
-                    {r.status==="error"&&<div style={{fontSize:9,color:C.r}}>エラー</div>}
+                    {r.status==="skipped"&&<div style={{fontSize:12,color:C.o}}>重複</div>}
+                    {r.status==="error"&&<div style={{fontSize:12,color:C.r}}>エラー</div>}
                   </div>
                 </div>
               ))}
@@ -1360,10 +1360,10 @@ function BulkScanModal({onClose,scanResults,setScanResults,onComplete}){
 
             {/* アクションボタン */}
             <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:16}}>
-              <button onClick={resetScan} style={{padding:"8px 16px",borderRadius:5,border:`1px solid ${C.bdr}`,background:"transparent",color:C.tx,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+              <button onClick={resetScan} style={{padding:"8px 16px",borderRadius:5,border:`1px solid ${C.bdr}`,background:"transparent",color:C.tx,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
                 新しいスキャン
               </button>
-              <button onClick={onClose} style={{padding:"8px 16px",borderRadius:5,border:"none",background:C.acc,color:C.bg,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+              <button onClick={onClose} style={{padding:"8px 16px",borderRadius:5,border:"none",background:C.acc,color:C.bg,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                 閉じる
               </button>
             </div>
@@ -1505,8 +1505,8 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
     }
   };
 
-  const inputStyle={width:"100%",padding:"8px 10px",borderRadius:5,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:11,outline:"none",boxSizing:"border-box",fontFamily:"inherit"};
-  const labelStyle={fontSize:10,color:C.sub,fontWeight:600,display:"block",marginBottom:4};
+  const inputStyle={width:"100%",padding:"8px 10px",borderRadius:5,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit"};
+  const labelStyle={fontSize:12,color:C.sub,fontWeight:600,display:"block",marginBottom:4};
   const running=phase>=1&&phase<5;
   const showAiResults=(tab==="ai")&&(aiCompanies.length>0||aiSearching)&&phase===0;
 
@@ -1537,7 +1537,7 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
                     <div style={{width:20,height:20,borderRadius:4,background:done?`${p.color}20`:isCurrent?`${p.color}15`:C.bg,display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${done||isCurrent?p.color+"40":"transparent"}`}}>
                       {done?<I d={ic.check} s={10} c={p.color}/>:isCurrent?<div style={{width:8,height:8,borderRadius:"50%",border:`2px solid ${p.color}`,borderTopColor:"transparent",animation:"spin 1s linear infinite"}}/>:<I d={p.icon} s={10} c={C.dim}/>}
                     </div>
-                    <span style={{fontSize:8,fontWeight:700,color:done?p.color:isCurrent?C.tx:C.dim}}>{p.label}</span>
+                    <span style={{fontSize:12,fontWeight:700,color:done?p.color:isCurrent?C.tx:C.dim}}>{p.label}</span>
                   </div>
                 </div>
               );
@@ -1553,7 +1553,7 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
               {phase===1&&"URLを発見中..."}
               {phase>=2&&phase<5&&`パイプライン実行中... (${discoveredUrls.length}件)`}
             </div>
-            {phase>=2&&<div style={{fontSize:10,color:C.dim}}>LLMO診断 → フォーム探索 → メール送信を一括実行</div>}
+            {phase>=2&&<div style={{fontSize:12,color:C.dim}}>LLMO診断 → フォーム探索 → メール送信を一括実行</div>}
           </div>
         )}
 
@@ -1563,7 +1563,7 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
             {/* Tabs */}
             <div style={{display:"flex",gap:2,marginBottom:16,background:C.bg,borderRadius:6,padding:3}}>
               {[{id:"ai",label:"AI検索"},{id:"search",label:"検索発見"},{id:"csv",label:"CSV取込"}].map(t=>(
-                <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:"7px 0",borderRadius:4,border:"none",background:tab===t.id?C.ca:"transparent",color:tab===t.id?C.tx:C.dim,fontSize:11,fontWeight:tab===t.id?700:400,cursor:"pointer",fontFamily:"inherit"}}>
+                <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:"7px 0",borderRadius:4,border:"none",background:tab===t.id?C.ca:"transparent",color:tab===t.id?C.tx:C.dim,fontSize:12,fontWeight:tab===t.id?700:400,cursor:"pointer",fontFamily:"inherit"}}>
                   {t.label}
                 </button>
               ))}
@@ -1573,8 +1573,8 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
             {tab==="ai"&&(
               <div>
                 <div style={{padding:10,borderRadius:6,background:`${C.cy}10`,border:`1px solid ${C.cy}30`,marginBottom:14}}>
-                  <div style={{fontSize:10,fontWeight:700,color:C.cy,marginBottom:4}}>Gemini + Google Search で企業を発見</div>
-                  <div style={{fontSize:9,color:C.sub}}>AIがリアルタイムで企業を検索し、Firecrawlで詳細情報を自動収集します。結果を確認してからパイプラインに投入できます。</div>
+                  <div style={{fontSize:12,fontWeight:700,color:C.cy,marginBottom:4}}>Gemini + Google Search で企業を発見</div>
+                  <div style={{fontSize:12,color:C.sub}}>AIがリアルタイムで企業を検索し、Firecrawlで詳細情報を自動収集します。結果を確認してからパイプラインに投入できます。</div>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
                   <div>
@@ -1636,32 +1636,32 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
                   placeholder={"https://example.com\nhttps://example2.co.jp\nhttps://example3.jp\n\nまたはCSV形式:\nurl,company,industry,region\nhttps://example.com,テスト会社,IT・SaaS,東京"}
                   style={{...inputStyle,fontFamily:"'Geist Mono',monospace",resize:"vertical"}}
                 />
-                <div style={{fontSize:9,color:C.dim,marginTop:4}}>1行1URL、またはCSV形式（最大100件）</div>
+                <div style={{fontSize:12,color:C.dim,marginTop:4}}>1行1URL、またはCSV形式（最大100件）</div>
               </div>
             )}
 
             {/* Settings (for search/csv tabs) */}
             {tab!=="ai"&&<div style={{background:C.bg,borderRadius:6,padding:14,marginBottom:16}}>
-              <div style={{fontSize:10,fontWeight:700,color:C.sub,marginBottom:10}}>設定</div>
+              <div style={{fontSize:12,fontWeight:700,color:C.sub,marginBottom:10}}>設定</div>
               <div style={{marginBottom:10}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                  <label style={{fontSize:10,color:C.sub,fontWeight:600}}>LLMOスコア上限</label>
+                  <label style={{fontSize:12,color:C.sub,fontWeight:600}}>LLMOスコア上限</label>
                   <span style={{fontSize:13,fontWeight:800,fontFamily:"'Geist Mono',monospace",color:C.acc}}>{scoreMax}</span>
                 </div>
                 <input type="range" min="10" max="60" value={scoreMax} onChange={e=>setScoreMax(+e.target.value)} style={{width:"100%"}}/>
-                <div style={{fontSize:8,color:C.dim}}>このスコア以下のサイトのみリードとして保存</div>
+                <div style={{fontSize:12,color:C.dim}}>このスコア以下のサイトのみリードとして保存</div>
               </div>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div>
-                  <div style={{fontSize:10,fontWeight:600,color:C.tx}}>自動メール送信</div>
-                  <div style={{fontSize:8,color:C.dim}}>フォーム発見後に初回ステップメールを自動送信</div>
+                  <div style={{fontSize:12,fontWeight:600,color:C.tx}}>自動メール送信</div>
+                  <div style={{fontSize:12,color:C.dim}}>フォーム発見後に初回ステップメールを自動送信</div>
                 </div>
-                <button onClick={()=>setAutoSend(!autoSend)} style={{padding:"4px 12px",borderRadius:4,border:"none",background:autoSend?C.gB:C.rB,color:autoSend?C.g:C.r,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoSend?"ON":"OFF"}</button>
+                <button onClick={()=>setAutoSend(!autoSend)} style={{padding:"4px 12px",borderRadius:4,border:"none",background:autoSend?C.gB:C.rB,color:autoSend?C.g:C.r,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoSend?"ON":"OFF"}</button>
               </div>
             </div>}
 
             {/* Error */}
-            {error&&<div style={{padding:10,borderRadius:6,background:C.rB,border:`1px solid ${C.r}`,color:C.r,fontSize:11,marginBottom:12}}>{error}</div>}
+            {error&&<div style={{padding:10,borderRadius:6,background:C.rB,border:`1px solid ${C.r}`,color:C.r,fontSize:12,marginBottom:12}}>{error}</div>}
 
             {/* Start button */}
             <button onClick={tab==="ai"?runAiSearch:runPipeline} disabled={!canStart} style={{width:"100%",padding:"12px",borderRadius:6,border:"none",background:canStart?`linear-gradient(135deg,${C.cy},${C.b})`:`${C.bdr}`,color:canStart?C.bg:C.dim,fontSize:13,fontWeight:800,cursor:canStart?"pointer":"default",fontFamily:"inherit",opacity:canStart?1:.6}}>
@@ -1676,13 +1676,13 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 {aiSearching&&<div style={{width:14,height:14,border:`2px solid ${C.bdr}`,borderTop:`2px solid ${C.cy}`,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>}
-                {aiSearching&&!aiEnriching&&<span style={{fontSize:11,color:C.cy,fontWeight:600}}>企業を検索中...</span>}
-                {aiEnriching&&<span style={{fontSize:11,color:C.b,fontWeight:600}}>詳細情報を収集中... ({aiEnrichTotal}社)</span>}
-                {aiComplete&&!aiSearching&&<span style={{fontSize:11,color:C.g,fontWeight:600}}>検索完了</span>}
+                {aiSearching&&!aiEnriching&&<span style={{fontSize:12,color:C.cy,fontWeight:600}}>企業を検索中...</span>}
+                {aiEnriching&&<span style={{fontSize:12,color:C.b,fontWeight:600}}>詳細情報を収集中... ({aiEnrichTotal}社)</span>}
+                {aiComplete&&!aiSearching&&<span style={{fontSize:12,color:C.g,fontWeight:600}}>検索完了</span>}
               </div>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
                 <span style={{fontSize:18,fontWeight:800,color:C.cy,fontFamily:"'Geist Mono',monospace"}}>{aiCompanies.length}</span>
-                <span style={{fontSize:9,color:C.sub}}>社発見</span>
+                <span style={{fontSize:12,color:C.sub}}>社発見</span>
               </div>
             </div>
 
@@ -1690,12 +1690,12 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
               <div style={{marginBottom:14}}>
                 {aiComplete&&(
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 10px",background:C.bg,borderRadius:"6px 6px 0 0",border:`1px solid ${C.bdr}`,borderBottom:"none"}}>
-                    <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:10,color:C.sub}}>
+                    <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:12,color:C.sub}}>
                       <input type="checkbox" checked={selectAll} onChange={toggleSelectAll} style={{accentColor:C.cy}}/>
                       全選択 ({selectedCompanyIds.size}/{aiCompanies.length})
                     </label>
                     {aiSearchMeta&&aiSearchMeta.queries&&(
-                      <span style={{fontSize:8,color:C.dim}}>{aiSearchMeta.queries.length}クエリ / {aiSearchMeta.sources?.length||0}ソース</span>
+                      <span style={{fontSize:12,color:C.dim}}>{aiSearchMeta.queries.length}クエリ / {aiSearchMeta.sources?.length||0}ソース</span>
                     )}
                   </div>
                 )}
@@ -1707,10 +1707,10 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
                         {aiComplete&&<input type="checkbox" checked={isSelected} onChange={()=>toggleCompany(c.id)} style={{accentColor:C.cy,marginTop:2,flexShrink:0}}/>}
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
-                            <span style={{fontWeight:700,fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</span>
-                            {typeof c.heat_score==="number"&&<span style={{fontSize:8,fontWeight:700,padding:"1px 5px",borderRadius:3,background:c.heat_score>=70?C.gB:c.heat_score>=40?`${C.o}15`:C.rB,color:c.heat_score>=70?C.g:c.heat_score>=40?C.o:C.r,fontFamily:"'Geist Mono',monospace"}}>{c.heat_score}</span>}
+                            <span style={{fontWeight:700,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</span>
+                            {typeof c.heat_score==="number"&&<span style={{fontSize:12,fontWeight:700,padding:"1px 5px",borderRadius:3,background:c.heat_score>=70?C.gB:c.heat_score>=40?`${C.o}15`:C.rB,color:c.heat_score>=70?C.g:c.heat_score>=40?C.o:C.r,fontFamily:"'Geist Mono',monospace"}}>{c.heat_score}</span>}
                           </div>
-                          <div style={{fontSize:9,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:2}}>{c.url?.replace(/^https?:\/\//,"").slice(0,40)}</div>
+                          <div style={{fontSize:12,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:2}}>{c.url?.replace(/^https?:\/\//,"").slice(0,40)}</div>
                           <div style={{display:"flex",flexWrap:"wrap",gap:4,fontSize:8}}>
                             {c.industry&&<span style={{padding:"1px 5px",borderRadius:3,background:`${C.b}15`,color:C.b}}>{c.industry}</span>}
                             {c.region&&<span style={{padding:"1px 5px",borderRadius:3,background:`${C.p}15`,color:C.p}}>{c.region}</span>}
@@ -1720,7 +1720,7 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
                             {c.capital&&<span style={{padding:"1px 5px",borderRadius:3,background:`${C.sub}15`,color:C.sub}}>{c.capital}</span>}
                             {c.representative&&<span style={{padding:"1px 5px",borderRadius:3,background:`${C.sub}15`,color:C.sub}}>{c.representative}</span>}
                           </div>
-                          {c.description&&<div style={{fontSize:8,color:C.dim,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.description}</div>}
+                          {c.description&&<div style={{fontSize:12,color:C.dim,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.description}</div>}
                         </div>
                       </div>
                     );
@@ -1729,30 +1729,30 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
               </div>
             )}
 
-            {error&&<div style={{padding:10,borderRadius:6,background:C.rB,border:`1px solid ${C.r}`,color:C.r,fontSize:11,marginBottom:12}}>{error}</div>}
+            {error&&<div style={{padding:10,borderRadius:6,background:C.rB,border:`1px solid ${C.r}`,color:C.r,fontSize:12,marginBottom:12}}>{error}</div>}
 
             {aiComplete&&aiCompanies.length>0&&(
               <>
                 <div style={{background:C.bg,borderRadius:6,padding:14,marginBottom:14}}>
-                  <div style={{fontSize:10,fontWeight:700,color:C.sub,marginBottom:10}}>パイプライン設定</div>
+                  <div style={{fontSize:12,fontWeight:700,color:C.sub,marginBottom:10}}>パイプライン設定</div>
                   <div style={{marginBottom:10}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                      <label style={{fontSize:10,color:C.sub,fontWeight:600}}>LLMOスコア上限</label>
+                      <label style={{fontSize:12,color:C.sub,fontWeight:600}}>LLMOスコア上限</label>
                       <span style={{fontSize:13,fontWeight:800,fontFamily:"'Geist Mono',monospace",color:C.acc}}>{scoreMax}</span>
                     </div>
                     <input type="range" min="10" max="60" value={scoreMax} onChange={e=>setScoreMax(+e.target.value)} style={{width:"100%"}}/>
-                    <div style={{fontSize:8,color:C.dim}}>このスコア以下のサイトのみリードとして保存</div>
+                    <div style={{fontSize:12,color:C.dim}}>このスコア以下のサイトのみリードとして保存</div>
                   </div>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                     <div>
-                      <div style={{fontSize:10,fontWeight:600,color:C.tx}}>自動メール送信</div>
-                      <div style={{fontSize:8,color:C.dim}}>フォーム発見後に初回ステップメールを自動送信</div>
+                      <div style={{fontSize:12,fontWeight:600,color:C.tx}}>自動メール送信</div>
+                      <div style={{fontSize:12,color:C.dim}}>フォーム発見後に初回ステップメールを自動送信</div>
                     </div>
-                    <button onClick={()=>setAutoSend(!autoSend)} style={{padding:"4px 12px",borderRadius:4,border:"none",background:autoSend?C.gB:C.rB,color:autoSend?C.g:C.r,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoSend?"ON":"OFF"}</button>
+                    <button onClick={()=>setAutoSend(!autoSend)} style={{padding:"4px 12px",borderRadius:4,border:"none",background:autoSend?C.gB:C.rB,color:autoSend?C.g:C.r,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoSend?"ON":"OFF"}</button>
                   </div>
                 </div>
                 <div style={{display:"flex",gap:8}}>
-                  <button onClick={()=>{setAiCompanies([]);setAiComplete(false);setAiSearchMeta(null);setError("");}} style={{flex:1,padding:"10px",borderRadius:6,border:`1px solid ${C.bdr}`,background:"transparent",color:C.tx,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>新しい検索</button>
+                  <button onClick={()=>{setAiCompanies([]);setAiComplete(false);setAiSearchMeta(null);setError("");}} style={{flex:1,padding:"10px",borderRadius:6,border:`1px solid ${C.bdr}`,background:"transparent",color:C.tx,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>新しい検索</button>
                   <button onClick={importAiResults} disabled={selectedCompanyIds.size===0} style={{flex:2,padding:"10px",borderRadius:6,border:"none",background:selectedCompanyIds.size>0?`linear-gradient(135deg,${C.cy},${C.b})`:`${C.bdr}`,color:selectedCompanyIds.size>0?C.bg:C.dim,fontSize:12,fontWeight:800,cursor:selectedCompanyIds.size>0?"pointer":"default",fontFamily:"inherit",opacity:selectedCompanyIds.size>0?1:.6}}>
                     {selectedCompanyIds.size}社をパイプラインに投入
                   </button>
@@ -1775,14 +1775,14 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
               ].map(k=>(
                 <div key={k.label} style={{background:C.sf,borderRadius:6,padding:"10px 8px",textAlign:"center",border:`1px solid ${C.bdr}`}}>
                   <div style={{fontSize:20,fontWeight:800,color:k.color,fontFamily:"'Geist Mono',monospace"}}>{k.value}</div>
-                  <div style={{fontSize:8,color:C.sub,fontWeight:700,marginTop:2}}>{k.label}</div>
+                  <div style={{fontSize:12,color:C.sub,fontWeight:700,marginTop:2}}>{k.label}</div>
                 </div>
               ))}
             </div>
 
             {/* Detail summary */}
             <div style={{background:C.bg,borderRadius:6,padding:12,marginBottom:14}}>
-              <div style={{fontSize:10,fontWeight:700,color:C.sub,marginBottom:8}}>詳細サマリー</div>
+              <div style={{fontSize:12,fontWeight:700,color:C.sub,marginBottom:8}}>詳細サマリー</div>
               {[
                 {l:"入力URL数",v:pipelineResult.summary?.totalInput||0},
                 {l:"重複スキップ",v:pipelineResult.summary?.duplicateSkipped||0},
@@ -1805,7 +1805,7 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
                     <div style={{width:8,height:8,borderRadius:"50%",background:r.status==="success"?C.g:r.status==="skipped"?C.o:r.status==="filtered"?C.sub:C.r,flexShrink:0}}/>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.company}</div>
-                      <div style={{fontSize:8,color:C.dim,display:"flex",gap:8}}>
+                      <div style={{fontSize:12,color:C.dim,display:"flex",gap:8}}>
                         <span>{r.url?.replace(/^https?:\/\//,"").slice(0,30)}</span>
                         {r.contactEmail&&<span style={{color:C.g}}>mail</span>}
                         {r.formUrl&&<span style={{color:C.b}}>form</span>}
@@ -1814,9 +1814,9 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
                     </div>
                     <div style={{textAlign:"right",flexShrink:0}}>
                       {r.status==="success"&&<div style={{fontWeight:700,color:r.llmoScore<=40?C.r:r.llmoScore<=70?C.o:C.g,fontFamily:"'Geist Mono',monospace"}}>{r.llmoScore}</div>}
-                      {r.status==="skipped"&&<div style={{fontSize:9,color:C.o}}>重複</div>}
-                      {r.status==="filtered"&&<div style={{fontSize:9,color:C.sub}}>対象外</div>}
-                      {r.status==="error"&&<div style={{fontSize:9,color:C.r}}>エラー</div>}
+                      {r.status==="skipped"&&<div style={{fontSize:12,color:C.o}}>重複</div>}
+                      {r.status==="filtered"&&<div style={{fontSize:12,color:C.sub}}>対象外</div>}
+                      {r.status==="error"&&<div style={{fontSize:12,color:C.r}}>エラー</div>}
                     </div>
                   </div>
                 ))}
@@ -1825,10 +1825,10 @@ function AutoDiscoverModal({onClose,llmoScoreMax:defaultLlmoMax,onComplete}){
 
             {/* Action buttons */}
             <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
-              <button onClick={()=>{setPhase(0);setPipelineResult(null);setDiscoveredUrls([]);setError("");setAiCompanies([]);setAiComplete(false);setAiSearchMeta(null);}} style={{padding:"8px 16px",borderRadius:5,border:`1px solid ${C.bdr}`,background:"transparent",color:C.tx,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+              <button onClick={()=>{setPhase(0);setPipelineResult(null);setDiscoveredUrls([]);setError("");setAiCompanies([]);setAiComplete(false);setAiSearchMeta(null);}} style={{padding:"8px 16px",borderRadius:5,border:`1px solid ${C.bdr}`,background:"transparent",color:C.tx,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
                 新しい発見
               </button>
-              <button onClick={onClose} style={{padding:"8px 16px",borderRadius:5,border:"none",background:C.acc,color:C.bg,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+              <button onClick={onClose} style={{padding:"8px 16px",borderRadius:5,border:"none",background:C.acc,color:C.bg,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                 閉じる
               </button>
             </div>
