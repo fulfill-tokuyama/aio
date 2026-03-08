@@ -394,10 +394,10 @@ export default function FormPilotAutoV2(){
         </nav>
         <div style={{padding:"9px 11px",borderTop:`1px solid ${C.bdr}`,fontSize:10}}>
           <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:5}}>
-            <span style={{width:5,height:5,borderRadius:"50%",background:autoConfig.scanEnabled?C.g:C.r,animation:autoConfig.scanEnabled?"p5 2s infinite":"none"}}/>
-            <span style={{fontWeight:700,color:autoConfig.scanEnabled?C.g:C.r,fontSize:10}}>{autoConfig.scanEnabled?"自動運転中":"停止中"}</span>
+            <span style={{width:5,height:5,borderRadius:"50%",background:autoConfig.autoSendEnabled?C.g:C.r,animation:autoConfig.autoSendEnabled?"p5 2s infinite":"none"}}/>
+            <span style={{fontWeight:700,color:autoConfig.autoSendEnabled?C.g:C.r,fontSize:10}}>{autoConfig.autoSendEnabled?"フォローアップ自動":"停止中"}</span>
           </div>
-          <div style={{fontSize:9,color:C.dim,marginBottom:8}}>次回スキャン: {autoConfig.nextScanAt ? new Date(autoConfig.nextScanAt).toLocaleString("ja-JP",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}) : "未設定"}</div>
+          <div style={{fontSize:9,color:C.dim,marginBottom:8}}>次回FU: 平日 10:00 JST</div>
           <div style={{padding:"7px 9px",borderRadius:4,background:C.accGl,marginTop:6}}>
             <div style={{fontSize:8,color:C.acc,fontWeight:700}}>MRR</div>
             <div style={{fontSize:16,fontWeight:800,color:C.g,fontFamily:"'Geist Mono',monospace"}}>¥{kpi.mrr.toLocaleString()}</div>
@@ -445,6 +445,64 @@ export default function FormPilotAutoV2(){
           {!loading&&view==="pipeline"&&(
             <div className="fi">
               <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>自動営業パイプライン</div>
+
+              {/* 自動化の現状 — 何が自動・何が手動かを明確に */}
+              <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`,marginBottom:16}}>
+                <div style={{fontSize:12,fontWeight:700,marginBottom:12,display:"flex",alignItems:"center",gap:6}}>
+                  <I d={ic.zap} s={14} c={C.acc}/> 自動化の現状
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
+                  <div>
+                    <div style={{fontSize:9,color:C.g,fontWeight:700,marginBottom:6,display:"flex",alignItems:"center",gap:4}}>
+                      <span style={{width:6,height:6,borderRadius:"50%",background:C.g}}/> 自動で動いている
+                    </div>
+                    <ul style={{margin:0,paddingLeft:16,fontSize:10,color:C.sub,lineHeight:1.8}}>
+                      <li><strong style={{color:C.tx}}>フォローアップメール</strong> — 平日 10:00 JST に Cron で自動送信</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <div style={{fontSize:9,color:C.o,fontWeight:700,marginBottom:6,display:"flex",alignItems:"center",gap:4}}>
+                      <span style={{width:6,height:6,borderRadius:"50%",background:C.o}}/> 手動実行が必要
+                    </div>
+                    <ul style={{margin:0,paddingLeft:16,fontSize:10,color:C.sub,lineHeight:1.8}}>
+                      <li><strong style={{color:C.tx}}>リード発見</strong> — 「自動発見」ボタンで実行</li>
+                      <li><strong style={{color:C.tx}}>LLMO診断</strong> — 「一括LLMO調査」で実行</li>
+                      <li><strong style={{color:C.tx}}>初回メール送信</strong> — 「AIスコア順送信」で実行</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* 次のアクション — 収益最大化のための推奨アクション */}
+              {(()=>{
+                const readyToSend=leads.filter(l=>l.phase==="form_found"&&l.contactEmail).length;
+                const needFormScan=leads.filter(l=>l.phase==="discovered").length;
+                const noLeads=leads.length===0;
+                const actions=[];
+                if(readyToSend>0)actions.push({msg:`送信待ち ${readyToSend}件 がいます。今すぐ送信すると収益機会があります`,action:"send",cta:"AIスコア順送信",priority:1});
+                if(needFormScan>0)actions.push({msg:`フォーム未探索のリードが ${needFormScan}件 あります。自動発見パイプラインで一括処理できます`,action:"discover",cta:"自動発見",priority:2});
+                if(noLeads)actions.push({msg:"リードが0件です。自動発見またはリード追加で開始しましょう",action:"discover",cta:"自動発見",priority:3});
+                if(actions.length===0&&leads.length>0)actions.push({msg:"パイプラインは順調です。リード一覧で進捗を確認しましょう",action:null,cta:"リード一覧",priority:0});
+                const top=actions.sort((a,b)=>a.priority-b.priority)[0];
+                if(!top)return null;
+                return(
+                  <div style={{background:top.priority>0?C.accGl:C.card,borderRadius:8,padding:12,border:`1px solid ${top.priority>0?C.acc+"30":C.bdr}`,marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
+                    <div style={{fontSize:11,color:C.tx,fontWeight:600}}>
+                      <span style={{fontSize:9,color:C.sub,marginRight:6}}>💡 次のアクション</span>{top.msg}
+                    </div>
+                    {top.cta&&(
+                      <button onClick={()=>{
+                        if(top.action==="send"){setView("leads");setTimeout(autoSend,200);}
+                        else if(top.action==="discover")setShowAutoDiscover(true);
+                        else setView("leads");
+                      }} style={{padding:"6px 12px",borderRadius:4,border:"none",background:top.priority>0?C.acc:C.bdr,color:top.priority>0?C.bg:C.tx,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                        {top.cta}
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+
               <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginBottom:12,padding:"6px 10px",background:C.card,borderRadius:6,border:`1px solid ${C.bdr}`,flexWrap:"wrap"}}>
                 {["リード発見","フォーム探索","キュー","メール送信","返信・商談","受注"].map((t,i,a)=>(
                   <span key={i} style={{display:"flex",alignItems:"center",gap:6}}>
@@ -455,16 +513,19 @@ export default function FormPilotAutoV2(){
               </div>
               <div style={{display:"grid",gridTemplateColumns:mob?"repeat(3,1fr)":"repeat(6,1fr)",gap:5,marginBottom:20}}>
                 {[
-                  {label:"LLMO未対策企業発見",count:leads.filter(l=>l.phase==="discovered").length,color:C.cy,icon:ic.radar,desc:"AIがLLMO未対策の企業を自動スキャン・発見",next:"フォーム探索 →"},
-                  {label:"フォーム自動発見",count:leads.filter(l=>l.phase==="form_found").length,color:C.b,icon:ic.link,desc:"問合せフォーム・メールアドレスを自動検出",next:"キュー投入 →"},
-                  {label:"送信待機中",count:leads.filter(l=>l.phase==="queued").length,color:C.o,icon:ic.clock,desc:"AIスコア順に送信キューで待機",next:"自動送信 →"},
-                  {label:"営業メール送信済",count:leads.filter(l=>["sent"].includes(l.phase)).length,color:C.p,icon:ic.send,desc:"パーソナライズ営業メールを自動送信完了",next:"返信待ち →"},
-                  {label:"返信受信",count:leads.filter(l=>l.phase==="replied").length,color:C.acc,icon:ic.check,desc:"見込み客から返信あり・商談開始",next:"成約 →"},
-                  {label:"有料顧客",count:leads.filter(l=>l.phase==="customer").length,color:C.g,icon:ic.dollar,desc:"Stripe決済確認済み・MRR計上",next:""},
+                  {label:"LLMO未対策企業発見",count:leads.filter(l=>l.phase==="discovered").length,color:C.cy,icon:ic.radar,desc:"AIがLLMO未対策の企業をスキャン・発見",next:"フォーム探索 →",auto:"手動"},
+                  {label:"フォーム発見",count:leads.filter(l=>l.phase==="form_found").length,color:C.b,icon:ic.link,desc:"問合せフォーム・メールアドレスを検出",next:"キュー投入 →",auto:"パイプライン内"},
+                  {label:"送信待機中",count:leads.filter(l=>l.phase==="queued").length,color:C.o,icon:ic.clock,desc:"AIスコア順に送信キューで待機",next:"送信 →",auto:"手動"},
+                  {label:"営業メール送信済",count:leads.filter(l=>["sent","step2","step3","step4"].includes(l.phase)).length,color:C.p,icon:ic.send,desc:"初回は手動、FUは平日10時自動",next:"返信待ち →",auto:"FU自動"},
+                  {label:"返信受信",count:leads.filter(l=>l.phase==="replied").length,color:C.acc,icon:ic.check,desc:"見込み客から返信あり・商談開始",next:"成約 →",auto:"手動"},
+                  {label:"有料顧客",count:leads.filter(l=>l.phase==="customer").length,color:C.g,icon:ic.dollar,desc:"Stripe決済確認済み・MRR計上",next:"",auto:"自動"},
                 ].map((s,i)=>(
                   <div key={i} style={{background:C.card,borderRadius:7,padding:"14px 10px 10px",border:`1px solid ${C.bdr}`,textAlign:"center",position:"relative"}}>
                     <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:s.color,opacity:.5}}/>
-                    <div style={{width:28,height:28,borderRadius:5,background:`${s.color}10`,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 6px"}}><I d={s.icon} s={14} c={s.color}/></div>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4,marginBottom:4}}>
+                      <div style={{width:28,height:28,borderRadius:5,background:`${s.color}10`,display:"flex",alignItems:"center",justifyContent:"center"}}><I d={s.icon} s={14} c={s.color}/></div>
+                      <span style={{fontSize:7,fontWeight:700,padding:"2px 5px",borderRadius:2,background:s.auto==="自動"||s.auto==="FU自動"?C.gB:s.auto==="パイプライン内"?C.b+"20":C.o+"20",color:s.auto==="自動"||s.auto==="FU自動"?C.g:s.auto==="パイプライン内"?C.b:C.o}}>{s.auto}</span>
+                    </div>
                     <div style={{fontSize:22,fontWeight:800,color:s.color,fontFamily:"'Geist Mono',monospace"}}>{s.count}</div>
                     <div style={{fontSize:10,color:C.dim,marginTop:3,lineHeight:1.3}}>{s.label}</div>
                     <div style={{fontSize:9,color:C.dim,marginTop:4,lineHeight:1.3,minHeight:24}}>{s.desc}</div>
@@ -486,17 +547,20 @@ export default function FormPilotAutoV2(){
               <div style={{marginBottom:16}}>
                 <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
                   <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>自動化ステータス</div>
+                  <div style={{fontSize:9,color:C.dim,marginBottom:12}}>Cron（定期実行）で動いているのはフォローアップメールのみです</div>
                   {[
-                    {l:"LLMO調査",d:`${autoConfig.scanInterval}時間ごと・${autoConfig.batchSize}件/回`,on:autoConfig.scanEnabled,key:"scanEnabled"},
-                    {l:"フォーム自動探索",d:"発見次第即実行",on:autoConfig.autoFormScan,key:"autoFormScan"},
-                    {l:"自動送信",d:`${autoConfig.sendThreshold}件蓄積で自動送信・${autoConfig.sendTime}`,on:autoConfig.autoSendEnabled,key:"autoSendEnabled"},
+                    {l:"フォローアップメール",d:"平日 10:00 JST に Cron で自動送信（Step2→3→4）",on:autoConfig.autoSendEnabled,key:"autoSendEnabled",cron:true},
+                    {l:"リード発見・診断・初回送信",d:"手動実行。「自動発見」または「一括LLMO調査」で実行",on:null,key:null,cron:false},
                   ].map((s,i)=>(
-                    <div key={s.key} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:i<2?`1px solid ${C.bdr}`:"none"}}>
+                    <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:i<1?`1px solid ${C.bdr}`:"none"}}>
                       <div>
-                        <div style={{fontSize:11,fontWeight:600}}>{s.l}</div>
+                        <div style={{fontSize:11,fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
+                          {s.l}
+                          {s.cron&&<span style={{fontSize:7,fontWeight:700,padding:"2px 5px",borderRadius:2,background:C.gB,color:C.g}}>Cron</span>}
+                        </div>
                         <div style={{fontSize:9,color:C.dim}}>{s.d}</div>
                       </div>
-                      <button onClick={()=>setAutoConfig(p=>({...p,[s.key]:!p[s.key]}))} style={{padding:"4px 10px",borderRadius:4,border:"none",background:s.on?C.gB:C.rB,color:s.on?C.g:C.r,fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s.on?"ON":"OFF"}</button>
+                      {s.key&&<button onClick={()=>setAutoConfig(p=>({...p,[s.key]:!p[s.key]}))} style={{padding:"4px 10px",borderRadius:4,border:"none",background:s.on?C.gB:C.rB,color:s.on?C.g:C.r,fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{s.on?"ON":"OFF"}</button>}
                     </div>
                   ))}
                 </div>
@@ -804,14 +868,20 @@ export default function FormPilotAutoV2(){
           {/* ===== AUTOMATION CONFIG ===== */}
           {view==="automation"&&(
             <div className="fi">
+              <div style={{background:C.accGl,borderRadius:8,padding:12,border:`1px solid ${C.acc}30`,marginBottom:16}}>
+                <div style={{fontSize:11,fontWeight:700,color:C.acc,marginBottom:4}}>💡 自動化の仕組み</div>
+                <div style={{fontSize:10,color:C.sub,lineHeight:1.6}}>
+                  <strong style={{color:C.g}}>自動（Cron）</strong>: フォローアップメールのみ、平日10:00 JST に実行。<br/>
+                  <strong style={{color:C.o}}>手動</strong>: リード発見・診断・初回送信は「リード一覧」のボタンで実行してください。
+                </div>
+              </div>
               <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:12}}>
                 <div style={{background:C.card,borderRadius:8,padding:18,border:`1px solid ${C.bdr}`}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-                    <h3 style={{fontSize:13,fontWeight:700,margin:0}}>🔬 LLMO調査</h3>
-                    <button onClick={()=>setAutoConfig(p=>({...p,scanEnabled:!p.scanEnabled}))} style={{padding:"5px 10px",borderRadius:4,border:"none",background:autoConfig.scanEnabled?C.gB:C.rB,color:autoConfig.scanEnabled?C.g:C.r,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoConfig.scanEnabled?"ON":"OFF"}</button>
+                  <div style={{marginBottom:14}}>
+                    <h3 style={{fontSize:13,fontWeight:700,margin:0}}>🔬 手動実行時の設定</h3>
+                    <div style={{fontSize:9,color:C.dim,marginTop:4}}>自動発見・一括LLMO調査で使用</div>
                   </div>
                   {[
-                    {l:"スキャン間隔",opts:[6,12,24,48,72],val:autoConfig.scanInterval,key:"scanInterval",fmt:h=>`${h}h`},
                     {l:"取得件数/回",opts:[10,20,50,100],val:autoConfig.batchSize,key:"batchSize",fmt:n=>`${n}件`},
                   ].map(({l,opts,val,key,fmt})=>(
                     <div key={key} style={{marginBottom:10}}>
@@ -820,14 +890,14 @@ export default function FormPilotAutoV2(){
                     </div>
                   ))}
                   <div style={{marginBottom:10}}>
-                    <label style={{fontSize:9,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>LLMOスコア上限</label>
+                    <label style={{fontSize:9,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>LLMOスコア上限（この以下をリード化）</label>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       <input type="range" min="10" max="60" value={autoConfig.llmoScoreMax} onChange={e=>setAutoConfig(p=>({...p,llmoScoreMax:+e.target.value}))} style={{flex:1}}/>
                       <span style={{fontSize:13,fontWeight:700,fontFamily:"'Geist Mono',monospace",color:C.acc}}>{autoConfig.llmoScoreMax}</span>
                     </div>
                   </div>
                   <div style={{marginBottom:8}}>
-                    <label style={{fontSize:9,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>対象業種</label>
+                    <label style={{fontSize:9,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>対象業種（自動発見時）</label>
                     <div style={{display:"flex",flexWrap:"wrap",gap:3}}>{INDUSTRIES.map(i=>(
                       <button key={i} onClick={()=>setAutoConfig(p=>({...p,scanIndustries:p.scanIndustries.includes(i)?p.scanIndustries.filter(x=>x!==i):[...p.scanIndustries,i]}))} style={{padding:"3px 7px",borderRadius:3,fontSize:8,fontWeight:autoConfig.scanIndustries.includes(i)?700:400,border:`1px solid ${autoConfig.scanIndustries.includes(i)?C.acc+"40":C.bdr}`,background:autoConfig.scanIndustries.includes(i)?C.accGl:"transparent",color:autoConfig.scanIndustries.includes(i)?C.acc:C.dim,cursor:"pointer",fontFamily:"inherit"}}>{i}</button>
                     ))}</div>
@@ -836,12 +906,15 @@ export default function FormPilotAutoV2(){
                 <div style={{display:"flex",flexDirection:"column",gap:12}}>
                   <div style={{background:C.card,borderRadius:8,padding:18,border:`1px solid ${C.bdr}`}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-                      <h3 style={{fontSize:13,fontWeight:700,margin:0}}>📨 自動送信</h3>
+                      <div>
+                        <h3 style={{fontSize:13,fontWeight:700,margin:0}}>📨 フォローアップ自動送信</h3>
+                        <div style={{fontSize:9,color:C.dim,marginTop:4}}>Cron: 平日 10:00 JST</div>
+                      </div>
                       <button onClick={()=>setAutoConfig(p=>({...p,autoSendEnabled:!p.autoSendEnabled}))} style={{padding:"5px 10px",borderRadius:4,border:"none",background:autoConfig.autoSendEnabled?C.gB:C.rB,color:autoConfig.autoSendEnabled?C.g:C.r,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{autoConfig.autoSendEnabled?"ON":"OFF"}</button>
                     </div>
                     <div style={{marginBottom:10}}>
-                      <label style={{fontSize:9,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>送信トリガー</label>
-                      <select value={autoConfig.sendThreshold} onChange={e=>setAutoConfig(p=>({...p,sendThreshold:+e.target.value}))} style={{width:"100%",padding:"7px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:11,outline:"none"}}>{[5,10,20,30,50].map(n=><option key={n} value={n}>{n}件蓄積で送信</option>)}</select>
+                      <label style={{fontSize:9,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>手動送信時の上限件数</label>
+                      <select value={autoConfig.sendThreshold} onChange={e=>setAutoConfig(p=>({...p,sendThreshold:+e.target.value}))} style={{width:"100%",padding:"7px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.bg,color:C.tx,fontSize:11,outline:"none"}}>{[5,10,20,30,50].map(n=><option key={n} value={n}>{n}件まで</option>)}</select>
                     </div>
                     <div style={{marginBottom:10}}>
                       <label style={{fontSize:9,color:C.sub,fontWeight:600,display:"block",marginBottom:3}}>AIスコア閾値（優先送信）</label>
@@ -853,20 +926,19 @@ export default function FormPilotAutoV2(){
                     </div>
                   </div>
                   <div style={{background:C.card,borderRadius:8,padding:16,border:`1px solid ${C.bdr}`}}>
-                    <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>🔄 自動化フロー全体</div>
+                    <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>🔄 パイプライン全体（自動/手動の区別）</div>
                     {[
-                      {s:"1",l:"LLMO未対策企業を定期発見",d:`${autoConfig.scanInterval}h · ${autoConfig.batchSize}件`,c:C.cy,on:autoConfig.scanEnabled},
-                      {s:"2",l:"フォームURL自動探索",d:"発見後即実行",c:C.b,on:autoConfig.autoFormScan},
-                      {s:"3",l:"AIスコアで優先度決定",d:`スコア${autoConfig.aiScoreMinForPriority}+を最優先`,c:C.acc,on:true},
-                      {s:"4",l:"A/B/Cテンプレートで送信",d:"ラウンドロビン振分",c:C.p,on:autoConfig.abTestEnabled},
-                      {s:"5",l:"無料診断レポート自動添付",d:"LLMO分析PDF",c:C.cy,on:autoConfig.autoDiagnosis},
-                      {s:"6",l:"自動フォローアップ",d:`${autoConfig.followUpInterval}日間隔 · 最大${autoConfig.followUpMaxCount}回`,c:C.pk,on:autoConfig.autoFollowUp},
-                      {s:"7",l:"ホットリードアラート",d:"高スコアリード即通知",c:C.r,on:autoConfig.warmAlerts},
+                      {s:"1",l:"リード発見",d:"手動: 自動発見 or 一括LLMO調査",c:C.cy,auto:false},
+                      {s:"2",l:"フォーム探索",d:"パイプライン実行時に自動",c:C.b,auto:true},
+                      {s:"3",l:"初回メール送信",d:"手動: AIスコア順送信",c:C.p,auto:false},
+                      {s:"4",l:"フォローアップ（Step2-4）",d:"Cron: 平日10:00 JST 自動",c:C.pk,auto:true},
+                      {s:"5",l:"返信・商談",d:"手動: 人間が対応",c:C.acc,auto:false},
+                      {s:"6",l:"決済・顧客化",d:"自動: Stripe Webhook",c:C.g,auto:true},
                     ].map((s,i)=>(
-                      <div key={i} style={{display:"flex",gap:8,alignItems:"center",padding:"5px 0",borderBottom:i<6?`1px solid ${C.bdr}`:"none"}}>
+                      <div key={i} style={{display:"flex",gap:8,alignItems:"center",padding:"5px 0",borderBottom:i<5?`1px solid ${C.bdr}`:"none"}}>
                         <div style={{width:18,height:18,borderRadius:3,background:`${s.c}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:800,color:s.c,flexShrink:0}}>{s.s}</div>
                         <div style={{flex:1}}><div style={{fontSize:10,fontWeight:600}}>{s.l}</div><div style={{fontSize:8,color:C.dim}}>{s.d}</div></div>
-                        <span style={{fontSize:7,fontWeight:700,padding:"2px 6px",borderRadius:2,background:s.on?C.gB:C.rB,color:s.on?C.g:C.r}}>{s.on?"ON":"OFF"}</span>
+                        <span style={{fontSize:7,fontWeight:700,padding:"2px 6px",borderRadius:2,background:s.auto?C.gB:C.o+"20",color:s.auto?C.g:C.o}}>{s.auto?"自動":"手動"}</span>
                       </div>
                     ))}
                   </div>
