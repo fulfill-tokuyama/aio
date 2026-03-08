@@ -2,7 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
 import { Suspense } from "react";
+
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder"
+);
 
 const C = {
   bg: "#FFFFFF",
@@ -67,6 +73,7 @@ function DiagnosisContent() {
   const [data, setData] = useState<DiagnosisData | null>(null);
   const [error, setError] = useState("");
   const [inputUrl, setInputUrl] = useState(url || "");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const runDiagnosis = async (targetUrl: string) => {
     if (!targetUrl.trim()) return;
@@ -97,6 +104,14 @@ function DiagnosisContent() {
     if (url) {
       runDiagnosis(url);
     }
+    // 認証状態チェック
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsLoggedIn(!!session);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+    });
+    return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -109,9 +124,12 @@ function DiagnosisContent() {
     { label: "技術パフォーマンス", score: data.breakdown.techPerformance, max: 5, color: "#0891B2" },
   ] : [];
 
+  const STRIPE_PAYMENT_LINK = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK || "#";
+
   const handleSignup = () => {
     const params = new URLSearchParams();
-    if (data?.reportId) params.set("diagnosis_id", data.reportId);
+    params.set("from", "diagnosis");
+    if (url) params.set("url", url);
     router.push(`/signup?${params.toString()}`);
   };
 
@@ -224,8 +242,8 @@ function DiagnosisContent() {
               <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
                 <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 16px" }}>検出された課題（{data.weaknessDetails.length}件）</h2>
 
-                {/* 最初の2件だけ見せる */}
-                {data.weaknessDetails.slice(0, 2).map((w, i) => (
+                {/* ログイン済み: 全件表示 / 未ログイン: 最初の2件のみ */}
+                {(isLoggedIn ? data.weaknessDetails : data.weaknessDetails.slice(0, 2)).map((w, i) => (
                   <div key={w.id || i} style={{ padding: "12px 0", borderBottom: `1px solid ${C.border}` }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                       <span style={{
@@ -242,8 +260,8 @@ function DiagnosisContent() {
                   </div>
                 ))}
 
-                {/* 残りはぼかして表示 */}
-                {data.weaknessDetails.length > 2 && (
+                {/* 未ログイン時のみ: 残りをぼかして表示 */}
+                {!isLoggedIn && data.weaknessDetails.length > 2 && (
                   <div style={{ position: "relative" }}>
                     {data.weaknessDetails.slice(2, 5).map((w, i) => (
                       <div key={w.id || i} style={{ padding: "12px 0", borderBottom: i < Math.min(data.weaknessDetails!.length - 3, 2) ? `1px solid ${C.border}` : "none", filter: "blur(5px)", userSelect: "none" as const, pointerEvents: "none" as const }}>
@@ -299,45 +317,48 @@ function DiagnosisContent() {
               </div>
             )}
 
-            {/* ===== ここからぼかし＋CTAゾーン（登録が必要な範囲） ===== */}
+            {/* ===== ここからぼかし＋CTAゾーン（未ログインの場合）/ 全表示（ログイン済み） ===== */}
 
-            {/* Suggestions プレビュー（ぼかし） */}
-            <div style={{ position: "relative", marginBottom: 24 }}>
-              <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", filter: "blur(5px)", userSelect: "none" as const, pointerEvents: "none" as const }}>
+            {/* Suggestions */}
+            {isLoggedIn ? (
+              <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
                 <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 16px" }}>改善提案（{data.suggestions.length}件）</h2>
-                {data.suggestions.slice(0, 3).map((s, i) => (
-                  <div key={i} style={{ display: "flex", gap: 8, padding: "8px 0", borderBottom: i < 2 ? `1px solid ${C.border}` : "none" }}>
+                {data.suggestions.map((s, i) => (
+                  <div key={i} style={{ display: "flex", gap: 8, padding: "8px 0", borderBottom: i < data.suggestions.length - 1 ? `1px solid ${C.border}` : "none" }}>
                     <span style={{ color: C.green, fontSize: 14, flexShrink: 0 }}>✓</span>
                     <span style={{ fontSize: 14, color: C.sub }}>{s}</span>
                   </div>
                 ))}
               </div>
-              {/* CTA オーバーレイ */}
-              <div style={{
-                position: "absolute", inset: 0,
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                background: "rgba(255,255,255,0.6)", borderRadius: 16,
-              }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 4 }}>
-                  改善提案の全リスト
+            ) : (
+              <div style={{ position: "relative", marginBottom: 24 }}>
+                <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", filter: "blur(5px)", userSelect: "none" as const, pointerEvents: "none" as const }}>
+                  <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 16px" }}>改善提案（{data.suggestions.length}件）</h2>
+                  {data.suggestions.slice(0, 3).map((s, i) => (
+                    <div key={i} style={{ display: "flex", gap: 8, padding: "8px 0", borderBottom: i < 2 ? `1px solid ${C.border}` : "none" }}>
+                      <span style={{ color: C.green, fontSize: 14, flexShrink: 0 }}>✓</span>
+                      <span style={{ fontSize: 14, color: C.sub }}>{s}</span>
+                    </div>
+                  ))}
                 </div>
-                <button
-                  onClick={handleSignup}
-                  style={{
+                <div style={{
+                  position: "absolute", inset: 0,
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  background: "rgba(255,255,255,0.6)", borderRadius: 16,
+                }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 4 }}>改善提案の全リスト</div>
+                  <button onClick={handleSignup} style={{
                     padding: "10px 28px", borderRadius: 8, border: "none",
                     background: "linear-gradient(135deg, #2563EB, #1D4ED8)", color: "#fff",
-                    fontSize: 14, fontWeight: 700, cursor: "pointer",
-                    boxShadow: "0 2px 8px rgba(37,99,235,0.3)",
-                  }}
-                >
-                  無料登録して詳細を見る
-                </button>
+                    fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 8px rgba(37,99,235,0.3)",
+                  }}>無料登録して詳細を見る</button>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* AI検索エンジン別 表示予測（ぼかしプレビュー） */}
-            <div style={{ position: "relative", marginBottom: 24 }}>
-              <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", filter: "blur(5px)", userSelect: "none" as const, pointerEvents: "none" as const }}>
+            {/* AI検索エンジン別 表示予測 */}
+            {isLoggedIn ? (
+              <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
                 <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 16px" }}>AI検索エンジン別 表示予測</h2>
                 {["ChatGPT", "Perplexity", "Gemini", "Copilot"].map((engine) => (
                   <div key={engine} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
@@ -346,31 +367,35 @@ function DiagnosisContent() {
                   </div>
                 ))}
               </div>
-              <div style={{
-                position: "absolute", inset: 0,
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                background: "rgba(255,255,255,0.6)", borderRadius: 16,
-              }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 4 }}>
-                  AI検索エンジン別の表示予測
+            ) : (
+              <div style={{ position: "relative", marginBottom: 24 }}>
+                <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", filter: "blur(5px)", userSelect: "none" as const, pointerEvents: "none" as const }}>
+                  <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 16px" }}>AI検索エンジン別 表示予測</h2>
+                  {["ChatGPT", "Perplexity", "Gemini", "Copilot"].map((engine) => (
+                    <div key={engine} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
+                      <span style={{ fontSize: 14, fontWeight: 600 }}>{engine}</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: C.orange }}>中程度</span>
+                    </div>
+                  ))}
                 </div>
-                <button
-                  onClick={handleSignup}
-                  style={{
+                <div style={{
+                  position: "absolute", inset: 0,
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  background: "rgba(255,255,255,0.6)", borderRadius: 16,
+                }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 4 }}>AI検索エンジン別の表示予測</div>
+                  <button onClick={handleSignup} style={{
                     padding: "10px 28px", borderRadius: 8, border: "none",
                     background: "linear-gradient(135deg, #2563EB, #1D4ED8)", color: "#fff",
-                    fontSize: 14, fontWeight: 700, cursor: "pointer",
-                    boxShadow: "0 2px 8px rgba(37,99,235,0.3)",
-                  }}
-                >
-                  無料登録して詳細を見る
-                </button>
+                    fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 8px rgba(37,99,235,0.3)",
+                  }}>無料登録して詳細を見る</button>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* 同業種比較データ（ぼかしプレビュー） */}
-            <div style={{ position: "relative", marginBottom: 24 }}>
-              <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", filter: "blur(5px)", userSelect: "none" as const, pointerEvents: "none" as const }}>
+            {/* 同業種比較データ */}
+            {isLoggedIn ? (
+              <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
                 <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 16px" }}>同業種比較データ</h2>
                 <div style={{ display: "flex", justifyContent: "space-around", textAlign: "center", padding: "16px 0" }}>
                   <div>
@@ -387,47 +412,82 @@ function DiagnosisContent() {
                   </div>
                 </div>
               </div>
-              <div style={{
-                position: "absolute", inset: 0,
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                background: "rgba(255,255,255,0.6)", borderRadius: 16,
-              }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 4 }}>
-                  同業種との比較データ
+            ) : (
+              <div style={{ position: "relative", marginBottom: 24 }}>
+                <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", filter: "blur(5px)", userSelect: "none" as const, pointerEvents: "none" as const }}>
+                  <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 16px" }}>同業種比較データ</h2>
+                  <div style={{ display: "flex", justifyContent: "space-around", textAlign: "center", padding: "16px 0" }}>
+                    <div>
+                      <div style={{ fontSize: 28, fontWeight: 800, color: C.accent }}>62</div>
+                      <div style={{ fontSize: 13, color: C.sub }}>業界平均スコア</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 28, fontWeight: 800, color: getScoreColor(data.score) }}>{data.score}</div>
+                      <div style={{ fontSize: 13, color: C.sub }}>あなたのスコア</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 28, fontWeight: 800, color: C.green }}>85</div>
+                      <div style={{ fontSize: 13, color: C.sub }}>上位企業平均</div>
+                    </div>
+                  </div>
                 </div>
+                <div style={{
+                  position: "absolute", inset: 0,
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  background: "rgba(255,255,255,0.6)", borderRadius: 16,
+                }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 4 }}>同業種との比較データ</div>
+                  <button onClick={handleSignup} style={{
+                    padding: "10px 28px", borderRadius: 8, border: "none",
+                    background: "linear-gradient(135deg, #2563EB, #1D4ED8)", color: "#fff",
+                    fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: "0 2px 8px rgba(37,99,235,0.3)",
+                  }}>無料登録して詳細を見る</button>
+                </div>
+              </div>
+            )}
+
+            {/* CTA: 未登録 → 無料登録 / 登録済み無料 → 有料プラン案内 */}
+            {isLoggedIn ? (
+              <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.accent}20`, padding: 32, textAlign: "center", marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>プロプランで本格的なAI検索対策を</h3>
+                <p style={{ color: C.sub, fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
+                  構造化データ（JSON-LD）自動生成・metaタグ改善案・月次モニタリングで<br />
+                  AI検索での可視性を継続的に改善します。
+                </p>
+                <a
+                  href={STRIPE_PAYMENT_LINK}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "inline-block", padding: "14px 48px", borderRadius: 10, border: "none",
+                    background: "linear-gradient(135deg, #2563EB, #1D4ED8)", color: "#fff", fontSize: 15, fontWeight: 800,
+                    cursor: "pointer", textDecoration: "none",
+                  }}
+                >
+                  プロプランに申し込む（月額 ¥10,000）
+                </a>
+                <p style={{ color: C.dim, fontSize: 13, marginTop: 12 }}>7日間の無料体験付き・いつでも解約可能</p>
+              </div>
+            ) : (
+              <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.accent}20`, padding: 32, textAlign: "center", marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>まずは無料登録で詳細レポートを確認</h3>
+                <p style={{ color: C.sub, fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
+                  課題の詳細・改善提案・AI検索エンジン別の表示予測・同業種比較データを<br />
+                  無料でご確認いただけます。
+                </p>
                 <button
                   onClick={handleSignup}
                   style={{
-                    padding: "10px 28px", borderRadius: 8, border: "none",
-                    background: "linear-gradient(135deg, #2563EB, #1D4ED8)", color: "#fff",
-                    fontSize: 14, fontWeight: 700, cursor: "pointer",
-                    boxShadow: "0 2px 8px rgba(37,99,235,0.3)",
+                    display: "inline-block", padding: "14px 48px", borderRadius: 10, border: "none",
+                    background: "linear-gradient(135deg, #2563EB, #1D4ED8)", color: "#fff", fontSize: 15, fontWeight: 800,
+                    cursor: "pointer",
                   }}
                 >
-                  無料登録して詳細を見る
+                  無料登録して詳細レポートを見る
                 </button>
+                <p style={{ color: C.dim, fontSize: 13, marginTop: 12 }}>メールアドレスだけで登録できます</p>
               </div>
-            </div>
-
-            {/* CTA（有料プラン） */}
-            <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.accent}20`, padding: 32, textAlign: "center", marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-              <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>まずは無料登録で詳細レポートを確認</h3>
-              <p style={{ color: C.sub, fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
-                課題の詳細・改善提案・AI検索エンジン別の表示予測・同業種比較データを<br />
-                無料でご確認いただけます。
-              </p>
-              <button
-                onClick={handleSignup}
-                style={{
-                  display: "inline-block", padding: "14px 48px", borderRadius: 10, border: "none",
-                  background: "linear-gradient(135deg, #2563EB, #1D4ED8)", color: "#fff", fontSize: 15, fontWeight: 800,
-                  cursor: "pointer",
-                }}
-              >
-                無料登録して詳細レポートを見る
-              </button>
-              <p style={{ color: C.dim, fontSize: 13, marginTop: 12 }}>メールアドレスだけで登録できます</p>
-            </div>
+            )}
 
             {/* Re-scan */}
             <div style={{ textAlign: "center", marginBottom: 32 }}>

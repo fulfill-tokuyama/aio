@@ -855,13 +855,31 @@ export default function AIOServiceLP() {
                   ))}
                 </div>
 
-                <button className="btn-primary" onClick={() => plan.isFree ? scrollTo("diagnosis-form") : window.open(STRIPE_PAYMENT_LINK, "_blank")}
-                  style={{
-                    width: "100%", padding: 14, fontSize: 14, borderRadius: 10,
-                    background: plan.badge ? `linear-gradient(135deg, ${C.accent}, #7C3AED)` : C.accent,
-                  }}>
-                  {plan.isFree ? "無料で診断する" : "有料プランに申し込む"}
-                </button>
+                {plan.isFree ? (
+                  <button className="btn-primary" onClick={() => scrollTo("diagnosis-form")}
+                    style={{
+                      width: "100%", padding: 14, fontSize: 14, borderRadius: 10,
+                      background: C.accent,
+                    }}>
+                    無料で診断する
+                  </button>
+                ) : (
+                  <>
+                    <button className="btn-primary" onClick={() => goToDiagnosis()}
+                      style={{
+                        width: "100%", padding: 14, fontSize: 14, borderRadius: 10,
+                        background: `linear-gradient(135deg, ${C.accent}, #7C3AED)`,
+                      }}>
+                      まず無料診断を試す
+                    </button>
+                    <div style={{ textAlign: "center", marginTop: 10 }}>
+                      <a href={STRIPE_PAYMENT_LINK} target="_blank" rel="noopener noreferrer"
+                        style={{ fontSize: 12, color: C.textDim, textDecoration: "underline", cursor: "pointer" }}>
+                        すぐに有料プランに申し込む →
+                      </a>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           ))}

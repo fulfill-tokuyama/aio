@@ -396,9 +396,7 @@ export async function POST(req: NextRequest) {
       for (const lead of sendTargets) {
         try {
           const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aio-rouge.vercel.app";
-          const diagnosisLink = lead.diagnosisReportId
-            ? `${appUrl}/signup?diagnosis_id=${lead.diagnosisReportId}`
-            : `${appUrl}/diagnosis?url=${encodeURIComponent(lead.url)}`;
+          const diagnosisLink = `${appUrl}/signup?from=email&url=${encodeURIComponent(lead.url)}`;
           const paymentLink = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK || "#";
           const senderName = process.env.NEXT_PUBLIC_SENDER_NAME || "AIO Insight";
           const unsubscribeLink = buildUnsubscribeUrl(lead.id, appUrl);
