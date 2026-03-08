@@ -43,9 +43,19 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Protect /diagnosis/[id]/detail — redirect to /signup if not authenticated
+  const detailMatch = request.nextUrl.pathname.match(/^\/diagnosis\/([^/]+)\/detail$/);
+  if (!user && detailMatch) {
+    const diagnosisId = detailMatch[1];
+    const url = request.nextUrl.clone();
+    url.pathname = "/signup";
+    url.searchParams.set("diagnosis_id", diagnosisId);
+    return NextResponse.redirect(url);
+  }
+
   return supabaseResponse;
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: ["/dashboard/:path*", "/diagnosis/:path*/detail"],
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
 
 const C = {
@@ -55,10 +55,12 @@ interface DiagnosisData {
   weaknessDetails?: { id: string; severity: string; message: string; suggestion: string }[];
   suggestions: string[];
   htmlAnalysis: { title: string };
+  reportId?: string | null;
 }
 
 function DiagnosisContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const url = searchParams.get("url");
 
   const [loading, setLoading] = useState(false);
@@ -98,8 +100,6 @@ function DiagnosisContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const paymentLink = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK || "#";
-
   const breakdownItems = data ? [
     { label: "E-E-A-T（信頼性）", score: data.breakdown.eeat, max: 25, color: C.accent },
     { label: "コンテンツ品質", score: data.breakdown.contentQuality, max: 25, color: C.green },
@@ -108,6 +108,12 @@ function DiagnosisContent() {
     { label: "メタ・エンティティ", score: data.breakdown.metaEntity, max: 10, color: "#7C3AED" },
     { label: "技術パフォーマンス", score: data.breakdown.techPerformance, max: 5, color: "#0891B2" },
   ] : [];
+
+  const handleSignup = () => {
+    const params = new URLSearchParams();
+    if (data?.reportId) params.set("diagnosis_id", data.reportId);
+    router.push(`/signup?${params.toString()}`);
+  };
 
   return (
     <div style={{ minHeight: "100vh", background: "#F9FAFB", fontFamily: "'Noto Sans JP', system-ui, sans-serif", color: C.text }}>
@@ -126,7 +132,7 @@ function DiagnosisContent() {
 
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "32px 16px" }}>
 
-        {/* URL入力 (URLパラメータなしの場合、または再診断用) */}
+        {/* URL入力 */}
         {!loading && !data && (
           <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 32, textAlign: "center", marginBottom: 32, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
             <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>AI検索可視性 無料診断</h1>
@@ -167,6 +173,8 @@ function DiagnosisContent() {
         {/* Results */}
         {data && !loading && (
           <>
+            {/* ===== 無料で見える範囲 ===== */}
+
             {/* Score Hero */}
             <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 32, textAlign: "center", marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
               <div style={{ fontSize: 14, color: C.sub, marginBottom: 4 }}>
@@ -195,7 +203,7 @@ function DiagnosisContent() {
               </p>
             </div>
 
-            {/* Breakdown */}
+            {/* Breakdown (カテゴリ別スコア — 無料で見える) */}
             <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
               <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, margin: "0 0 16px" }}>カテゴリ別スコア</h2>
               {breakdownItems.map((item) => (
@@ -211,12 +219,14 @@ function DiagnosisContent() {
               ))}
             </div>
 
-            {/* Weaknesses */}
+            {/* Weaknesses — 件数 + severity のみ表示、message/suggestion はぼかし */}
             {data.weaknessDetails && data.weaknessDetails.length > 0 && (
               <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-                <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 16px" }}>検出された課題 ({data.weaknessDetails.length}件)</h2>
-                {data.weaknessDetails.map((w, i) => (
-                  <div key={w.id || i} style={{ padding: "12px 0", borderBottom: i < data.weaknessDetails!.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 16px" }}>検出された課題（{data.weaknessDetails.length}件）</h2>
+
+                {/* 最初の2件だけ見せる */}
+                {data.weaknessDetails.slice(0, 2).map((w, i) => (
+                  <div key={w.id || i} style={{ padding: "12px 0", borderBottom: `1px solid ${C.border}` }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                       <span style={{
                         fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 6,
@@ -231,35 +241,192 @@ function DiagnosisContent() {
                     </div>
                   </div>
                 ))}
+
+                {/* 残りはぼかして表示 */}
+                {data.weaknessDetails.length > 2 && (
+                  <div style={{ position: "relative" }}>
+                    {data.weaknessDetails.slice(2, 5).map((w, i) => (
+                      <div key={w.id || i} style={{ padding: "12px 0", borderBottom: i < Math.min(data.weaknessDetails!.length - 3, 2) ? `1px solid ${C.border}` : "none", filter: "blur(5px)", userSelect: "none" as const, pointerEvents: "none" as const }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <span style={{
+                            fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 6,
+                            background: `${getSeverityColor(w.severity)}15`, color: getSeverityColor(w.severity),
+                          }}>
+                            {getSeverityLabel(w.severity)}
+                          </span>
+                          <span style={{ fontSize: 14, fontWeight: 600 }}>{w.message}</span>
+                        </div>
+                        <div style={{ fontSize: 14, color: C.sub, lineHeight: 1.7, paddingLeft: 4 }}>
+                          {w.suggestion}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* CTA オーバーレイ */}
+                    <div style={{
+                      position: "absolute", inset: 0,
+                      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                      background: "rgba(255,255,255,0.6)",
+                      borderRadius: 8,
+                    }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 4 }}>
+                        他 {data.weaknessDetails.length - 2}件の課題と改善提案
+                      </div>
+                      <button
+                        onClick={handleSignup}
+                        style={{
+                          padding: "10px 28px", borderRadius: 8, border: "none",
+                          background: "linear-gradient(135deg, #2563EB, #1D4ED8)", color: "#fff",
+                          fontSize: 14, fontWeight: 700, cursor: "pointer",
+                          boxShadow: "0 2px 8px rgba(37,99,235,0.3)",
+                        }}
+                      >
+                        無料登録して詳細を見る
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Weaknesses fallback (no details) */}
             {(!data.weaknessDetails || data.weaknessDetails.length === 0) && data.weaknesses.length > 0 && (
               <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-                <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 16px" }}>検出された課題 ({data.weaknesses.length}件)</h2>
-                {data.weaknesses.map((w, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: i < data.weaknesses.length - 1 ? `1px solid ${C.border}` : "none" }}>
-                    <span style={{ color: C.red, fontSize: 14 }}>&#x2715;</span>
-                    <span style={{ fontSize: 14 }}>{w}</span>
-                  </div>
-                ))}
+                <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 16px" }}>検出された課題（{data.weaknesses.length}件）</h2>
+                <p style={{ fontSize: 14, color: C.sub }}>
+                  {data.weaknesses.length}件の課題が見つかりました。詳細を確認するには無料登録が必要です。
+                </p>
               </div>
             )}
 
-            {/* CTA */}
-            <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.accent}20`, padding: 32, textAlign: "center", marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-              <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>AI検索対策を始めませんか？</h3>
-              <p style={{ color: C.sub, fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
-                月額¥10,000で、AI検索可視性の継続モニタリング・改善提案・構造化データ実装をサポートします。
-              </p>
-              <a href={paymentLink} style={{
-                display: "inline-block", padding: "14px 48px", borderRadius: 10, textDecoration: "none",
-                background: "linear-gradient(135deg, #2563EB, #1D4ED8)", color: "#fff", fontSize: 15, fontWeight: 800,
+            {/* ===== ここからぼかし＋CTAゾーン（登録が必要な範囲） ===== */}
+
+            {/* Suggestions プレビュー（ぼかし） */}
+            <div style={{ position: "relative", marginBottom: 24 }}>
+              <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", filter: "blur(5px)", userSelect: "none" as const, pointerEvents: "none" as const }}>
+                <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 16px" }}>改善提案（{data.suggestions.length}件）</h2>
+                {data.suggestions.slice(0, 3).map((s, i) => (
+                  <div key={i} style={{ display: "flex", gap: 8, padding: "8px 0", borderBottom: i < 2 ? `1px solid ${C.border}` : "none" }}>
+                    <span style={{ color: C.green, fontSize: 14, flexShrink: 0 }}>✓</span>
+                    <span style={{ fontSize: 14, color: C.sub }}>{s}</span>
+                  </div>
+                ))}
+              </div>
+              {/* CTA オーバーレイ */}
+              <div style={{
+                position: "absolute", inset: 0,
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                background: "rgba(255,255,255,0.6)", borderRadius: 16,
               }}>
-                有料プランに申し込む
-              </a>
-              <p style={{ color: C.dim, fontSize: 13, marginTop: 12 }}>初月セットアップ費用無料</p>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 4 }}>
+                  改善提案の全リスト
+                </div>
+                <button
+                  onClick={handleSignup}
+                  style={{
+                    padding: "10px 28px", borderRadius: 8, border: "none",
+                    background: "linear-gradient(135deg, #2563EB, #1D4ED8)", color: "#fff",
+                    fontSize: 14, fontWeight: 700, cursor: "pointer",
+                    boxShadow: "0 2px 8px rgba(37,99,235,0.3)",
+                  }}
+                >
+                  無料登録して詳細を見る
+                </button>
+              </div>
+            </div>
+
+            {/* AI検索エンジン別 表示予測（ぼかしプレビュー） */}
+            <div style={{ position: "relative", marginBottom: 24 }}>
+              <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", filter: "blur(5px)", userSelect: "none" as const, pointerEvents: "none" as const }}>
+                <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 16px" }}>AI検索エンジン別 表示予測</h2>
+                {["ChatGPT", "Perplexity", "Gemini", "Copilot"].map((engine) => (
+                  <div key={engine} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${C.border}` }}>
+                    <span style={{ fontSize: 14, fontWeight: 600 }}>{engine}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: C.orange }}>中程度</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{
+                position: "absolute", inset: 0,
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                background: "rgba(255,255,255,0.6)", borderRadius: 16,
+              }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 4 }}>
+                  AI検索エンジン別の表示予測
+                </div>
+                <button
+                  onClick={handleSignup}
+                  style={{
+                    padding: "10px 28px", borderRadius: 8, border: "none",
+                    background: "linear-gradient(135deg, #2563EB, #1D4ED8)", color: "#fff",
+                    fontSize: 14, fontWeight: 700, cursor: "pointer",
+                    boxShadow: "0 2px 8px rgba(37,99,235,0.3)",
+                  }}
+                >
+                  無料登録して詳細を見る
+                </button>
+              </div>
+            </div>
+
+            {/* 同業種比較データ（ぼかしプレビュー） */}
+            <div style={{ position: "relative", marginBottom: 24 }}>
+              <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", filter: "blur(5px)", userSelect: "none" as const, pointerEvents: "none" as const }}>
+                <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 16px" }}>同業種比較データ</h2>
+                <div style={{ display: "flex", justifyContent: "space-around", textAlign: "center", padding: "16px 0" }}>
+                  <div>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: C.accent }}>62</div>
+                    <div style={{ fontSize: 13, color: C.sub }}>業界平均スコア</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: getScoreColor(data.score) }}>{data.score}</div>
+                    <div style={{ fontSize: 13, color: C.sub }}>あなたのスコア</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: C.green }}>85</div>
+                    <div style={{ fontSize: 13, color: C.sub }}>上位企業平均</div>
+                  </div>
+                </div>
+              </div>
+              <div style={{
+                position: "absolute", inset: 0,
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                background: "rgba(255,255,255,0.6)", borderRadius: 16,
+              }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 4 }}>
+                  同業種との比較データ
+                </div>
+                <button
+                  onClick={handleSignup}
+                  style={{
+                    padding: "10px 28px", borderRadius: 8, border: "none",
+                    background: "linear-gradient(135deg, #2563EB, #1D4ED8)", color: "#fff",
+                    fontSize: 14, fontWeight: 700, cursor: "pointer",
+                    boxShadow: "0 2px 8px rgba(37,99,235,0.3)",
+                  }}
+                >
+                  無料登録して詳細を見る
+                </button>
+              </div>
+            </div>
+
+            {/* CTA（有料プラン） */}
+            <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.accent}20`, padding: 32, textAlign: "center", marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+              <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>まずは無料登録で詳細レポートを確認</h3>
+              <p style={{ color: C.sub, fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
+                課題の詳細・改善提案・AI検索エンジン別の表示予測・同業種比較データを<br />
+                無料でご確認いただけます。
+              </p>
+              <button
+                onClick={handleSignup}
+                style={{
+                  display: "inline-block", padding: "14px 48px", borderRadius: 10, border: "none",
+                  background: "linear-gradient(135deg, #2563EB, #1D4ED8)", color: "#fff", fontSize: 15, fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                無料登録して詳細レポートを見る
+              </button>
+              <p style={{ color: C.dim, fontSize: 13, marginTop: 12 }}>メールアドレスだけで登録できます</p>
             </div>
 
             {/* Re-scan */}
