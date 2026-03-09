@@ -678,6 +678,24 @@ export default function WorkshopPage() {
                   </div>
                 </div>
 
+                {/* 希望日程 */}
+                <div style={{ marginBottom: 20 }}>
+                  <label style={labelStyle}>希望日程</label>
+                  <select
+                    value={form.workshopDate}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, workshopDate: e.target.value }))
+                    }
+                    style={inputStyle}
+                  >
+                    <option value="">選択してください</option>
+                    <option value="直近の開催日">直近の開催日に参加したい</option>
+                    <option value="平日午前">平日午前（10:00〜11:30）希望</option>
+                    <option value="平日午後">平日午後（14:00〜15:30）希望</option>
+                    <option value="録画視聴">録画での視聴を希望</option>
+                  </select>
+                </div>
+
                 {/* 興味のあるトピック */}
                 <div style={{ marginBottom: 24 }}>
                   <label style={labelStyle}>

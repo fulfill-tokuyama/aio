@@ -35,11 +35,23 @@ async function notifyHotLead(leadId: string): Promise<void> {
     // training キャンペーンのクリックのみ通知（AIOは別管理）
     if (lead.campaign !== "training") return;
 
-    // heat_score を上げる
+    // heat_score を上げる + dormant リードを復活させる
     const newHeatScore = Math.min((lead.heat_score || 0) + 30, 100);
+    const updateFields: Record<string, unknown> = { heat_score: newHeatScore };
+
+    // dormant フェーズのリードがクリックした場合 → 関心ありとして復活
+    const { data: phaseData } = await supabaseAdmin
+      .from("pipeline_leads")
+      .select("phase")
+      .eq("id", leadId)
+      .single();
+    if (phaseData?.phase === "dormant") {
+      updateFields.phase = "engaged";
+    }
+
     await supabaseAdmin
       .from("pipeline_leads")
-      .update({ heat_score: newHeatScore })
+      .update(updateFields)
       .eq("id", leadId);
 
     // n8n Webhook発火

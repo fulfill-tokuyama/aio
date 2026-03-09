@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { notifyAdmin } from "@/lib/email";
+import { notifyAdmin, sendWorkshopConfirmationEmail } from "@/lib/email";
 import { fireN8nWebhook } from "@/lib/n8n-webhook";
 
 export const maxDuration = 30;
@@ -99,6 +99,18 @@ export async function POST(req: NextRequest) {
         });
     } catch {
       // pipeline追加は best-effort
+    }
+
+    // === 申込者に確認メール送信 ===
+    try {
+      await sendWorkshopConfirmationEmail({
+        to: body.email.trim().toLowerCase(),
+        name: body.name.trim(),
+        company: body.company.trim(),
+        workshopDate: body.workshopDate || undefined,
+      });
+    } catch {
+      // 確認メール失敗は申込自体には影響させない
     }
 
     // === n8n Webhook発火（WS前リマインド・後フォローのトリガー） ===
