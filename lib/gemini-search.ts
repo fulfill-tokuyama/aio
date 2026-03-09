@@ -165,11 +165,117 @@ const DEFAULT_SEARCH_SEGMENTS = [
   "Established & Trusted Providers (実績豊富・老舗)",
 ];
 
+/** AI研修ターゲット向け検索セグメント */
+export const TRAINING_SEARCH_SEGMENTS = [
+  "Companies hiring for DX or AI roles (DX推進・AI人材を採用中の企業)",
+  "Companies mentioning AI or ChatGPT adoption (AI・ChatGPT導入を検討中の企業)",
+  "Manufacturing & Construction companies with 20-500 employees (従業員20-500名の製造・建設企業)",
+  "Professional services & Real estate firms seeking efficiency (業務効率化を目指す士業・不動産企業)",
+  "Companies that received IT subsidies or DX grants (IT導入補助金・DX関連助成金の採択企業)",
+];
+
 export interface GeminiSearchResult {
   urls: Array<{ url: string; title: string; source: string; company?: string }>;
   queries: string[];
   sources: GeminiSearchSource[];
   summary: { totalFound: number; afterFilter: number; segments: number };
+}
+
+/**
+ * AI研修ターゲット企業を検索（Gemini Google Search）
+ * DX推進中・AI導入検討中・助成金対象の中小企業を発見
+ */
+export async function searchTrainingTargetsWithGemini(
+  industry: string,
+  region: string,
+  keyword?: string,
+  segments?: string[]
+): Promise<GeminiSearchResult> {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY が設定されていません");
+  }
+
+  const targetTopic = keyword?.trim()
+    ? `"${keyword.trim()}"`
+    : industry?.trim() || "Business";
+  const regionLabel = region?.trim() || "Japan";
+  const segList = segments && segments.length > 0 ? segments : TRAINING_SEARCH_SEGMENTS;
+
+  const systemInstruction = `
+You are a B2B lead generation expert finding companies in Japan that would benefit from AI training programs.
+Target: Companies with 20-500 employees that are interested in AI/DX but haven't fully adopted it yet.
+Key signals: DX hiring, efficiency initiatives, traditional industries modernizing.
+- Use Google Search to verify existence and get contact information.
+- Focus on companies with actual business websites (not media articles or directories).
+- Return ONLY a valid JSON array. No markdown, no explanation.
+`.trim();
+
+  const allSources: GeminiSearchSource[] = [];
+  const allQueries: string[] = [];
+
+  for (const segment of segList) {
+    const query = `
+Find 8-12 distinct companies in ${regionLabel} related to: ${targetTopic}.
+
+Segment Focus: ${segment}
+
+Target companies that:
+- Have 20-500 employees
+- Are likely interested in AI training or digital transformation
+- Have a corporate website with contact information
+
+Use Google Search to verify they exist.
+Return ONLY a valid JSON array. No markdown, no explanation.
+
+Format each item: {"name": "...", "url": "...", "industry": "...", "region": "...", "address": "...", "phone": "...", "email": "...", "employee_estimate": "..."}
+`.trim();
+
+    try {
+      const { groundingMetadata } = await callGeminiWithSearchWithFallback(
+        apiKey,
+        systemInstruction,
+        query
+      );
+
+      if (groundingMetadata) {
+        const extracted = extractSourcesFromMetadata(groundingMetadata, segment);
+        allQueries.push(...extracted.queries);
+        allSources.push(...extracted.sources);
+      }
+    } catch (err) {
+      console.warn(`Training target search segment failed:`, err);
+    }
+  }
+
+  // 重複排除
+  const seenUrls = new Set<string>();
+  const uniqueSources: GeminiSearchSource[] = [];
+  for (const s of allSources) {
+    const key = normalizeUrl(s.url);
+    if (key && !seenUrls.has(key)) {
+      seenUrls.add(key);
+      uniqueSources.push(s);
+    }
+  }
+
+  const urls = uniqueSources.map((s) => ({
+    url: s.url,
+    title: s.title || s.domain,
+    source: `gemini_training:${s.segment}`,
+    company: s.title || undefined,
+  }));
+
+  return {
+    urls,
+    queries: Array.from(new Set(allQueries.filter((q) => q))),
+    sources: uniqueSources,
+    summary: {
+      totalFound: allSources.length,
+      afterFilter: urls.length,
+      segments: segList.length,
+    },
+  };
 }
 
 /**

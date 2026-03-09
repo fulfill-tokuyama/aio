@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as cheerio from "cheerio";
 import { requireAuth } from "@/lib/api-auth";
-import { searchCompaniesWithGemini } from "@/lib/gemini-search";
+import { searchCompaniesWithGemini, searchTrainingTargetsWithGemini } from "@/lib/gemini-search";
 
 export const maxDuration = 60;
 
@@ -70,7 +70,20 @@ function extractUrlsFromDDG(html: string): { url: string; title: string }[] {
 }
 
 // 検索クエリ生成
-function buildSearchQueries(industry: string, region: string, keyword?: string): string[] {
+function buildSearchQueries(industry: string, region: string, keyword?: string, campaign?: string): string[] {
+  if (campaign === "training") {
+    // AI研修ターゲット向けクエリ
+    const queries: string[] = [
+      `${industry} ${region} DX推進 企業`,
+      `${industry} ${region} AI導入 会社`,
+      `${industry} ${region} 業務効率化 企業`,
+    ];
+    if (keyword) {
+      queries.push(`${keyword} ${industry} ${region}`);
+    }
+    return queries;
+  }
+
   const queries: string[] = [
     `${industry} ${region} 企業 ホームページ`,
     `${industry} ${region} 会社 サイト`,
@@ -180,17 +193,18 @@ export async function POST(req: NextRequest) {
 
     if (mode === "search") {
       // === 検索スクレイピングモード ===
-      const { industry, region, keyword } = body as {
+      const { industry, region, keyword, campaign } = body as {
         industry: string;
         region: string;
         keyword?: string;
+        campaign?: string;
       };
 
       if (!industry || !region) {
         return NextResponse.json({ error: "industry と region は必須です" }, { status: 400 });
       }
 
-      const queries = buildSearchQueries(industry, region, keyword);
+      const queries = buildSearchQueries(industry, region, keyword, campaign);
       const seenDomains = new Set<string>();
       const allUrls: { url: string; title: string; source: string }[] = [];
 
@@ -285,6 +299,56 @@ export async function POST(req: NextRequest) {
         },
       });
 
+    } else if (mode === "gemini_training") {
+      // === Gemini AI研修ターゲット検索モード ===
+      const { industry, region, keyword, segments } = body as {
+        industry: string;
+        region: string;
+        keyword?: string;
+        segments?: string[];
+      };
+
+      if (!industry || !region) {
+        return NextResponse.json({ error: "industry と region は必須です" }, { status: 400 });
+      }
+
+      const geminiResult = await searchTrainingTargetsWithGemini(
+        industry,
+        region,
+        keyword,
+        segments
+      );
+
+      // ブロックリストフィルタ適用
+      const seenDomains = new Set<string>();
+      const filtered: { url: string; title: string; source: string; company?: string }[] = [];
+
+      for (const item of geminiResult.urls) {
+        const domain = extractDomain(item.url);
+        if (!domain) continue;
+        if (isDomainBlocked(domain)) continue;
+        if (seenDomains.has(domain)) continue;
+
+        seenDomains.add(domain);
+        filtered.push({
+          url: item.url,
+          title: item.title || "",
+          source: item.source,
+          company: item.company,
+        });
+      }
+
+      return NextResponse.json({
+        urls: filtered,
+        campaign: "training",
+        summary: {
+          totalFound: geminiResult.summary.totalFound,
+          afterFilter: filtered.length,
+          segments: geminiResult.summary.segments,
+          queries: geminiResult.queries.length,
+        },
+      });
+
     } else if (mode === "csv") {
       // === CSVモード ===
       const { csvText } = body as { csvText: string };
@@ -325,7 +389,7 @@ export async function POST(req: NextRequest) {
 
     } else {
       return NextResponse.json(
-        { error: "mode は 'search'、'gemini_search'、'csv' のいずれかを指定してください" },
+        { error: "mode は 'search'、'gemini_search'、'gemini_training'、'csv' のいずれかを指定してください" },
         { status: 400 }
       );
     }

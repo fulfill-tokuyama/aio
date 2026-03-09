@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { sendOutreachEmail } from "@/lib/email";
+import { sendOutreachEmail, sendTrainingOutreachEmail } from "@/lib/email";
 import { requireAuth } from "@/lib/api-auth";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
 import { incrementTemplateStat } from "@/lib/pipeline-utils";
@@ -41,17 +41,24 @@ function getPhaseForStep(step: 1 | 2 | 3 | 4): string {
   }
 }
 
+// キャンペーン種別: aio(LLMO診断) / training(AI研修・派遣)
+type CampaignType = "aio" | "training";
+
 interface LeadRow {
   id: string;
   company: string;
   url: string;
   contact_email: string | null;
+  contact_name: string | null;
+  industry: string | null;
+  employee_count: string | null;
   llmo_score: number;
   weaknesses: string[] | null;
   phase: string;
   follow_up_count: number;
   follow_up_scheduled: string | null;
   diagnosis_report_id: string | null;
+  campaign: CampaignType | null;
 }
 
 async function sendStepEmail(lead: LeadRow, step: 1 | 2 | 3 | 4): Promise<{ success: boolean; error?: string }> {
@@ -60,29 +67,56 @@ async function sendStepEmail(lead: LeadRow, step: 1 | 2 | 3 | 4): Promise<{ succ
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aio-rouge.vercel.app";
-  const diagnosisLink = `${appUrl}/signup?from=email&url=${encodeURIComponent(lead.url)}`;
-  const paymentLink = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK || "#";
-  const senderName = process.env.NEXT_PUBLIC_SENDER_NAME || "AIO Insight";
   const unsubscribeLink = buildUnsubscribeUrl(lead.id, appUrl);
+  const campaign: CampaignType = lead.campaign || "aio";
 
   try {
-    await sendOutreachEmail({
-      to: lead.contact_email,
-      data: {
-        company: lead.company,
-        llmoScore: lead.llmo_score || 0,
-        weaknesses: lead.weaknesses || [],
-        diagnosisLink,
-        paymentLink,
-        senderName,
-        leadId: lead.id,
-        unsubscribeLink,
-      },
-      step,
-    });
+    if (campaign === "training") {
+      // === AI研修・人材派遣キャンペーン（2ステップマーケティング） ===
+      const workshopLink = process.env.NEXT_PUBLIC_WORKSHOP_URL
+        || `${appUrl}/workshop?ref=email&lid=${lead.id}`;
+      const senderName = process.env.NEXT_PUBLIC_TRAINING_SENDER_NAME || "フルフィル株式会社 AI研修事業部";
 
-    // テンプレート統計更新（step 1-3のみ）
-    await incrementTemplateStat(step, "sent").catch(() => {});
+      await sendTrainingOutreachEmail({
+        to: lead.contact_email,
+        data: {
+          company: lead.company,
+          industry: lead.industry || undefined,
+          employeeCount: lead.employee_count || undefined,
+          contactName: lead.contact_name || undefined,
+          workshopLink,
+          senderName,
+          leadId: lead.id,
+          unsubscribeLink,
+        },
+        step,
+      });
+    } else {
+      // === AIO（LLMO診断）キャンペーン ===
+      const diagnosisLink = `${appUrl}/signup?from=email&url=${encodeURIComponent(lead.url)}`;
+      const paymentLink = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK || "#";
+      const senderName = process.env.NEXT_PUBLIC_SENDER_NAME || "AIO Insight";
+
+      await sendOutreachEmail({
+        to: lead.contact_email,
+        data: {
+          company: lead.company,
+          llmoScore: lead.llmo_score || 0,
+          weaknesses: lead.weaknesses || [],
+          diagnosisLink,
+          paymentLink,
+          senderName,
+          leadId: lead.id,
+          unsubscribeLink,
+        },
+        step,
+      });
+    }
+
+    // テンプレート統計更新（AIOキャンペーンのみ既存統計に記録）
+    if (campaign === "aio") {
+      await incrementTemplateStat(step, "sent").catch(() => {});
+    }
 
     // 送信成功 → DB更新
     const daysUntilNext = getDaysUntilNext(step);
@@ -92,7 +126,7 @@ async function sendStepEmail(lead: LeadRow, step: 1 | 2 | 3 | 4): Promise<{ succ
 
     const newCount = (lead.follow_up_count || 0) + 1;
 
-    // 全4通送信済み（follow_up_count=4）で直接 dormant に遷移（二重更新を回避）
+    // 全4通送信済み（follow_up_count=4）で直接 dormant に遷移
     const finalPhase = newCount >= 4 ? "dormant" : getPhaseForStep(step);
     const finalScheduled = newCount >= 4 ? null : nextScheduled;
 
@@ -101,7 +135,7 @@ async function sendStepEmail(lead: LeadRow, step: 1 | 2 | 3 | 4): Promise<{ succ
       .update({
         phase: finalPhase,
         sent_at: new Date().toISOString(),
-        template_used: `outreach_step${step}`,
+        template_used: `${campaign}_step${step}`,
         follow_up_count: newCount,
         follow_up_scheduled: finalScheduled,
       })
@@ -133,7 +167,7 @@ export async function POST(req: NextRequest) {
 
     const { data: leads, error } = await supabaseAdmin
       .from("pipeline_leads")
-      .select("id, company, url, contact_email, llmo_score, weaknesses, phase, follow_up_count, follow_up_scheduled, diagnosis_report_id")
+      .select("id, company, url, contact_email, contact_name, industry, employee_count, llmo_score, weaknesses, phase, follow_up_count, follow_up_scheduled, diagnosis_report_id, campaign")
       .in("id", targetIds);
 
     if (error) {
@@ -149,9 +183,9 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      // 顧客・休眠・配信停止済みはスキップ
-      if (["customer", "dormant"].includes(lead.phase)) {
-        results.push({ leadId: lead.id, company: lead.company, success: false, step: 0, error: "Customer or dormant" });
+      // 顧客・休眠・WS申込済み・配信停止済みはスキップ
+      if (["customer", "dormant", "workshop_registered", "workshop_attended"].includes(lead.phase)) {
+        results.push({ leadId: lead.id, company: lead.company, success: false, step: 0, error: `Skipped: ${lead.phase}` });
         continue;
       }
 
@@ -195,7 +229,7 @@ export async function GET(req: NextRequest) {
     // 対象リード抽出: フォローアップ予定日が過ぎたリード（顧客・休眠を除外）
     const { data: leads, error } = await supabaseAdmin
       .from("pipeline_leads")
-      .select("id, company, url, contact_email, llmo_score, weaknesses, phase, follow_up_count, follow_up_scheduled, diagnosis_report_id")
+      .select("id, company, url, contact_email, contact_name, industry, employee_count, llmo_score, weaknesses, phase, follow_up_count, follow_up_scheduled, diagnosis_report_id, campaign")
       .in("phase", ["sent", "step2", "step3"])
       .lte("follow_up_scheduled", new Date().toISOString())
       .lt("follow_up_count", 4)
