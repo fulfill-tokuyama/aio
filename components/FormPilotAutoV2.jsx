@@ -62,7 +62,7 @@ const ic={
 };
 
 const Phase=({p})=>{
-  const m={discovered:{c:C.cy,l:"発見"},form_found:{c:C.b,l:"フォーム済"},queued:{c:C.o,l:"送信待"},sent:{c:C.p,l:"送信済"},replied:{c:C.acc,l:"無料登録"},customer:{c:C.g,l:"有料顧客"},followup:{c:C.pk,l:"追客中"}};
+  const m={discovered:{c:C.cy,l:"発見"},form_found:{c:C.b,l:"フォーム済"},queued:{c:C.o,l:"送信待"},sent:{c:C.p,l:"送信済"},replied:{c:C.acc,l:"無料登録"},workshop_registered:{c:"#f59e0b",l:"WS申込"},workshop_attended:{c:"#8b5cf6",l:"WS参加"},customer:{c:C.g,l:"有料顧客"},followup:{c:C.pk,l:"追客中"}};
   const s=m[p]||m.discovered;
   return<span style={{fontSize:12,fontWeight:700,padding:"2px 7px",borderRadius:3,background:`${s.c}14`,color:s.c}}>{s.l}</span>;
 };
@@ -666,9 +666,9 @@ export default function FormPilotAutoV2(){
                   <input value={searchQ} onChange={e=>{setSearchQ(e.target.value);setPage(0);}} placeholder="検索..." style={{width:"100%",padding:"6px 9px 6px 26px",borderRadius:4,border:`1px solid ${C.bdr}`,background:C.card,color:C.tx,fontSize:12,outline:"none",boxSizing:"border-box"}}/>
                   <div style={{position:"absolute",left:7,top:7}}><I d={ic.search} s={11} c={C.dim}/></div>
                 </div>
-                {["all","discovered","form_found","queued","sent","replied","customer"].map(f=>(
+                {["all","discovered","form_found","queued","sent","replied","workshop_registered","workshop_attended","customer"].map(f=>(
                   <button key={f} onClick={()=>{setFilterPhase(f);setPage(0);}} style={{padding:"4px 9px",borderRadius:3,border:`1px solid ${filterPhase===f?C.acc+"40":"transparent"}`,background:filterPhase===f?C.accGl:"transparent",color:filterPhase===f?C.acc:C.dim,fontSize:12,fontWeight:filterPhase===f?700:400,cursor:"pointer",fontFamily:"inherit"}}>
-                    {f==="all"?"全件":{discovered:"発見",form_found:"フォーム済",queued:"送信待",sent:"送信済",replied:"無料登録",customer:"有料顧客"}[f]}
+                    {f==="all"?"全件":{discovered:"発見",form_found:"フォーム済",queued:"送信待",sent:"送信済",replied:"無料登録",workshop_registered:"WS申込",workshop_attended:"WS参加",customer:"有料顧客"}[f]}
                   </button>
                 ))}
                 <select value={filterIndustry} onChange={e=>{setFilterIndustry(e.target.value);setPage(0);}} style={{padding:"4px 7px",borderRadius:3,border:`1px solid ${C.bdr}`,background:C.card,color:C.tx,fontSize:12,outline:"none"}}>

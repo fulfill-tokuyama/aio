@@ -12,7 +12,6 @@ export interface TrainingOutreachEmailData {
   unsubscribeLink?: string;
   // ワークショップ + 研修特有
   workshopLink: string; // 無料ワークショップ申込リンク
-  consultationLink?: string; // 個別相談リンク（Step3-4で使用）
   senderName: string;
   senderTitle?: string;
 }

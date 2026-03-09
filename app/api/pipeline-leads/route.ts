@@ -43,6 +43,7 @@ function dbRowToClientLead(row: Record<string, unknown>) {
     description: row.description,
     heatScore: row.heat_score,
     googleMapsUrl: row.google_maps_url,
+    campaign: row.campaign,
     notes: row.notes,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -80,6 +81,7 @@ const FIELD_MAP: Record<string, string> = {
   heatScore: "heat_score",
   googleMapsUrl: "google_maps_url",
   address: "address",
+  campaign: "campaign",
 };
 
 // 許可されたフィールドのみDB更新に含める
@@ -107,6 +109,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const phase = searchParams.get("phase");
     const industry = searchParams.get("industry");
+    const campaign = searchParams.get("campaign");
     const q = searchParams.get("q");
 
     let query = supabaseAdmin
@@ -119,6 +122,9 @@ export async function GET(req: NextRequest) {
     }
     if (industry && industry !== "all") {
       query = query.eq("industry", industry);
+    }
+    if (campaign && campaign !== "all") {
+      query = query.eq("campaign", campaign);
     }
     if (q) {
       // PostgREST特殊文字をサニタイズ
