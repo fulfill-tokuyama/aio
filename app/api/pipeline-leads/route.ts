@@ -17,6 +17,7 @@ function dbRowToClientLead(row: Record<string, unknown>) {
     aiScore: row.ai_score,
     weaknesses: row.weaknesses ?? [],
     phase: row.phase,
+    previousPhase: row.previous_phase,
     formUrl: row.form_url,
     stripeStatus: row.stripe_status,
     mrr: row.mrr,
@@ -82,11 +83,12 @@ const FIELD_MAP: Record<string, string> = {
   googleMapsUrl: "google_maps_url",
   address: "address",
   campaign: "campaign",
+  previousPhase: "previous_phase",
 };
 
 // 許可されたフィールドのみDB更新に含める
 const ALLOWED_DB_FIELDS = new Set([
-  "company", "url", "industry", "region", "notes", "phase", "weaknesses",
+  "company", "url", "industry", "region", "notes", "phase", "weaknesses", "previous_phase",
   ...Object.values(FIELD_MAP),
 ]);
 
